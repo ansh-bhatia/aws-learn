@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://aws-learn.vercel.app/sitemap.xml
+Sitemap: https://aws-learn-chi.vercel.app/sitemap.xml
