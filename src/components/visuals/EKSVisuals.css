@@ -1,0 +1,65 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.eks-title { color: #ffb84d; border-bottom: 1px solid rgba(255,153,0,0.3); }
+.eks-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.eks-intro code, .eks-detail code, .eks-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ffcb7d; font-size: 11.5px; }
+.eks-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.eks-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.eks-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.eks-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.eks-tab { flex: 1; min-width: 100px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.eks-tab.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+.eks-detail { background: #161b22; border-left: 4px solid #ff9900; border-radius: 10px; padding: 13px 15px; margin-bottom: 4px; }
+.eks-detail b { font-size: 13px; color: #ffb84d; }
+.eks-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+
+/* ─── 2. ARCH STACK ────────────────────────────────── */
+.eks-arch-stack { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.eks-arch-layer { padding: 12px 14px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; background: #161b22; transition: all 0.2s; }
+.eks-arch-layer.control { border-left: 4px solid #a371f7; }
+.eks-arch-layer.worker { border-left: 4px solid #1f6feb; }
+.eks-arch-layer.pod { border-left: 4px solid #3fb950; }
+.eks-arch-layer.active { border-color: #ff9900; background: rgba(255,153,0,0.07); }
+.eks-arch-t { font-size: 13px; font-weight: 800; color: #e6edf3; }
+.eks-arch-sub { font-size: 11px; color: #8b949e; margin-top: 3px; }
+.eks-arch-comps { font-size: 11px; color: #b9c2cc; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; margin-bottom: 12px; line-height: 1.5; }
+.eks-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.eks-split-col { border-radius: 10px; padding: 12px 14px; }
+.eks-split-col.onprem { background: rgba(227,179,65,0.08); border: 1px solid rgba(227,179,65,0.25); }
+.eks-split-col.eks { background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.25); }
+.eks-split-h { font-size: 12px; font-weight: 800; margin-bottom: 6px; }
+.eks-split-col.onprem .eks-split-h { color: #e8cd8a; }
+.eks-split-col.eks .eks-split-h { color: #9be59b; }
+.eks-split-col p { font-size: 11.5px; color: #c9d1d9; line-height: 1.45; margin: 0; }
+
+/* ─── 3/5. TABLE ───────────────────────────────────── */
+.eks-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.eks-row { display: grid; grid-template-columns: 1.1fr 1.6fr 1.6fr; }
+.eks-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.eks-row.head > span { font-weight: 800; background: #161b22; }
+.eks-row.head .op { color: #e8cd8a; }
+.eks-row.head .ek { color: #9be59b; }
+.eks-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── 4. MODE BAR ──────────────────────────────────── */
+.eks-mode-bar { display: flex; height: 30px; border-radius: 8px; overflow: hidden; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08); }
+.eks-mode-seg { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; transition: flex 0.4s; }
+.eks-mode-seg.you { background: rgba(227,179,65,0.18); color: #e8cd8a; }
+.eks-mode-seg.aws { background: rgba(63,185,80,0.18); color: #9be59b; }
+.eks-mode-seg.you.quick { flex: 0.1; }
+.eks-mode-seg.aws.quick { flex: 0.9; }
+.eks-mode-seg.you.custom { flex: 0.35; }
+.eks-mode-seg.aws.custom { flex: 0.65; }
+.eks-mode-seg.you.classic { flex: 0.7; }
+.eks-mode-seg.aws.classic { flex: 0.3; }
+
+/* ─── 7. STEP TRACK ────────────────────────────────── */
+.eks-step-track { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 12px 0; }
+.eks-step-node { width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 14px; font-weight: 800; background: #21262d; border: 2px solid rgba(255,255,255,0.1); color: #8b949e; }
+.eks-step-node.on { border-color: #ff9900; background: rgba(255,153,0,0.15); color: #ffb84d; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .eks-split, .eks-row { grid-template-columns: 1fr; }
+}

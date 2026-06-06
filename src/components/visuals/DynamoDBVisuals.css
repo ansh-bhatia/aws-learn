@@ -1,0 +1,139 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.ddb-title { color: #5aa0e6; border-bottom: 1px solid rgba(46,115,184,0.3); }
+.ddb-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.ddb-intro code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11.5px; }
+.ddb-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.ddb-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.ddb-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.ddb-btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.ddb-btn.primary { background: #2e73b8; border-color: #2e73b8; color: #fff; }
+.ddb-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.ddb-toggle { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.ddb-toggle button { flex: 1; min-width: 130px; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.ddb-toggle button.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.ddb-toggle.small button { padding: 7px; font-size: 11.5px; min-width: 90px; }
+
+.ddb-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.ddb-grid2.tight { gap: 8px; }
+.ddb-stat { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; font-size: 12px; color: #b9c2cc; }
+.ddb-stat b { color: #79c0ff; }
+
+.ddb-cf-controls { display: flex; gap: 10px; justify-content: space-between; margin-top: 12px; }
+
+/* ─── 1. AURORA ────────────────────────────────────── */
+.ddb-aur-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.ddb-aur-card { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 12px 6px; border-radius: 10px; background: #161b22; border: 2px solid rgba(255,255,255,0.06); cursor: pointer; transition: all 0.2s; }
+.ddb-aur-card.active { border-color: #2e73b8; background: rgba(46,115,184,0.12); }
+.ddb-aur-ic { font-size: 22px; }
+.ddb-aur-ic.big { font-size: 34px; }
+.ddb-aur-t { font-size: 10px; font-weight: 700; color: #c9d1d9; line-height: 1.25; }
+.ddb-aur-detail { display: flex; gap: 14px; align-items: center; background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.ddb-aur-dt { font-size: 13px; font-weight: 800; color: #5aa0e6; margin-bottom: 5px; }
+.ddb-aur-dd { font-size: 12px; color: #c9d1d9; line-height: 1.5; }
+
+/* ─── 1b. CLUSTER STORAGE 3D ────────────────────────── */
+.ddb-cs3d-stage { perspective: 900px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 26px 16px; margin-bottom: 14px; }
+.ddb-cs3d-scene { transform-style: preserve-3d; transform: rotateX(52deg) rotateZ(0deg); display: flex; justify-content: center; gap: 26px; align-items: flex-start; }
+.ddb-cs3d-writer { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); font-size: 12px; font-weight: 800; color: #f0883e; background: rgba(240,136,62,0.14); border: 1px solid rgba(240,136,62,0.4); border-radius: 8px; padding: 5px 12px; }
+.ddb-cs3d-az { transform-style: preserve-3d; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; border-radius: 10px; background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.35); animation: ddbFloat 3s ease-in-out infinite; }
+.ddb-cs3d-az.az1 { animation-delay: 0.4s; }
+.ddb-cs3d-az.az2 { animation-delay: 0.8s; }
+@keyframes ddbFloat { 0%,100% { transform: translateZ(0); } 50% { transform: translateZ(26px); } }
+.ddb-cs3d-azlbl { font-size: 10px; font-weight: 800; color: #5aa0e6; }
+.ddb-cs3d-copy { font-size: 24px; }
+
+/* ─── 2. SQL vs NoSQL ──────────────────────────────── */
+.ddb-rep { }
+.ddb-sqltable { border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; overflow: hidden; }
+.ddb-sqlrow { display: grid; grid-template-columns: 1fr 1fr 1.4fr; }
+.ddb-sqlrow > span { padding: 9px 11px; font-size: 11.5px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.ddb-sqlrow.head > span { font-weight: 800; background: #161b22; color: #8b949e; }
+.ddb-kvbox { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ddb-kvitem { background: #161b22; border: 1px solid rgba(46,115,184,0.25); border-radius: 9px; padding: 6px; display: grid; grid-template-columns: auto 1fr; gap: 4px; align-content: start; }
+.ddb-kvk { font-size: 10.5px; font-weight: 700; color: #8b949e; background: #0d1117; padding: 4px 7px; border-radius: 5px; }
+.ddb-kvv { font-size: 10.5px; color: #79c0ff; padding: 4px 7px; }
+.ddb-kvk.add, .ddb-kvv.add { background: rgba(63,185,80,0.14); color: #9be59b; }
+
+/* ─── 3. UPI / DEPLOYMENT DETAIL ───────────────────── */
+.ddb-dep-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.ddb-dep-detail.rds { border-color: #f0883e; }
+.ddb-dep-detail.ddb { border-color: #a371f7; }
+.ddb-dep-detail p { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin: 0 0 8px; }
+.ddb-dep-detail ul { padding-left: 18px; margin: 0; }
+.ddb-dep-detail li { font-size: 12px; color: #b9c2cc; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── 4. CORE COMPONENTS / KEYS ────────────────────── */
+.ddb-keytable { border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; overflow: hidden; margin-bottom: 4px; }
+.ddb-keyrow { display: grid; grid-template-columns: 1.3fr 1fr 1.3fr; }
+.ddb-keyrow:not(.head):nth-child(odd) { }
+.ddb-keyrow > span { padding: 9px 11px; font-size: 11.5px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.ddb-keyrow.head > span { font-weight: 800; background: #161b22; color: #8b949e; }
+.ddb-keyrow .pk { color: #f0883e; font-weight: 700; }
+.ddb-keyrow .sk { color: #a371f7; font-weight: 700; }
+.ddb-keyrow.err > span { background: rgba(248,81,73,0.1); color: #ff7b72; }
+
+/* ─── 5. TABLE CLASS bars ──────────────────────────── */
+.ddb-bar { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; }
+.ddb-bar > span { font-size: 11.5px; color: #b9c2cc; display: block; margin-bottom: 7px; }
+.ddb-bartrack { height: 10px; background: #0d1117; border-radius: 6px; overflow: hidden; }
+.ddb-barfill { height: 100%; border-radius: 6px; transition: width 0.4s; }
+.ddb-bar small { display: block; margin-top: 6px; font-size: 11px; color: #8b949e; }
+
+/* ─── 6. STORAGE ARCHITECTURE 3D ───────────────────── */
+.ddb-sa-scene { perspective: 1000px; display: flex; gap: 18px; justify-content: center; align-items: flex-start; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 22px 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.ddb-sa-node { transform-style: preserve-3d; transform: rotateY(-14deg); border-radius: 11px; padding: 12px; min-width: 150px; background: #161b22; border: 2px solid rgba(255,255,255,0.08); transition: all 0.3s; }
+.ddb-sa-node.leader { border-color: rgba(46,115,184,0.4); }
+.ddb-sa-node.leader.on { border-color: #2e73b8; box-shadow: 0 0 22px rgba(46,115,184,0.35); transform: rotateY(-14deg) translateZ(20px); }
+.ddb-sa-node.replica { border-color: rgba(63,185,80,0.3); }
+.ddb-sa-repwrap { display: flex; flex-direction: column; gap: 12px; opacity: 0.4; transition: opacity 0.4s; }
+.ddb-sa-repwrap.on { opacity: 1; }
+.ddb-sa-az { font-size: 9.5px; font-weight: 800; color: #8b949e; }
+.ddb-sa-role { font-size: 12.5px; font-weight: 800; color: #e6edf3; margin: 4px 0 7px; }
+.ddb-sa-parts { display: flex; gap: 5px; margin-bottom: 7px; }
+.ddb-sa-parts span { flex: 1; text-align: center; font-size: 10px; font-weight: 700; color: #79c0ff; background: rgba(46,115,184,0.15); border-radius: 5px; padding: 4px; }
+.ddb-sa-tag { font-size: 10px; color: #8b949e; }
+.ddb-sa-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 12px 15px; }
+.ddb-sa-detail b { font-size: 13px; color: #5aa0e6; }
+.ddb-sa-detail p { font-size: 12px; color: #c9d1d9; line-height: 1.5; margin: 6px 0 0; }
+
+/* ─── 7. READ CONSISTENCY tabs ─────────────────────── */
+.ddb-cs-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.ddb-cs-tab { flex: 1; min-width: 130px; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.ddb-cs-tab.active { border-color: var(--cc); color: #e6edf3; background: color-mix(in srgb, var(--cc) 14%, #21262d); }
+.ddb-cs-detail { background: #161b22; border-left: 4px solid var(--cc); border-radius: 10px; padding: 14px 16px; }
+.ddb-cs-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin-bottom: 12px; }
+.ddb-rc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.ddb-rc-stats > div { background: #0d1117; border-radius: 8px; padding: 9px; }
+.ddb-rc-stats small { display: block; font-size: 9.5px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.ddb-rc-stats b { font-size: 11px; color: var(--cc); line-height: 1.3; }
+
+/* ─── 8. WRITE CONSISTENCY ─────────────────────────── */
+.ddb-wc-flow { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.ddb-wc-step { font-size: 12px; font-weight: 600; padding: 11px 14px; border-radius: 9px; background: #161b22; border: 1px solid rgba(255,255,255,0.08); color: #e6edf3; }
+.ddb-wc-step.done { border-color: rgba(63,185,80,0.4); }
+.ddb-wc-step.failed { border-color: rgba(248,81,73,0.5); background: rgba(248,81,73,0.08); color: #ff7b72; }
+.ddb-wc-result { font-size: 12px; line-height: 1.55; padding: 12px 14px; border-radius: 9px; }
+.ddb-wc-result.ok { background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.28); color: #9be59b; }
+.ddb-wc-result.bad { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); color: #ff9d96; }
+.ddb-wc-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #b9c2cc; margin-top: 12px; cursor: pointer; }
+.ddb-wc-toggle input { accent-color: #f85149; width: 15px; height: 15px; }
+
+/* ─── 9/10. CALCULATORS ────────────────────────────── */
+.ddb-calc { display: flex; flex-direction: column; gap: 13px; margin-bottom: 14px; }
+.ddb-calc label { font-size: 12px; color: #c9d1d9; display: flex; flex-direction: column; gap: 7px; }
+.ddb-calc label b { color: #79c0ff; }
+.ddb-calc input[type=range] { accent-color: #2e73b8; width: 100%; }
+.ddb-calc-out { background: #0d1117; border: 1px solid rgba(46,115,184,0.3); border-radius: 10px; padding: 14px; text-align: center; }
+.ddb-calc-formula { font-size: 13px; color: #8b949e; font-family: ui-monospace, monospace; margin-bottom: 8px; }
+.ddb-calc-result { font-size: 22px; font-weight: 800; color: #5aa0e6; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .ddb-aur-grid { grid-template-columns: repeat(2, 1fr); }
+  .ddb-grid2, .ddb-rc-stats, .ddb-kvbox { grid-template-columns: 1fr; }
+  .ddb-rc-stats { grid-template-columns: 1fr 1fr; }
+  .ddb-keyrow, .ddb-sqlrow { grid-template-columns: 1fr; }
+}

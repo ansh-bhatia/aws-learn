@@ -1,0 +1,126 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.cap-title { color: #ffb84d; border-bottom: 1px solid rgba(255,153,0,0.25); }
+.cap-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.cap-btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.cap-btn.primary { background: #ff9900; border-color: #ff9900; color: #1c1c1c; }
+.cap-btn.ghost { background: transparent; }
+.cap-btn.warn { background: rgba(248,81,73,0.15); border-color: #f85149; color: #f0867f; }
+.cap-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── 1. BRIEF / HERO ──────────────────────────────── */
+.cap-hero { text-align: center; padding: 22px; border-radius: 12px; margin-bottom: 18px;
+  background: radial-gradient(circle at 50% 0%, rgba(255,153,0,0.18), transparent 70%), linear-gradient(160deg, #2a2018, #1c2128);
+  border: 1px solid rgba(255,153,0,0.25); }
+.cap-hero-badge { display: inline-block; font-size: 11px; font-weight: 800; color: #1c1c1c; background: #ff9900; border-radius: 20px; padding: 4px 14px; margin-bottom: 12px; }
+.cap-hero-title { font-size: 22px; font-weight: 800; color: #ffd699; line-height: 1.2; }
+.cap-hero-sub { font-size: 12.5px; color: #b9c2cc; margin-top: 8px; max-width: 520px; margin-left: auto; margin-right: auto; line-height: 1.5; }
+
+.cap-tabs { display: flex; gap: 10px; margin-bottom: 16px; }
+.cap-tab { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.cap-tab.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+
+.cap-obj-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cap-obj-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-top: 3px solid #ff9900; border-radius: 10px; padding: 14px; }
+.cap-obj-icon { font-size: 24px; }
+.cap-obj-title { font-size: 13px; font-weight: 800; color: #ffb84d; margin: 6px 0 5px; }
+.cap-obj-desc { font-size: 11.5px; color: #b9c2cc; line-height: 1.45; }
+
+.cap-svc-list { display: flex; flex-direction: column; gap: 8px; }
+.cap-svc-row { display: flex; align-items: center; gap: 12px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 14px; }
+.cap-svc-icon { font-size: 22px; }
+.cap-svc-name { font-size: 12.5px; font-weight: 800; color: #ffb84d; min-width: 100px; }
+.cap-svc-role { font-size: 11.5px; color: #b9c2cc; line-height: 1.4; }
+
+/* ─── 2. 3D ARCHITECTURE BUILDER ───────────────────── */
+.cap-scene { perspective: 1400px; height: 360px; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, rgba(255,153,0,0.08), transparent 60%); border-radius: 14px; overflow: hidden; }
+.cap-world { position: relative; width: 440px; height: 300px; transform-style: preserve-3d; transform: rotateX(55deg) rotateZ(-32deg); transition: transform 0.5s; }
+.cap-scene.spin .cap-world { animation: cap-orbit 22s linear infinite; }
+@keyframes cap-orbit {
+  from { transform: rotateX(55deg) rotateZ(-32deg); }
+  50%  { transform: rotateX(55deg) rotateZ(-92deg); }
+  to   { transform: rotateX(55deg) rotateZ(-32deg); }
+}
+
+.cap-vpc-slab { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,153,0,0.12), rgba(140,79,255,0.12));
+  border: 2px solid rgba(255,153,0,0.4); border-radius: 14px; box-shadow: 0 0 40px rgba(255,153,0,0.15); }
+.cap-vpc-label { position: absolute; top: 8px; left: 12px; font-size: 10px; font-weight: 800; color: #ffd699; transform: translateZ(2px); }
+
+.cap-azs { position: absolute; inset: 34px 16px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; transform: translateZ(6px); }
+.cap-az-col { display: flex; flex-direction: column; gap: 8px; }
+.cap-az-name { font-size: 9px; font-weight: 700; color: #b9c2cc; text-align: center; }
+.cap-subnet { flex: 1; border-radius: 9px; padding: 8px; position: relative; min-height: 70px; }
+.cap-subnet.public { background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.4); }
+.cap-subnet.private { background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.35); }
+.cap-subnet-tag { font-size: 8px; font-weight: 700; color: #c9d1d9; }
+.cap-comp { font-size: 9.5px; font-weight: 700; color: #fff; border-radius: 6px; padding: 4px 6px; margin-top: 5px; animation: cap-drop 0.5s ease backwards; box-shadow: 0 4px 10px rgba(0,0,0,0.4); }
+.cap-comp.alb { background: #8c4fff; }
+.cap-comp.nat { background: #2e73b8; }
+.cap-comp.ec2 { background: #ff9900; color: #1c1c1c; }
+@keyframes cap-drop { from { opacity: 0; transform: translateZ(40px) scale(1.3); } to { opacity: 1; transform: translateZ(0) scale(1); } }
+
+.cap-igw { position: absolute; top: -26px; left: 50%; transform: translateX(-50%) translateZ(40px); font-size: 11px; font-weight: 800; color: #5fc943; background: #161b22; border: 1px solid #3fb950; border-radius: 8px; padding: 4px 10px; animation: cap-rise 0.5s ease backwards; }
+.cap-efs { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%) translateZ(55px); display: flex; flex-direction: column; align-items: center; font-size: 24px; animation: cap-rise 0.5s ease backwards; }
+.cap-efs span { font-size: 9px; color: #ffd699; font-weight: 700; }
+.cap-r53 { position: absolute; top: -70px; left: 50%; transform: translateX(-50%) translateZ(90px); display: flex; flex-direction: column; align-items: center; font-size: 28px; animation: cap-rise 0.6s ease backwards; }
+.cap-r53 span { font-size: 9px; color: #b88cff; font-weight: 700; text-align: center; }
+.cap-user { position: absolute; top: -60px; right: -40px; transform: translateZ(70px); display: flex; flex-direction: column; align-items: center; font-size: 22px; animation: cap-rise 0.6s ease backwards; }
+.cap-user span { font-size: 9px; color: #b9c2cc; }
+@keyframes cap-rise { from { opacity: 0; transform: translateX(-50%) translateZ(120px); } }
+
+.cap-stage-note { font-size: 12.5px; color: #e6edf3; line-height: 1.55; background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22); border-radius: 9px; padding: 12px 14px; margin: 14px 0; }
+.cap-range { width: 100%; accent-color: #ff9900; margin-bottom: 12px; }
+.cap-builder-controls { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+
+/* ─── 3. PHASE FLOW ────────────────────────────────── */
+.cap-phase-track { display: flex; justify-content: space-between; margin-bottom: 18px; overflow-x: auto; padding-bottom: 6px; }
+.cap-phase-node { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; flex: 1; min-width: 44px; }
+.cap-phase-icon { width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 17px; background: #21262d; border: 2px solid rgba(255,255,255,0.1); z-index: 1; transition: all 0.2s; }
+.cap-phase-node.active .cap-phase-icon { border-color: #ff9900; background: rgba(255,153,0,0.15); transform: scale(1.15); }
+.cap-phase-node.done .cap-phase-icon { border-color: rgba(255,153,0,0.4); }
+.cap-phase-num { font-size: 9px; font-weight: 700; color: #8b949e; }
+.cap-phase-node.active .cap-phase-num { color: #ffb84d; }
+.cap-phase-line { position: absolute; top: 19px; left: 50%; width: 100%; height: 2px; background: rgba(255,255,255,0.1); z-index: 0; }
+.cap-phase-node.done .cap-phase-line { background: rgba(255,153,0,0.4); }
+.cap-phase-detail { background: #161b22; border-left: 4px solid #ff9900; border-radius: 10px; padding: 14px 16px; }
+.cap-phase-head { font-size: 14px; font-weight: 800; color: #ffb84d; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.cap-phase-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.5; }
+
+/* ─── 4. RESILIENCE TEST ───────────────────────────── */
+.cap-fleet { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; min-height: 80px; align-items: center; }
+.cap-fleet-node { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 14px; border-radius: 10px; border: 2px solid; animation: cap-drop2 0.4s ease backwards; }
+.cap-fleet-node.up { border-color: rgba(63,185,80,0.4); background: rgba(63,185,80,0.08); }
+.cap-fleet-node.down { border-color: rgba(248,81,73,0.4); background: rgba(248,81,73,0.08); opacity: 0.7; }
+@keyframes cap-drop2 { from { opacity: 0; transform: scale(0.5); } }
+.cap-fleet-icon { font-size: 24px; }
+.cap-fleet-id { font-size: 11px; font-weight: 700; color: #e6edf3; font-family: "SF Mono", Consolas, monospace; }
+.cap-fleet-az { font-size: 9px; color: #8b949e; }
+.cap-fleet-status { text-align: center; font-size: 12px; color: #b9c2cc; margin: 10px 0 14px; }
+.cap-test-controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.cap-load-ctrl { flex: 1; min-width: 180px; font-size: 12px; color: #b9c2cc; display: flex; flex-direction: column; gap: 4px; }
+.cap-load-ctrl input { accent-color: #ff9900; }
+.cap-log { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 10px 12px; display: flex; flex-direction: column; gap: 5px; }
+.cap-log-line { font-size: 11px; color: #c9d1d9; font-family: "SF Mono", Consolas, monospace; line-height: 1.4; animation: cap-fade 0.4s ease backwards; }
+@keyframes cap-fade { from { opacity: 0; } }
+
+/* ─── 5. DELIVERABLES ──────────────────────────────── */
+.cap-deliver-bar { height: 8px; background: #0d1117; border-radius: 4px; overflow: hidden; }
+.cap-deliver-fill { height: 100%; background: linear-gradient(90deg, #ff9900, #ffd699); border-radius: 4px; transition: width 0.4s; }
+.cap-deliver-count { font-size: 11px; color: #8b949e; text-align: right; margin: 4px 0 12px; }
+.cap-deliver-list { display: flex; flex-direction: column; gap: 8px; }
+.cap-deliver-item { display: flex; align-items: flex-start; gap: 10px; text-align: left; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 12px; cursor: pointer; transition: all 0.2s; }
+.cap-deliver-item.done { border-color: rgba(255,153,0,0.4); background: rgba(255,153,0,0.06); }
+.cap-deliver-check { font-size: 16px; }
+.cap-deliver-icon { font-size: 20px; }
+.cap-deliver-title { font-size: 12.5px; font-weight: 800; color: #ffb84d; }
+.cap-deliver-desc { font-size: 11px; color: #b9c2cc; line-height: 1.45; margin-top: 2px; }
+.cap-complete { margin-top: 14px; text-align: center; font-size: 13px; font-weight: 800; color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); border-radius: 9px; padding: 12px; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .cap-obj-grid { grid-template-columns: 1fr; }
+  .cap-scene { height: 300px; }
+  .cap-world { width: 320px; transform: rotateX(52deg) rotateZ(-30deg) scale(0.8); }
+}

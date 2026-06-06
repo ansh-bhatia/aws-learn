@@ -1,0 +1,228 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card {
+  background: #1c2128;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 28px 0;
+}
+.sv-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3F8624;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(63,134,36,0.2);
+}
+.fsx-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.fsx-intro code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11.5px; }
+
+/* ─── 1. FILE SYSTEM SELECTOR ──────────────────────── */
+.fsx-fs-tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.fsx-fs-tab {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 12px 8px; border-radius: 10px; cursor: pointer; text-align: center;
+  background: #21262d; border: 2px solid rgba(255,255,255,0.06); color: #8b949e;
+  font-size: 11.5px; font-weight: 700; transition: all 0.2s;
+}
+.fsx-fs-tab.active { border-color: var(--fc); color: #e6edf3; background: color-mix(in srgb, var(--fc) 10%, #21262d); transform: translateY(-2px); }
+.fsx-fs-icon { font-size: 24px; }
+.fsx-fs-name { line-height: 1.2; }
+
+.fsx-fs-detail {
+  background: #161b22; border: 1px solid color-mix(in srgb, var(--fc) 30%, transparent);
+  border-left: 4px solid var(--fc); border-radius: 10px; padding: 18px 20px;
+}
+.fsx-fs-head { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.fsx-fs-big { font-size: 36px; }
+.fsx-fs-title { font-size: 16px; font-weight: 800; color: var(--fc); }
+.fsx-fs-tagline { font-size: 12px; color: #8b949e; margin-top: 2px; }
+.fsx-fs-protocols { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.fsx-fs-plabel { font-size: 11px; color: #8b949e; font-weight: 700; }
+.fsx-fs-proto { font-size: 11px; font-weight: 700; color: var(--fc); background: color-mix(in srgb, var(--fc) 15%, transparent); border-radius: 5px; padding: 2px 8px; }
+.fsx-fs-best { font-size: 12px; color: #e6edf3; margin-bottom: 12px; }
+.fsx-fs-points { padding-left: 18px; margin: 0; }
+.fsx-fs-points li { font-size: 12px; color: #e6edf3; margin-bottom: 6px; line-height: 1.5; }
+
+/* ─── 2. BENEFITS ──────────────────────────────────── */
+.fsx-ben-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.fsx-ben-card {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-top: 3px solid var(--bc);
+  border-radius: 10px; padding: 14px 12px; transition: all 0.2s; cursor: default;
+}
+.fsx-ben-card.active { background: color-mix(in srgb, var(--bc) 8%, #161b22); transform: translateY(-3px); box-shadow: 0 8px 20px color-mix(in srgb, var(--bc) 15%, transparent); }
+.fsx-ben-icon { font-size: 26px; }
+.fsx-ben-title { font-size: 13px; font-weight: 800; color: var(--bc); margin: 6px 0 6px; }
+.fsx-ben-desc { font-size: 11px; color: #b9c2cc; line-height: 1.45; }
+
+/* ─── 3. ONTAP DEPLOYMENT ──────────────────────────── */
+.fsx-ontap-flow { display: flex; align-items: stretch; gap: 6px; margin-bottom: 16px; }
+.fsx-ontap-step { display: flex; align-items: center; gap: 6px; flex: 1; }
+.fsx-ontap-card {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 10px; border-radius: 10px; cursor: pointer; width: 100%;
+  background: #21262d; border: 2px solid rgba(255,255,255,0.06); color: #e6edf3; transition: all 0.2s;
+}
+.fsx-ontap-card.active { border-color: var(--oc); background: color-mix(in srgb, var(--oc) 10%, #21262d); }
+.fsx-ontap-era { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; color: #8b949e; font-weight: 700; }
+.fsx-ontap-icon { font-size: 26px; }
+.fsx-ontap-name { font-size: 11.5px; font-weight: 700; text-align: center; line-height: 1.2; }
+.fsx-ontap-arrow { color: #8b949e; font-size: 18px; flex-shrink: 0; }
+
+.fsx-ontap-detail {
+  background: #161b22; border: 1px solid color-mix(in srgb, var(--oc) 30%, transparent);
+  border-left: 4px solid var(--oc); border-radius: 10px; padding: 16px 18px;
+}
+.fsx-ontap-detail-tag { display: inline-block; font-size: 10px; font-weight: 700; color: var(--oc); background: color-mix(in srgb, var(--oc) 15%, transparent); border-radius: 5px; padding: 2px 8px; margin-bottom: 8px; }
+.fsx-ontap-detail-name { font-size: 15px; font-weight: 800; color: #e6edf3; margin-bottom: 6px; }
+.fsx-ontap-detail-desc { font-size: 12.5px; color: #b9c2cc; line-height: 1.55; }
+
+/* ─── 4. ZFS TIMELINE ──────────────────────────────── */
+.fsx-tl-track { display: flex; justify-content: space-between; margin-bottom: 18px; }
+.fsx-tl-node {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: none; border: none; cursor: pointer; flex: 1;
+}
+.fsx-tl-year { font-size: 11px; font-weight: 700; color: #8b949e; }
+.fsx-tl-dot {
+  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: #21262d; border: 2px solid rgba(255,255,255,0.1);
+  font-size: 17px; transition: all 0.2s; z-index: 1;
+}
+.fsx-tl-node.active .fsx-tl-dot { border-color: #e07b39; background: rgba(224,123,57,0.15); transform: scale(1.15); }
+.fsx-tl-node.active .fsx-tl-year { color: #e07b39; }
+.fsx-tl-node.done .fsx-tl-dot { border-color: rgba(224,123,57,0.5); }
+.fsx-tl-line { position: absolute; top: 38px; left: 50%; width: 100%; height: 2px; background: rgba(255,255,255,0.1); z-index: 0; }
+.fsx-tl-node.done .fsx-tl-line { background: rgba(224,123,57,0.4); }
+
+.fsx-tl-detail { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px 18px; margin-bottom: 16px; }
+.fsx-tl-detail-head { font-size: 15px; font-weight: 800; color: #e07b39; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.fsx-tl-detail-year { font-size: 11px; color: #8b949e; margin-left: auto; }
+.fsx-tl-detail-desc { font-size: 12.5px; color: #b9c2cc; line-height: 1.55; }
+
+.fsx-zfs-feat-title { font-size: 12px; font-weight: 700; color: #8b949e; margin-bottom: 10px; }
+.fsx-zfs-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fsx-zfs-chip { background: #21262d; border: 1px solid rgba(224,123,57,0.2); border-radius: 8px; padding: 9px 12px; }
+.fsx-zfs-chip-t { display: block; font-size: 12px; font-weight: 700; color: #e07b39; }
+.fsx-zfs-chip-d { display: block; font-size: 11px; color: #b9c2cc; margin-top: 2px; line-height: 1.4; }
+
+/* ─── 5. COMPARISON ────────────────────────────────── */
+.fsx-cmp-controls { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.fsx-cmp-toggle { padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.1); color: #8b949e; }
+.fsx-cmp-toggle.on { border-color: #3F8624; color: #5fc943; background: rgba(63,134,36,0.12); }
+.fsx-cmp-legend { display: flex; gap: 10px; font-size: 10.5px; flex-wrap: wrap; }
+.fsx-cmp-key { padding: 2px 8px; border-radius: 5px; font-weight: 700; }
+.fsx-cmp-key.zfs { color: #e07b39; background: rgba(224,123,57,0.12); }
+.fsx-cmp-key.ontap { color: #0a84ff; background: rgba(10,132,255,0.12); }
+.fsx-cmp-key.tie { color: #8b949e; background: rgba(139,148,158,0.12); }
+
+.fsx-cmp-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.fsx-cmp-row { display: grid; grid-template-columns: 1.4fr 1fr 1.2fr; }
+.fsx-cmp-row > span { padding: 10px 12px; font-size: 12px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.fsx-cmp-row.head > span { font-weight: 800; color: #8b949e; background: #161b22; font-size: 11.5px; }
+.fsx-cmp-row.head .fsx-cmp-zfs { color: #e07b39; }
+.fsx-cmp-row.head .fsx-cmp-ontap { color: #0a84ff; }
+.fsx-cmp-feat { color: #8b949e !important; font-weight: 600; }
+.fsx-cmp-win.zfs { background: rgba(224,123,57,0.14); color: #f0a36a; font-weight: 700; }
+.fsx-cmp-win.ontap { background: rgba(10,132,255,0.14); color: #5cb0ff; font-weight: 700; }
+.fsx-cmp-tie { color: #8b949e; }
+
+.fsx-cmp-verdict { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.fsx-cmp-verdict > div { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 14px; }
+
+/* ─── 6. WINDOWS FILE SERVER ───────────────────────── */
+.fsx-wfs-switch { display: flex; gap: 8px; margin-bottom: 16px; }
+.fsx-wfs-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; transition: all 0.2s; }
+.fsx-wfs-btn.active { border-color: var(--wc); color: var(--wc); background: color-mix(in srgb, var(--wc) 10%, #21262d); }
+
+.fsx-wfs-stage { background: #161b22; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.fsx-wfs-pcs { display: flex; justify-content: center; gap: 22px; }
+.fsx-wfs-pc { position: relative; font-size: 30px; }
+.fsx-wfs-disk { position: absolute; bottom: -6px; right: -8px; font-size: 14px; }
+.fsx-wfs-disk.warn { filter: drop-shadow(0 0 4px rgba(248,81,73,0.6)); }
+.fsx-wfs-links { display: flex; justify-content: center; gap: 22px; height: 26px; }
+.fsx-wfs-line { width: 2px; height: 100%; background: linear-gradient(var(--wc), transparent); }
+.fsx-wfs-server { max-width: 360px; margin: 0 auto; text-align: center; background: color-mix(in srgb, var(--wc) 8%, #1c2128); border: 2px solid var(--wc); border-radius: 12px; padding: 14px; }
+.fsx-wfs-server-icon { font-size: 32px; }
+.fsx-wfs-server-label { font-size: 13px; font-weight: 800; color: var(--wc); margin-top: 4px; }
+.fsx-wfs-proto { font-size: 10px; color: #8b949e; margin-top: 2px; }
+
+.fsx-wfs-detail { background: #161b22; border: 1px solid color-mix(in srgb, var(--wc) 30%, transparent); border-left: 4px solid var(--wc); border-radius: 10px; padding: 16px 18px; }
+.fsx-wfs-headline { font-size: 13.5px; font-weight: 800; color: var(--wc); margin-bottom: 10px; }
+.fsx-wfs-points { padding-left: 18px; margin: 0; }
+.fsx-wfs-points li { font-size: 12px; color: #e6edf3; margin-bottom: 6px; line-height: 1.5; }
+
+/* ─── 7. ACTIVE DIRECTORY ──────────────────────────── */
+.fsx-ad-stage {
+  position: relative; display: flex; justify-content: space-around; align-items: center;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px;
+  padding: 28px 20px; margin-bottom: 14px; min-height: 130px; overflow: hidden;
+}
+.fsx-ad-node { display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 2; }
+.fsx-ad-icon {
+  width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;
+  border-radius: 14px; font-size: 28px; background: #21262d; border: 2px solid rgba(255,255,255,0.1);
+}
+.fsx-ad-node.dc .fsx-ad-icon { border-color: #e3b341; background: rgba(227,179,65,0.1); }
+.fsx-ad-node.file .fsx-ad-icon { border-color: #2e73b8; background: rgba(46,115,184,0.1); }
+.fsx-ad-node.user .fsx-ad-icon { border-color: #3fb950; background: rgba(63,185,80,0.1); }
+.fsx-ad-label { font-size: 10.5px; color: #b9c2cc; text-align: center; line-height: 1.3; }
+
+.fsx-ad-packet {
+  position: absolute; top: 30px; font-size: 11px; font-weight: 700; white-space: nowrap;
+  padding: 3px 9px; border-radius: 12px; z-index: 3;
+  background: #0d1117; border: 1px solid rgba(255,255,255,0.15); color: #e6edf3;
+}
+.fsx-ad-packet.p1 { color: #3fb950; border-color: #3fb950; animation: fsx-ad-move1 0.8s ease forwards; }
+.fsx-ad-packet.p2 { color: #2e73b8; border-color: #2e73b8; animation: fsx-ad-move2 0.8s ease 0.8s backwards; opacity: 0; }
+.fsx-ad-packet.p3 { animation: fsx-ad-move3 0.8s ease 1.6s backwards; opacity: 0; }
+.fsx-ad-packet.p3.allow { color: #3fb950; border-color: #3fb950; }
+.fsx-ad-packet.p3.deny { color: #f85149; border-color: #f85149; }
+@keyframes fsx-ad-move1 { from{left:14%; opacity:0} 20%{opacity:1} to{left:44%; opacity:1} }
+@keyframes fsx-ad-move2 { from{left:50%; opacity:0} 20%{opacity:1} to{left:82%; opacity:1} }
+@keyframes fsx-ad-move3 { from{left:82%; opacity:0} 20%{opacity:1} 80%{opacity:1} to{left:50%; opacity:1} }
+
+.fsx-ad-result { font-size: 12px; line-height: 1.5; border-radius: 9px; padding: 12px 14px; margin-bottom: 12px; }
+.fsx-ad-result.idle { color: #8b949e; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+.fsx-ad-result.allow { color: #5fc943; background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.25); }
+.fsx-ad-result.deny { color: #f0867f; background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.25); }
+
+.fsx-ad-controls { display: flex; gap: 10px; margin-bottom: 14px; }
+.fsx-ad-btn { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; border: 1px solid; }
+.fsx-ad-btn.allow { background: rgba(63,185,80,0.1); border-color: #3fb950; color: #5fc943; }
+.fsx-ad-btn.deny { background: rgba(248,81,73,0.1); border-color: #f85149; color: #f0867f; }
+.fsx-ad-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; background: rgba(227,179,65,0.07); border: 1px solid rgba(227,179,65,0.2); border-radius: 8px; padding: 11px 13px; }
+.fsx-ad-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11px; }
+
+/* ─── 8. LAB (shared lab styles) ───────────────────── */
+.fsx-lab-timeline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.fsx-lab-step { position: relative; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; flex-shrink: 0; background: #21262d; border: 2px solid rgba(255,255,255,0.1); transition: all 0.2s; }
+.fsx-lab-step-icon { font-size: 18px; filter: grayscale(0.6); }
+.fsx-lab-step.active { border-color: #0a84ff; background: rgba(10,132,255,0.15); transform: scale(1.15); }
+.fsx-lab-step.active .fsx-lab-step-icon, .fsx-lab-step.done .fsx-lab-step-icon { filter: none; }
+.fsx-lab-step.done { border-color: #3fb950; }
+.fsx-lab-connector { position: absolute; left: 40px; width: 100%; height: 2px; background: rgba(255,255,255,0.1); z-index: -1; }
+.fsx-lab-step.done .fsx-lab-connector { background: rgba(63,185,80,0.5); }
+
+.fsx-lab-detail { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px 20px; }
+.fsx-lab-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.fsx-lab-detail-icon { font-size: 24px; }
+.fsx-lab-detail-title { font-size: 15px; font-weight: 800; color: #5cb0ff; }
+.fsx-lab-detail-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; margin-bottom: 12px; }
+.fsx-lab-code { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px 14px; overflow-x: auto; margin: 0 0 12px; }
+.fsx-lab-code code { font-family: "SF Mono", Consolas, monospace; font-size: 11.5px; color: #79c0ff; white-space: pre; line-height: 1.6; }
+.fsx-lab-tip { font-size: 11.5px; color: #e3b341; background: rgba(227,179,65,0.08); border-radius: 7px; padding: 9px 12px; line-height: 1.5; }
+.fsx-lab-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+.fsx-lab-btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.1); color: #e6edf3; }
+.fsx-lab-btn.primary { background: #0a84ff; border-color: #0a84ff; color: #fff; }
+.fsx-lab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.fsx-lab-progress { font-size: 12px; color: #8b949e; font-weight: 700; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .fsx-fs-tabs { grid-template-columns: 1fr 1fr; }
+  .fsx-ben-grid { grid-template-columns: 1fr 1fr; }
+  .fsx-ontap-flow { flex-direction: column; }
+  .fsx-ontap-arrow { transform: rotate(90deg); }
+  .fsx-zfs-chips, .fsx-cmp-verdict { grid-template-columns: 1fr; }
+}

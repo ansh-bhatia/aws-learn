@@ -1,0 +1,122 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.rds2-title { color: #5aa0e6; border-bottom: 1px solid rgba(46,115,184,0.3); }
+.rds2-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.rds2-intro code, .rds2-note code, .rds2-conn-rule code, .rds2-pg-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11.5px; }
+.rds2-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+
+/* ─── 1. CONNECTIVITY ──────────────────────────────── */
+.rds2-conn-stage { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; }
+.rds2-conn-tier { border-radius: 10px; padding: 12px; }
+.rds2-conn-tier.public { background: rgba(63,185,80,0.07); border: 1px solid rgba(63,185,80,0.25); }
+.rds2-conn-tier.private { background: rgba(248,81,73,0.05); border: 1px solid rgba(248,81,73,0.22); }
+.rds2-conn-label { font-size: 10px; font-weight: 800; margin-bottom: 8px; }
+.rds2-conn-tier.public .rds2-conn-label { color: #5fc943; }
+.rds2-conn-tier.private .rds2-conn-label { color: #f0867f; }
+.rds2-conn-box { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 13px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; }
+.rds2-conn-box.db { color: #79c0ff; }
+.rds2-sg { font-size: 9px; font-weight: 700; color: #5fc943; background: rgba(63,185,80,0.15); border-radius: 5px; padding: 2px 7px; }
+.rds2-sg.db { color: #79c0ff; background: rgba(46,115,184,0.18); }
+.rds2-conn-arrow { text-align: center; font-size: 10.5px; color: #8b949e; font-weight: 700; margin: 6px 0; }
+.rds2-conn-rules { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.rds2-conn-rule { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; background: rgba(255,255,255,0.03); border-radius: 7px; padding: 8px 11px; }
+
+/* ─── 2. AUTH ──────────────────────────────────────── */
+.rds2-auth-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.rds2-auth-tab { flex: 1; min-width: 130px; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds2-auth-tab.active { border-color: var(--ac); color: #e6edf3; background: color-mix(in srgb, var(--ac) 12%, #21262d); }
+.rds2-auth-detail { background: #161b22; border-left: 4px solid var(--ac); border-radius: 10px; padding: 14px 16px; }
+.rds2-auth-name { font-size: 15px; font-weight: 800; color: var(--ac); margin-bottom: 6px; }
+.rds2-auth-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; margin-bottom: 8px; }
+.rds2-auth-note { font-size: 11.5px; color: #b9c2cc; }
+
+/* ─── 3. MONITORING ────────────────────────────────── */
+.rds2-mon-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.rds2-mon-tab { flex: 1; min-width: 130px; display: flex; align-items: center; gap: 6px; justify-content: center; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds2-mon-tab.active { border-color: var(--mc); color: #e6edf3; background: color-mix(in srgb, var(--mc) 12%, #21262d); }
+.rds2-mon-detail { background: #161b22; border-left: 4px solid var(--mc); border-radius: 10px; padding: 14px 16px; }
+.rds2-mon-focus { font-size: 12px; color: #e6edf3; margin-bottom: 6px; }
+.rds2-mon-focus strong { color: var(--mc); }
+.rds2-mon-what { font-size: 12px; color: #b9c2cc; line-height: 1.5; margin-bottom: 10px; }
+.rds2-mon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rds2-mon-grid div { font-size: 11.5px; color: #e6edf3; background: rgba(255,255,255,0.04); border-radius: 7px; padding: 7px 10px; }
+.rds2-mon-grid div.full { grid-column: span 2; }
+.rds2-mon-grid span { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+
+/* ─── 4. PARAM/OPTION ──────────────────────────────── */
+.rds2-pg-switch { display: flex; gap: 10px; margin-bottom: 14px; }
+.rds2-pg-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds2-pg-btn.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.rds2-pg-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.rds2-pg-detail p { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin: 0 0 8px; }
+.rds2-pg-detail ul { padding-left: 18px; margin: 0; }
+.rds2-pg-detail li { font-size: 12px; color: #b9c2cc; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── 5. BACKUPS ───────────────────────────────────── */
+.rds2-bk-cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; margin-bottom: 14px; }
+.rds2-bk-col { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.rds2-bk-col.auto { border-top: 3px solid #3fb950; }
+.rds2-bk-col.manual { border-top: 3px solid #e3b341; }
+.rds2-bk-h { font-size: 13px; font-weight: 800; margin-bottom: 8px; }
+.rds2-bk-col.auto .rds2-bk-h { color: #5fc943; }
+.rds2-bk-col.manual .rds2-bk-h { color: #e8cd8a; }
+.rds2-bk-col ul { padding-left: 16px; margin: 0; }
+.rds2-bk-col li { font-size: 11.5px; color: #e6edf3; margin-bottom: 5px; line-height: 1.45; }
+.rds2-pitr { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.rds2-pitr-label { font-size: 11.5px; font-weight: 700; color: #8b949e; margin-bottom: 8px; }
+.rds2-pitr-track { display: flex; gap: 6px; margin-bottom: 8px; }
+.rds2-pitr-day { flex: 1; padding: 10px 0; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 1px solid rgba(63,185,80,0.25); color: #8b949e; }
+.rds2-pitr-day.kept { color: #b9c2cc; }
+.rds2-pitr-day.active { border-color: #2e73b8; color: #fff; background: #2e73b8; }
+.rds2-pitr-msg { font-size: 11.5px; color: #b9c2cc; }
+
+/* ─── 6. ENCRYPTION ────────────────────────────────── */
+.rds2-enc-stage { display: flex; align-items: center; gap: 8px; justify-content: center; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px; margin-bottom: 14px; flex-wrap: wrap; }
+.rds2-enc-node { font-size: 13px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px 16px; text-align: center; }
+.rds2-enc-node.db { display: flex; flex-direction: column; }
+.rds2-enc-node.db small { font-size: 9px; color: #8b949e; margin-top: 2px; }
+.rds2-enc-node.db.locked { border-color: #3fb950; }
+.rds2-enc-pipe { font-size: 11px; font-weight: 700; padding: 8px 12px; border-radius: 8px; white-space: nowrap; }
+.rds2-enc-pipe.on { color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.rds2-enc-pipe.off { color: #f0867f; background: rgba(248,81,73,0.1); border: 1px dashed rgba(248,81,73,0.4); }
+.rds2-enc-toggles { display: flex; flex-direction: column; gap: 8px; }
+.rds2-enc-toggle { padding: 11px 13px; border-radius: 9px; cursor: pointer; text-align: left; font-size: 12px; font-weight: 600; background: #21262d; border: 2px solid rgba(255,255,255,0.08); color: #b9c2cc; }
+.rds2-enc-toggle.on { border-color: #3fb950; color: #e6edf3; background: rgba(63,185,80,0.08); }
+
+/* ─── 7. RR vs STANDBY ─────────────────────────────── */
+.rds2-rr-switch { display: flex; gap: 10px; margin-bottom: 14px; }
+.rds2-rr-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds2-rr-btn.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.rds2-rr-grid { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.rds2-rr-row { display: grid; grid-template-columns: 1fr 1.3fr 1.3fr; }
+.rds2-rr-row > span { padding: 9px 11px; font-size: 11.5px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.rds2-rr-row.head > span { font-weight: 800; background: #161b22; color: #8b949e; }
+.rds2-rr-feat { color: #8b949e !important; font-weight: 600; }
+.rds2-rr-row > span.hl { background: rgba(46,115,184,0.12); color: #cfe4f9; }
+
+/* ─── 8. ADVANCED ──────────────────────────────────── */
+.rds2-adv-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.rds2-adv-tab { flex: 1; min-width: 140px; display: flex; align-items: center; gap: 6px; justify-content: center; padding: 10px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds2-adv-tab.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.rds2-adv-icon { font-size: 14px; }
+.rds2-adv-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.rds2-adv-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; margin-bottom: 10px; }
+.rds2-adv-points { padding-left: 18px; margin: 0; }
+.rds2-adv-points li { font-size: 12px; color: #b9c2cc; margin-bottom: 6px; line-height: 1.45; }
+.rds2-proxy-flow { display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+.rds2-proxy-node { font-size: 11.5px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 13px; text-align: center; }
+.rds2-proxy-node.proxy { display: flex; flex-direction: column; border-color: #8c4fff; color: #c9a3ff; }
+.rds2-proxy-node.proxy small { font-size: 9px; color: #8b949e; }
+.rds2-proxy-node.db { border-color: #2e73b8; color: #79c0ff; }
+.rds2-proxy-arrow { color: #8b949e; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .rds2-auth-tabs, .rds2-mon-tabs, .rds2-pg-switch, .rds2-rr-switch, .rds2-enc-stage, .rds2-bk-cols { flex-direction: column; }
+  .rds2-bk-cols { grid-template-columns: 1fr; }
+  .rds2-mon-grid { grid-template-columns: 1fr; }
+  .rds2-mon-grid div.full { grid-column: span 1; }
+  .rds2-rr-row { grid-template-columns: 1fr; }
+  .rds2-rr-row > span { border-bottom: 1px solid rgba(255,255,255,0.08); }
+}

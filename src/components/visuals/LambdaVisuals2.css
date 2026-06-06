@@ -1,0 +1,110 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.lam2-title { color: #ffb84d; border-bottom: 1px solid rgba(255,153,0,0.3); }
+.lam2-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.lam2-intro code, .lam2-note code, .lam2-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ffcb7d; font-size: 11.5px; }
+.lam2-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.lam2-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.lam2-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.lam2-btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.lam2-btn.primary { background: #ff9900; border-color: #ff9900; color: #1c1300; }
+.lam2-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.lam2-controls { display: flex; gap: 10px; justify-content: space-between; margin-top: 12px; }
+.lam2-toggle { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.lam2-toggle button { flex: 1; min-width: 120px; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.lam2-toggle button.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+.lam2-detail { background: #161b22; border-left: 4px solid #ff9900; border-radius: 10px; padding: 13px 15px; }
+.lam2-detail.ok { border-color: #3fb950; }
+.lam2-detail.bad { border-color: #f85149; }
+.lam2-detail b { font-size: 13px; color: #ffb84d; }
+.lam2-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+
+/* ─── 1. EXECUTION ENVIRONMENT ─────────────────────── */
+.lam2-ee-stage { display: flex; justify-content: center; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 24px; margin-bottom: 12px; perspective: 700px; }
+.lam2-ee-box { transform: perspective(700px) rotateX(8deg) rotateY(-12deg); width: 280px; border-radius: 12px; border: 2px solid rgba(255,255,255,0.1); padding: 12px; background: #161b22; box-shadow: 8px 10px 0 rgba(0,0,0,0.35); transition: all 0.4s; }
+.lam2-ee-box.built { border-color: rgba(255,153,0,0.5); }
+.lam2-ee-box.warm { border-color: #3fb950; box-shadow: 8px 10px 0 rgba(63,185,80,0.2); }
+.lam2-ee-layer { font-size: 11px; font-weight: 600; color: #6b7480; padding: 8px 10px; border-radius: 7px; margin-bottom: 6px; background: #0d1117; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
+.lam2-ee-layer[data-on="true"] { color: #e6edf3; border-color: rgba(255,153,0,0.3); background: rgba(255,153,0,0.08); }
+.lam2-ee-flag { text-align: center; font-size: 11.5px; font-weight: 800; color: #ffb84d; margin-top: 8px; }
+.lam2-ee-box.warm .lam2-ee-flag { color: #9be59b; }
+
+/* ─── 2. VERSIONS & ALIASES ────────────────────────── */
+.lam2-ver-rail { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.lam2-ver-chip { flex: 1; min-width: 70px; text-align: center; font-size: 12px; font-weight: 700; color: #b9c2cc; background: #161b22; border: 2px solid rgba(255,255,255,0.08); border-radius: 9px; padding: 10px 6px; }
+.lam2-ver-chip small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 3px; }
+.lam2-ver-chip.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+.lam2-ver-chip.canary { border-color: #a371f7; color: #c8a6ff; }
+.lam2-alias-box { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 16px; text-align: center; }
+.lam2-alias-url { font-size: 12.5px; font-family: ui-monospace, monospace; color: #ffcb7d; }
+.lam2-alias-url span { color: #8b949e; font-size: 10.5px; }
+.lam2-alias-arrow { font-size: 11px; color: #8b949e; margin: 8px 0; }
+.lam2-alias-target { font-size: 14px; font-weight: 800; color: #ffb84d; }
+.lam2-canary { display: flex; height: 32px; border-radius: 8px; overflow: hidden; margin-bottom: 12px; }
+.lam2-canary-bar { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; transition: width 0.3s; white-space: nowrap; }
+.lam2-canary-bar.v2 { background: #1f6feb; }
+.lam2-canary-bar.v3 { background: #a371f7; }
+.lam2-slider { font-size: 12px; color: #c9d1d9; display: flex; flex-direction: column; gap: 7px; }
+.lam2-slider b { color: #ffb84d; }
+.lam2-slider input[type=range] { accent-color: #ff9900; width: 100%; }
+.lam2-slider.check { flex-direction: row; align-items: center; gap: 8px; margin-top: 12px; }
+.lam2-slider.check input { accent-color: #ff9900; width: 15px; height: 15px; }
+
+/* ─── 3. CONCURRENCY ───────────────────────────────── */
+.lam2-calc { display: flex; flex-direction: column; gap: 13px; margin-bottom: 14px; }
+.lam2-calc label { font-size: 12px; color: #c9d1d9; display: flex; flex-direction: column; gap: 7px; }
+.lam2-calc label b { color: #ffb84d; }
+.lam2-calc input[type=range] { accent-color: #ff9900; width: 100%; }
+.lam2-calc-out { background: #0d1117; border: 1px solid rgba(255,153,0,0.3); border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 12px; }
+.lam2-calc-formula { font-size: 13px; color: #8b949e; font-family: ui-monospace, monospace; margin-bottom: 6px; }
+.lam2-calc-result { font-size: 22px; font-weight: 800; }
+.lam2-meter { position: relative; height: 22px; background: #0d1117; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+.lam2-meter-fill { height: 100%; transition: width 0.3s; }
+.lam2-meter-cap { position: absolute; right: 8px; top: 3px; font-size: 10px; color: #b9c2cc; font-weight: 700; }
+
+/* ─── 4. RESERVED ──────────────────────────────────── */
+.lam2-res-bars { display: flex; flex-direction: column; gap: 10px; }
+.lam2-res-row { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 10px; }
+.lam2-res-row > span { font-size: 11.5px; color: #b9c2cc; }
+.lam2-track { height: 22px; background: #0d1117; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); }
+.lam2-fill { height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 11px; font-weight: 800; color: #fff; transition: width 0.3s; }
+.lam2-fill.crit { background: #ff9900; color: #1c1300; }
+.lam2-fill.shared { background: #6e7681; }
+
+/* ─── 5. PROVISIONED ───────────────────────────────── */
+.lam2-pc-stage { display: flex; gap: 10px; justify-content: center; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; margin-bottom: 12px; flex-wrap: wrap; }
+.lam2-pc-env { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 24px; padding: 12px 14px; border-radius: 10px; border: 2px solid; transition: all 0.3s; }
+.lam2-pc-env small { font-size: 9.5px; font-weight: 700; }
+.lam2-pc-env.ready { border-color: #3fb950; background: rgba(63,185,80,0.1); color: #9be59b; }
+.lam2-pc-env.cold { border-color: #6e7681; background: rgba(110,118,129,0.08); color: #8b949e; opacity: 0.7; }
+
+/* ─── 6. LAYERS ────────────────────────────────────── */
+.lam2-layers-viz { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+.lam2-fn-block { border-radius: 10px; padding: 12px; text-align: center; min-width: 90px; border: 2px solid rgba(255,255,255,0.08); background: #161b22; }
+.lam2-fn-block.heavy { border-color: rgba(248,81,73,0.3); }
+.lam2-fn-block.light { border-color: rgba(63,185,80,0.3); }
+.lam2-fn-code { font-size: 12px; font-weight: 700; color: #e6edf3; margin-bottom: 6px; }
+.lam2-fn-lib { font-size: 10.5px; color: #ff9d96; background: rgba(248,81,73,0.1); border-radius: 6px; padding: 4px; }
+.lam2-shared-lib { font-size: 12.5px; font-weight: 800; color: #9be59b; background: rgba(63,185,80,0.1); border: 2px dashed rgba(63,185,80,0.4); border-radius: 11px; padding: 16px; text-align: center; }
+.lam2-shared-lib small { font-size: 9.5px; color: #7fc98a; font-weight: 500; }
+.lam2-layer-fns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ─── 7. VPC ───────────────────────────────────────── */
+.lam2-cube { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.lam2-cube-face { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 800; border-radius: 13px; transform: perspective(400px) rotateX(10deg) rotateY(-14deg); box-shadow: 5px 7px 0 rgba(0,0,0,0.35); background: linear-gradient(135deg, #ff9900, #cc6f00); color: #fff; }
+.lam2-cube small { font-size: 10.5px; color: #b9c2cc; font-weight: 600; }
+.lam2-vpc-diagram { display: flex; align-items: center; justify-content: center; gap: 14px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 22px 14px; margin-bottom: 4px; flex-wrap: wrap; }
+.lam2-eni { font-size: 10.5px; font-weight: 700; color: #ffb84d; text-align: center; background: rgba(255,153,0,0.1); border: 1px dashed rgba(255,153,0,0.4); border-radius: 8px; padding: 7px 10px; line-height: 1.5; }
+.lam2-eni small { color: #b9c2cc; }
+.lam2-vpc-arrow { font-size: 22px; color: #ff9900; }
+.lam2-vpc-resources { display: flex; flex-direction: column; gap: 6px; }
+.lam2-res-chip { font-size: 11px; color: #6b7480; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 7px; padding: 7px 11px; transition: all 0.3s; }
+.lam2-res-chip.on { color: #9be59b; border-color: rgba(63,185,80,0.35); background: rgba(63,185,80,0.08); }
+.lam2-res-chip.off { color: #ff9d96; border-color: rgba(248,81,73,0.3); text-decoration: line-through; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .lam2-res-row { grid-template-columns: 1fr; }
+  .lam2-vpc-diagram { flex-direction: column; }
+}

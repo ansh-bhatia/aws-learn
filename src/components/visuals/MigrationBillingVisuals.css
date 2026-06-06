@@ -1,0 +1,31 @@
+/* ─── shared base (teal Migration/Billing theme) ───── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.mb-title { color: #4fd1c5; border-bottom: 1px solid rgba(56,178,172,0.4); }
+.mb-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.mb-intro code, .mb-note code, .mb-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #7fe3da; font-size: 11.5px; }
+.mb-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(56,178,172,0.1); border: 1px solid rgba(56,178,172,0.28); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.mb-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.mb-tab { flex: 1; min-width: 110px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.mb-tab.active { border-color: #38b2ac; color: #4fd1c5; background: rgba(56,178,172,0.1); }
+.mb-detail { background: #161b22; border-left: 4px solid #38b2ac; border-radius: 10px; padding: 13px 15px; }
+.mb-detail b { font-size: 13px; color: #4fd1c5; }
+.mb-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.mb-chip { display: inline-block; font-size: 10.5px; font-weight: 800; color: #4fd1c5; background: rgba(56,178,172,0.14); border-radius: 6px; padding: 3px 9px; }
+
+/* flow */
+.mb-flow { display: flex; align-items: center; justify-content: center; gap: 8px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px 10px; flex-wrap: wrap; }
+.mb-node { font-size: 11px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(56,178,172,0.3); border-radius: 9px; padding: 10px 12px; text-align: center; }
+.mb-node small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 3px; }
+.mb-arrow { font-size: 11px; font-weight: 700; color: #4fd1c5; }
+
+/* data transfer */
+.mb-dt-list { display: flex; flex-direction: column; gap: 7px; }
+.mb-dt-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 13px; flex-wrap: wrap; }
+.mb-dt-path { font-size: 11.5px; color: #d6dde5; }
+.mb-dt-cost { font-size: 11.5px; font-weight: 800; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .mb-flow { flex-direction: column; }
+}

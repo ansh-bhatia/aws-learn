@@ -1,0 +1,123 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.iam-title { color: #ff6b7a; border-bottom: 1px solid rgba(221,52,76,0.3); }
+.iam-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.iam-intro code, .iam-note code, .iam-ar-trust code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ff9eaa; font-size: 11.5px; }
+.iam-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(221,52,76,0.08); border: 1px solid rgba(221,52,76,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.iam-switch { display: flex; gap: 10px; margin-bottom: 16px; }
+.iam-switch-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; transition: all 0.2s; }
+.iam-switch-btn.active { border-color: #dd344c; color: #ff6b7a; background: rgba(221,52,76,0.1); }
+.iam-switch-btn.active.king { border-color: #e3b341; color: #e8cd8a; background: rgba(227,179,65,0.1); }
+
+/* ─── 1. ROOT vs IAM ───────────────────────────────── */
+.iam-rootview { display: flex; gap: 16px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 18px; }
+.iam-rootview.king { border-color: rgba(227,179,65,0.3); }
+.iam-rootview.scoped { border-color: rgba(221,52,76,0.3); }
+.iam-rootview-icon { font-size: 44px; }
+.iam-rootview-title { font-size: 15px; font-weight: 800; color: #e6edf3; margin-bottom: 8px; }
+.iam-rootview-list { padding-left: 18px; margin: 0; }
+.iam-rootview-list li { font-size: 12px; color: #e6edf3; margin-bottom: 6px; line-height: 1.5; }
+
+/* ─── 2. POLICY TYPES ──────────────────────────────── */
+.iam-pol-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.iam-pol-tab { flex: 1; min-width: 140px; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.iam-pol-tab.active { border-color: var(--pc); color: #e6edf3; background: color-mix(in srgb, var(--pc) 12%, #21262d); }
+.iam-pol-detail { background: #161b22; border: 1px solid color-mix(in srgb, var(--pc) 30%, transparent); border-left: 4px solid var(--pc); border-radius: 10px; padding: 16px 18px; }
+.iam-pol-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.iam-pol-name { font-size: 15px; font-weight: 800; color: var(--pc); }
+.iam-pol-tags { display: flex; gap: 6px; }
+.iam-pol-tags span { font-size: 10px; font-weight: 700; color: #b9c2cc; background: rgba(255,255,255,0.05); border-radius: 5px; padding: 2px 8px; }
+.iam-pol-pts { padding-left: 18px; margin: 0; }
+.iam-pol-pts li { font-size: 12px; color: #e6edf3; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── 3. POLICY EVALUATION ─────────────────────────── */
+.iam-eval-toggles { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.iam-eval-toggle { flex: 1; min-width: 220px; padding: 12px; border-radius: 9px; cursor: pointer; font-size: 12px; text-align: left; background: #21262d; border: 2px solid rgba(255,255,255,0.08); color: #e6edf3; }
+.iam-eval-toggle.on.allow { border-color: #3fb950; background: rgba(63,185,80,0.1); }
+.iam-eval-toggle.on.deny { border-color: #f85149; background: rgba(248,81,73,0.1); }
+.iam-eval-flow { display: flex; align-items: stretch; gap: 6px; margin-bottom: 14px; }
+.iam-eval-step { flex: 1; font-size: 11px; font-weight: 700; color: #8b949e; background: #161b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; padding: 10px; text-align: center; transition: all 0.2s; }
+.iam-eval-step span { display: block; font-size: 10px; font-weight: 500; color: #b9c2cc; margin-top: 4px; }
+.iam-eval-step.hit.deny { border-color: #f85149; color: #f0867f; background: rgba(248,81,73,0.1); }
+.iam-eval-step.hit.allow { border-color: #3fb950; color: #5fc943; background: rgba(63,185,80,0.1); }
+.iam-eval-step.skip { opacity: 0.4; }
+.iam-eval-arrow { display: flex; align-items: center; color: #8b949e; }
+.iam-eval-result { font-size: 13px; line-height: 1.5; border-radius: 9px; padding: 12px 14px; }
+.iam-eval-result.allow { color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.iam-eval-result.deny { color: #f0867f; background: rgba(248,81,73,0.1); border: 1px solid rgba(248,81,73,0.3); }
+
+/* ─── 4. ENTITIES ──────────────────────────────────── */
+.iam-ent-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.iam-ent-tab { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.iam-ent-tab.active { border-color: #dd344c; color: #ff6b7a; background: rgba(221,52,76,0.1); }
+.iam-ent-body { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px 18px; }
+.iam-ent-body p { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin: 0 0 10px; }
+.iam-ent-body ul { padding-left: 18px; margin: 0; }
+.iam-ent-body li { font-size: 12px; color: #e6edf3; margin-bottom: 6px; line-height: 1.45; }
+.iam-group-viz { margin: 12px 0; }
+.iam-group-box { background: rgba(221,52,76,0.08); border: 1px solid rgba(221,52,76,0.3); border-radius: 10px; padding: 12px; }
+.iam-group-name { font-size: 12px; font-weight: 800; color: #ff6b7a; text-align: center; margin-bottom: 10px; }
+.iam-group-name small { font-weight: 500; color: #8b949e; }
+.iam-group-members { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.iam-group-members span { font-size: 11px; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 5px 10px; }
+
+/* ─── 5. ROLE USE CASES ────────────────────────────── */
+.iam-uc-tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-bottom: 16px; }
+.iam-uc-tab { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 5px; border-radius: 9px; cursor: pointer; background: #21262d; border: 2px solid rgba(255,255,255,0.06); color: #8b949e; transition: all 0.2s; }
+.iam-uc-tab.active { border-color: var(--uc); color: #e6edf3; background: color-mix(in srgb, var(--uc) 12%, #21262d); }
+.iam-uc-icon { font-size: 20px; }
+.iam-uc-name { font-size: 9.5px; font-weight: 700; text-align: center; line-height: 1.2; }
+.iam-uc-detail { background: #161b22; border: 1px solid color-mix(in srgb, var(--uc) 30%, transparent); border-left: 4px solid var(--uc); border-radius: 10px; padding: 16px 18px; }
+.iam-uc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.iam-uc-big { font-size: 28px; }
+.iam-uc-title { font-size: 15px; font-weight: 800; color: var(--uc); }
+.iam-uc-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; }
+
+/* ─── 6. ASSUME ROLE ───────────────────────────────── */
+.iam-ar-stage { display: flex; align-items: stretch; gap: 8px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.iam-ar-acct { flex: 1; border: 1px dashed rgba(255,255,255,0.15); border-radius: 10px; padding: 12px; text-align: center; }
+.iam-ar-acct-name { font-size: 10.5px; font-weight: 800; color: #8b949e; margin-bottom: 8px; }
+.iam-ar-user, .iam-ar-role, .iam-ar-res { font-size: 11px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; padding: 7px; margin-bottom: 6px; }
+.iam-ar-role.active { border-color: #dd344c; background: rgba(221,52,76,0.15); color: #ff6b7a; }
+.iam-ar-link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 90px; }
+.iam-ar-sts { font-size: 10px; font-weight: 800; color: #8b949e; background: rgba(255,255,255,0.06); border-radius: 5px; padding: 2px 8px; }
+.iam-ar-arrow { font-size: 10px; font-weight: 700; color: #8b949e; }
+.iam-ar-link.on .iam-ar-arrow { color: #5fc943; }
+.iam-ar-link.on .iam-ar-sts { color: #ff6b7a; background: rgba(221,52,76,0.15); }
+.iam-ar-btn { padding: 9px 18px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #dd344c; border: none; color: #fff; margin-bottom: 12px; }
+.iam-ar-btn:hover { filter: brightness(1.1); }
+.iam-ar-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.iam-ar-status { font-size: 12px; line-height: 1.5; border-radius: 9px; padding: 11px 13px; margin-bottom: 12px; color: #b9c2cc; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+.iam-ar-status.on { color: #5fc943; background: rgba(63,185,80,0.08); border-color: rgba(63,185,80,0.25); }
+.iam-ar-trust { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; }
+
+/* ─── 7. ROOT BEST PRACTICES ───────────────────────── */
+.iam-mfa-demo { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; margin-bottom: 16px; }
+.iam-mfa-toggle-row { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; font-size: 12px; color: #b9c2cc; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.iam-mfa-switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 5px 12px 5px 5px; font-size: 12px; font-weight: 700; color: #e6edf3; }
+.iam-mfa-knob { width: 16px; height: 16px; border-radius: 50%; background: #8b949e; transition: all 0.2s; }
+.iam-mfa-switch.on { border-color: #3fb950; }
+.iam-mfa-switch.on .iam-mfa-knob { background: #5fc943; transform: translateX(2px); }
+.iam-login-sim { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.iam-login-title { font-size: 12px; font-weight: 800; color: #ff6b7a; margin-bottom: 10px; }
+.iam-login-steps { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.iam-login-step { font-size: 11.5px; color: #8b949e; background: #21262d; border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; padding: 7px 10px; }
+.iam-login-step.done { color: #e6edf3; }
+.iam-login-step.current { border-color: #dd344c; color: #ff6b7a; }
+
+.iam-bp-list { display: flex; flex-direction: column; gap: 6px; }
+.iam-bp-title { font-size: 12px; font-weight: 800; color: #8b949e; margin-bottom: 4px; }
+.iam-bp-item { display: flex; gap: 12px; background: #161b22; border: 1px solid rgba(255,255,255,0.05); border-radius: 7px; padding: 9px 12px; }
+.iam-bp-t { font-size: 11.5px; font-weight: 700; color: #ff6b7a; min-width: 150px; }
+.iam-bp-d { font-size: 11.5px; color: #b9c2cc; line-height: 1.4; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .iam-uc-tabs { grid-template-columns: 1fr 1fr; }
+  .iam-eval-flow { flex-direction: column; }
+  .iam-eval-arrow { transform: rotate(90deg); justify-content: center; }
+  .iam-mfa-demo { grid-template-columns: 1fr; }
+  .iam-ar-stage { flex-direction: column; }
+  .iam-bp-t { min-width: 110px; }
+}

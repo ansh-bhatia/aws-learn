@@ -1,0 +1,110 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.rds-title { color: #5aa0e6; border-bottom: 1px solid rgba(46,115,184,0.3); }
+.rds-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.rds-intro code, .rds-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11.5px; }
+.rds-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+
+/* ─── 1. RELATIONAL TABLES ─────────────────────────── */
+.rds-rel-tables { display: flex; align-items: center; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.rds-rel-table { background: #161b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; overflow: hidden; min-width: 150px; }
+.rds-rel-th { font-size: 12px; font-weight: 800; color: #5aa0e6; background: rgba(46,115,184,0.12); padding: 7px 10px; text-align: center; }
+.rds-rel-row { display: grid; grid-template-columns: 1fr 1.2fr; font-size: 11px; }
+.rds-rel-row > span { padding: 6px 10px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rds-rel-row.head > span { font-size: 9.5px; color: #8b949e; font-weight: 700; background: rgba(255,255,255,0.03); }
+.rds-rel-row.lit { background: rgba(46,115,184,0.18); cursor: default; }
+.rds-rel-link { font-size: 16px; color: #5aa0e6; }
+
+/* ─── 2. DEPLOYMENT COMPARISON ─────────────────────── */
+.rds-dep-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.rds-dep-tab { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds-dep-tab.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.rds-dep-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.rds-dep-row { display: grid; grid-template-columns: 1fr 1.6fr; }
+.rds-dep-row > span { padding: 10px 12px; font-size: 12px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.rds-dep-feat { color: #8b949e !important; font-weight: 600; background: #161b22; }
+
+/* ─── 3. AVAILABILITY (3D) ─────────────────────────── */
+.rds-av-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.rds-av-tab { flex: 1; min-width: 140px; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds-av-tab.active { border-color: var(--ac); color: #e6edf3; background: color-mix(in srgb, var(--ac) 12%, #21262d); }
+.rds-av-scene { display: flex; align-items: center; justify-content: center; gap: 20px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 22px; margin-bottom: 14px; perspective: 800px; min-height: 130px; flex-wrap: wrap; }
+.rds-av-db { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 16px; border-radius: 10px; border: 2px solid var(--ac);
+  background: linear-gradient(155deg, #2b3340, #21262d); box-shadow: 0 8px 20px rgba(0,0,0,0.4); transform: rotateX(6deg); transition: all 0.3s; }
+.rds-av-db.primary, .rds-av-db.writer { box-shadow: 0 8px 24px color-mix(in srgb, var(--ac) 35%, transparent); }
+.rds-av-db.standby { opacity: 0.7; }
+.rds-av-db-icon { font-size: 28px; }
+.rds-av-db-role { font-size: 9px; font-weight: 800; color: var(--ac); letter-spacing: 0.5px; }
+.rds-av-db-az { font-size: 9px; color: #8b949e; }
+.rds-av-repl { position: absolute; right: -28px; top: 50%; transform: translateY(-50%); font-size: 8px; color: #8b949e; white-space: nowrap; }
+.rds-av-detail { background: #161b22; border-left: 4px solid var(--ac); border-radius: 10px; padding: 14px 16px; }
+.rds-av-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.rds-av-stats div { font-size: 11.5px; color: #e6edf3; background: rgba(255,255,255,0.04); border-radius: 7px; padding: 7px 10px; }
+.rds-av-stats span { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+.rds-av-desc { font-size: 12px; color: #b9c2cc; line-height: 1.55; }
+
+/* ─── 4. RPO/RTO ───────────────────────────────────── */
+.rds-slider-row { display: grid; grid-template-columns: 1.2fr 2fr auto; align-items: center; gap: 12px; margin-bottom: 12px; font-size: 12px; color: #e6edf3; }
+.rds-slider-row input { accent-color: #2e73b8; }
+.rds-slider-row strong { color: #5aa0e6; min-width: 70px; text-align: right; }
+.rds-rec { background: #161b22; border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent); border-left: 4px solid var(--rc); border-radius: 10px; padding: 14px 16px; margin-top: 6px; }
+.rds-rec-label { font-size: 10px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+.rds-rec-name { font-size: 16px; font-weight: 800; color: var(--rc); margin: 4px 0 6px; }
+.rds-rec-why { font-size: 12px; color: #b9c2cc; line-height: 1.5; }
+
+/* ─── 5. INSTANCE CLASS ────────────────────────────── */
+.rds-class-builder { display: flex; align-items: center; justify-content: center; gap: 2px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 20px; margin-bottom: 14px; font-family: "SF Mono", Consolas, monospace; }
+.rds-class-part { font-size: 24px; font-weight: 800; padding: 4px 8px; border-radius: 7px; }
+.rds-class-part.fixed { color: #8b949e; }
+.rds-class-part.fam { color: var(--fc); background: color-mix(in srgb, var(--fc) 18%, transparent); }
+.rds-class-part.gen { color: #e3b341; }
+.rds-class-part.size { color: #5aa0e6; background: rgba(46,115,184,0.15); }
+.rds-class-dot { font-size: 24px; color: #8b949e; }
+.rds-class-controls { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.rds-class-ctrl { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 10px; font-size: 11.5px; color: #8b949e; }
+.rds-class-btns { display: flex; gap: 6px; }
+.rds-class-btns.wrap { flex-wrap: wrap; }
+.rds-class-btns button { padding: 6px 11px; border-radius: 7px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.1); color: #8b949e; font-family: "SF Mono", Consolas, monospace; }
+.rds-class-btns button.on { border-color: var(--fc, #2e73b8); color: #e6edf3; background: rgba(46,115,184,0.15); }
+.rds-class-explain { font-size: 12px; color: #e6edf3; line-height: 1.55; background: #161b22; border-left: 4px solid var(--fc); border-radius: 9px; padding: 12px 14px; }
+
+/* ─── 6. STORAGE ───────────────────────────────────── */
+.rds-stor-bar { position: relative; height: 36px; background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; overflow: hidden; margin-bottom: 6px; }
+.rds-stor-used { height: 100%; background: linear-gradient(90deg, #2e73b8, #5aa0e6); display: flex; align-items: center; padding-left: 10px; font-size: 11px; font-weight: 700; color: #fff; transition: width 0.5s; white-space: nowrap; }
+.rds-stor-used.warn { background: linear-gradient(90deg, #e3b341, #f85149); }
+.rds-stor-threshold { position: absolute; top: -4px; bottom: -4px; width: 2px; background: #fff; }
+.rds-stor-threshold span { position: absolute; top: -16px; left: -10px; font-size: 9px; color: #fff; }
+.rds-stor-labels { display: flex; justify-content: space-between; font-size: 11px; color: #8b949e; margin-bottom: 14px; }
+.rds-stor-labels strong { color: #5aa0e6; }
+.rds-stor-controls { display: flex; gap: 10px; margin-bottom: 12px; }
+.rds-stor-btn { padding: 9px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #2e73b8; border: none; color: #fff; }
+.rds-stor-btn.ghost { background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.rds-stor-msg { font-size: 12px; line-height: 1.5; border-radius: 9px; padding: 11px 13px; }
+.rds-stor-msg.good { color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.rds-stor-msg.warn { color: #e8cd8a; background: rgba(227,179,65,0.1); border: 1px solid rgba(227,179,65,0.3); }
+
+/* ─── 7. CREDENTIALS ───────────────────────────────── */
+.rds-cred-switch { display: flex; gap: 10px; margin-bottom: 14px; }
+.rds-cred-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds-cred-btn.active.good { border-color: #3fb950; color: #5fc943; background: rgba(63,185,80,0.1); }
+.rds-cred-btn.active.bad { border-color: #f85149; color: #f0867f; background: rgba(248,81,73,0.08); }
+.rds-cred-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px; margin-bottom: 12px; }
+.rds-cred-node { text-align: center; font-size: 12px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; line-height: 1.4; }
+.rds-cred-node small { color: #8b949e; font-weight: 500; }
+.rds-cred-node.sm { border-color: #3fb950; }
+.rds-cred-node.db { border-color: #2e73b8; }
+.rds-cred-arrow { font-size: 10px; font-weight: 700; color: #8b949e; text-align: center; }
+.rds-cred-arrow.bad { color: #f0867f; }
+.rds-cred-verdict { font-size: 12px; line-height: 1.55; border-radius: 9px; padding: 12px 14px; }
+.rds-cred-verdict.good { color: #5fc943; background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.25); }
+.rds-cred-verdict.bad { color: #f0867f; background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.25); }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .rds-rel-tables { flex-direction: column; }
+  .rds-dep-tabs, .rds-cred-switch, .rds-av-tabs { flex-direction: column; }
+  .rds-av-stats { grid-template-columns: 1fr; }
+  .rds-class-ctrl { grid-template-columns: 1fr; }
+  .rds-cred-flow { flex-direction: column; }
+}

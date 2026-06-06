@@ -1,0 +1,221 @@
+/* ─── shared base (mirrors StorageVisuals.css) ─────── */
+.sv-card {
+  background: #1c2128;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 12px;
+  padding: 24px;
+  margin: 28px 0;
+}
+.sv-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #3F8624;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(63,134,36,0.2);
+}
+
+/* ─── 1. EBS vs EFS SHARED ─────────────────────────── */
+.efs-mode-switch { display: flex; gap: 10px; margin-bottom: 16px; }
+.efs-mode-btn {
+  flex: 1; padding: 10px; border-radius: 9px; cursor: pointer;
+  background: #21262d; border: 2px solid rgba(255,255,255,0.07);
+  color: #8b949e; font-size: 13px; font-weight: 700; transition: all 0.2s;
+}
+.efs-mode-btn.active.bad  { border-color: #f85149; color: #f85149; background: rgba(248,81,73,0.08); }
+.efs-mode-btn.active.good { border-color: #3fb950; color: #3fb950; background: rgba(63,185,80,0.08); }
+
+.efs-controls {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  font-size: 12px; color: #e6edf3; margin-bottom: 18px;
+}
+.efs-controls input[type=range] { flex: 1; min-width: 120px; accent-color: #3F8624; }
+.efs-update-btn {
+  padding: 7px 14px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px;
+  background: #3F8624; color: #fff; border: none;
+}
+.efs-update-btn:hover { filter: brightness(1.15); }
+
+.efs-stage {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px; padding: 22px 18px; perspective: 1000px;
+}
+.efs-instances-row {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+}
+.efs-node { display: flex; flex-direction: column; align-items: center; }
+.efs-ec2-box {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: linear-gradient(145deg, #2b3340, #21262d);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+  padding: 10px 12px; box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+  transform: rotateX(8deg); transition: transform 0.2s;
+}
+.efs-ec2-box:hover { transform: rotateX(0deg) translateY(-3px); }
+.efs-ec2-icon { font-size: 24px; }
+.efs-ec2-label { font-size: 11px; font-weight: 700; color: #e6edf3; }
+.efs-az-tag { font-size: 9px; color: #8b949e; background: rgba(255,255,255,0.05); border-radius: 4px; padding: 1px 5px; }
+
+.efs-link.vertical { width: 2px; height: 18px; background: rgba(255,255,255,0.15); }
+.efs-link.to-shared { width: 2px; height: 36px; background: linear-gradient(#3fb950, transparent); }
+.efs-link.to-shared.flow { animation: efs-pulse 0.8s linear infinite; }
+@keyframes efs-pulse { 0%{opacity:0.3} 50%{opacity:1} 100%{opacity:0.3} }
+
+.efs-vol {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  border-radius: 9px; padding: 8px 10px; position: relative;
+  border: 1px solid rgba(248,81,73,0.4); background: rgba(248,81,73,0.06);
+  transform: rotateX(8deg);
+}
+.efs-vol-label { font-size: 10px; font-weight: 700; color: #f85149; }
+.efs-vol-sub { font-size: 9px; color: #8b949e; }
+.efs-vol.manual-update { animation: efs-shake 0.3s ease-in-out 3; border-color: #e3b341; }
+@keyframes efs-shake { 0%,100%{transform:rotateX(8deg) translateX(0)} 25%{transform:rotateX(8deg) translateX(-3px)} 75%{transform:rotateX(8deg) translateX(3px)} }
+.efs-update-flag {
+  position: absolute; top: -16px; font-size: 8px; font-weight: 700; color: #e3b341;
+  background: rgba(227,179,65,0.15); border-radius: 4px; padding: 1px 4px; white-space: nowrap;
+}
+
+.efs-shared-vol {
+  display: flex; align-items: center; gap: 14px; justify-content: center;
+  margin: 26px auto 0; max-width: 480px;
+  background: linear-gradient(145deg, #1f3a26, #18261c);
+  border: 2px solid rgba(63,185,80,0.4); border-radius: 12px;
+  padding: 16px 20px; box-shadow: 0 10px 26px rgba(63,185,80,0.12);
+  transform: rotateX(4deg); transition: all 0.3s;
+}
+.efs-shared-vol.synced { border-color: #3fb950; box-shadow: 0 10px 34px rgba(63,185,80,0.3); }
+.efs-shared-icon { font-size: 34px; }
+.efs-shared-title { font-size: 13px; font-weight: 800; color: #3fb950; }
+.efs-shared-sub { font-size: 11px; color: #b9c2cc; margin-top: 2px; }
+
+.efs-verdict {
+  margin-top: 18px; font-size: 12.5px; line-height: 1.6; color: #e6edf3;
+  border-radius: 9px; padding: 14px 16px;
+}
+.efs-verdict.ebs { background: rgba(248,81,73,0.07); border: 1px solid rgba(248,81,73,0.25); }
+.efs-verdict.efs { background: rgba(63,185,80,0.07); border: 1px solid rgba(63,185,80,0.25); }
+
+/* ─── 2. USE CASES ─────────────────────────────────── */
+.efs-uc-tabs { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.efs-uc-tab {
+  flex: 1; min-width: 150px; display: flex; align-items: center; gap: 8px;
+  padding: 12px; border-radius: 9px; cursor: pointer; text-align: left;
+  background: #21262d; border: 2px solid rgba(255,255,255,0.06);
+  color: #8b949e; font-size: 12px; font-weight: 700; transition: all 0.2s;
+}
+.efs-uc-tab.active { border-color: var(--uc); color: var(--uc); background: color-mix(in srgb, var(--uc) 8%, #21262d); }
+.efs-uc-tab-icon { font-size: 20px; }
+
+.efs-uc-detail {
+  background: #161b22; border: 1px solid color-mix(in srgb, var(--uc) 30%, transparent);
+  border-left: 4px solid var(--uc); border-radius: 10px; padding: 18px 20px;
+}
+.efs-uc-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.efs-uc-big-icon { font-size: 38px; }
+.efs-uc-title { font-size: 16px; font-weight: 800; color: var(--uc); }
+.efs-uc-summary { font-size: 12px; color: #8b949e; margin-top: 2px; }
+.efs-uc-points { padding-left: 18px; margin: 0; }
+.efs-uc-points li { font-size: 12.5px; color: #e6edf3; margin-bottom: 7px; line-height: 1.5; }
+
+/* ─── 3. CONFIG EXPLORER ───────────────────────────── */
+.efs-cfg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.efs-cfg-block {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 16px;
+}
+.efs-cfg-label { font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.efs-toggle-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.efs-toggle-row.wrap { flex-wrap: wrap; }
+.efs-toggle {
+  padding: 7px 12px; border-radius: 7px; cursor: pointer; font-size: 11.5px; font-weight: 700;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.08); color: #8b949e; transition: all 0.2s;
+}
+.efs-toggle.on { background: rgba(63,134,36,0.15); border-color: #3F8624; color: #5fc943; }
+
+.efs-switch {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px; padding: 4px 12px 4px 4px; margin-bottom: 10px;
+}
+.efs-switch-knob {
+  width: 16px; height: 16px; border-radius: 50%; background: #8b949e; transition: all 0.2s;
+}
+.efs-switch.on { border-color: #3F8624; }
+.efs-switch.on .efs-switch-knob { background: #5fc943; transform: translateX(2px); }
+.efs-switch-text { font-size: 11.5px; font-weight: 700; color: #e6edf3; }
+
+.efs-cfg-explain { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; }
+.efs-hotcold {
+  display: flex; align-items: center; gap: 8px; margin-top: 12px; flex-wrap: wrap;
+  font-size: 10.5px;
+}
+.efs-hc { padding: 5px 8px; border-radius: 6px; color: #e6edf3; }
+.efs-hc.hot { background: rgba(240,136,62,0.12); border: 1px solid rgba(240,136,62,0.3); }
+.efs-hc.cold { background: rgba(46,115,184,0.12); border: 1px solid rgba(46,115,184,0.3); }
+.efs-hc-arrow { font-size: 10px; color: #8b949e; font-weight: 700; }
+
+/* ─── 4. THROUGHPUT vs PERFORMANCE ─────────────────── */
+.efs-rest-analogy { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.efs-rest-side {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 16px; text-align: center;
+}
+.efs-rest-head { font-size: 14px; font-weight: 800; margin-bottom: 4px; }
+.efs-rest-sub { font-size: 11px; color: #8b949e; margin-bottom: 12px; line-height: 1.4; }
+.efs-dishes { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 56px; align-items: center; }
+.efs-dish { font-size: 20px; animation: efs-pop 0.4s ease backwards; }
+@keyframes efs-pop { from{opacity:0; transform:scale(0.3)} to{opacity:1; transform:scale(1)} }
+.efs-rest-metric { font-size: 12px; font-weight: 700; margin-top: 10px; }
+
+.efs-tp-note {
+  font-size: 12px; color: #e6edf3; line-height: 1.5; background: rgba(63,134,36,0.08);
+  border: 1px solid rgba(63,134,36,0.25); border-radius: 9px; padding: 12px 14px; margin-bottom: 16px;
+}
+.efs-tp-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.efs-tp-group {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px;
+}
+
+/* ─── 5. LAB WALKTHROUGH ───────────────────────────── */
+.efs-lab-timeline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.efs-lab-step {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+  background: #21262d; border: 2px solid rgba(255,255,255,0.1); transition: all 0.2s;
+}
+.efs-lab-step-icon { font-size: 18px; filter: grayscale(0.6); }
+.efs-lab-step.active { border-color: #3F8624; background: rgba(63,134,36,0.15); transform: scale(1.15); }
+.efs-lab-step.active .efs-lab-step-icon { filter: none; }
+.efs-lab-step.done { border-color: #3fb950; }
+.efs-lab-step.done .efs-lab-step-icon { filter: none; }
+.efs-lab-connector { position: absolute; left: 40px; width: calc(100% + 0px); height: 2px; background: rgba(255,255,255,0.1); z-index: -1; }
+.efs-lab-step.done .efs-lab-connector { background: rgba(63,185,80,0.5); }
+
+.efs-lab-detail {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px 20px;
+}
+.efs-lab-detail-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.efs-lab-detail-icon { font-size: 24px; }
+.efs-lab-detail-title { font-size: 15px; font-weight: 800; color: #5fc943; }
+.efs-lab-detail-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; margin-bottom: 12px; }
+.efs-lab-code {
+  background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px;
+  padding: 12px 14px; overflow-x: auto; margin: 0 0 12px;
+}
+.efs-lab-code code { font-family: "SF Mono", Consolas, monospace; font-size: 11.5px; color: #79c0ff; white-space: pre; line-height: 1.6; }
+.efs-lab-tip { font-size: 11.5px; color: #e3b341; background: rgba(227,179,65,0.08); border-radius: 7px; padding: 9px 12px; line-height: 1.5; }
+
+.efs-lab-nav { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+.efs-lab-btn {
+  padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1); color: #e6edf3;
+}
+.efs-lab-btn.primary { background: #3F8624; border-color: #3F8624; color: #fff; }
+.efs-lab-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.efs-lab-progress { font-size: 12px; color: #8b949e; font-weight: 700; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 720px) {
+  .efs-cfg-grid, .efs-tp-controls, .efs-rest-analogy { grid-template-columns: 1fr; }
+}

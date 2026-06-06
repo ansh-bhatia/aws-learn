@@ -1,0 +1,75 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; padding-bottom: 10px; }
+.v3-title { color: #b88cff; border-bottom: 1px solid rgba(140,79,255,0.25); }
+.v3-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.v3-intro code, .v3-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #c9a3ff; font-size: 11.5px; }
+.v3-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; background: rgba(140,79,255,0.08); border: 1px solid rgba(140,79,255,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 12px; }
+.v3-note.warn { background: rgba(227,179,65,0.08); border-color: rgba(227,179,65,0.25); color: #e8cd8a; }
+
+.v3-switch { display: flex; gap: 10px; margin-bottom: 16px; }
+.v3-switch-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; transition: all 0.2s; }
+.v3-switch-btn.active { border-color: #8c4fff; color: #b88cff; background: rgba(140,79,255,0.1); }
+.v3-switch-btn.active.good { border-color: #3fb950; color: #5fc943; background: rgba(63,185,80,0.1); }
+.v3-switch-btn.active.bad { border-color: #f85149; color: #f0867f; background: rgba(248,81,73,0.08); }
+
+/* ─── 1. DHCP ──────────────────────────────────────── */
+.v3-dhcp-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.v3-dhcp-row { display: grid; grid-template-columns: 1fr 1.6fr 0.9fr; }
+.v3-dhcp-row > span { padding: 10px 12px; font-size: 12px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.v3-dhcp-row.head > span { font-weight: 800; background: #161b22; color: #8b949e; font-size: 11.5px; }
+.v3-dhcp-key { color: #8b949e !important; font-weight: 600; }
+.v3-dhcp-val { font-family: "SF Mono", Consolas, monospace; font-size: 11px !important; color: #c9a3ff !important; }
+.v3-dhcp-lock { color: #f0867f !important; font-weight: 700; }
+.v3-dhcp-ok { color: #5fc943 !important; font-weight: 700; }
+
+/* ─── 2. FLOW LOG ──────────────────────────────────── */
+.v3-fl-controls { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.v3-fl-group { flex: 1; min-width: 200px; }
+.v3-fl-label { font-size: 11px; font-weight: 700; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.v3-fl-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.v3-fl-btn { padding: 7px 11px; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.08); color: #8b949e; }
+.v3-fl-btn.on { border-color: #8c4fff; color: #b88cff; background: rgba(140,79,255,0.12); }
+
+.v3-fl-dest { display: flex; align-items: center; gap: 12px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.v3-fl-dest-icon { font-size: 26px; }
+.v3-fl-dest-name { font-size: 13px; font-weight: 800; color: #e6edf3; }
+.v3-fl-delay { font-size: 10px; color: #8b949e; font-weight: 600; margin-left: 6px; }
+.v3-fl-dest-note { font-size: 11.5px; color: #b9c2cc; margin-top: 2px; }
+
+.v3-fl-record { display: flex; flex-wrap: wrap; gap: 6px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; margin: 8px 0 0; }
+.v3-fl-field { display: flex; flex-direction: column; border-radius: 6px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); }
+.v3-fl-fk { font-size: 8.5px; color: #8b949e; background: rgba(255,255,255,0.04); padding: 2px 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+.v3-fl-fv { font-size: 11px; color: #c9a3ff; padding: 3px 6px; font-family: "SF Mono", Consolas, monospace; }
+.v3-fl-field.accept .v3-fl-fv { color: #5fc943; }
+.v3-fl-field.reject .v3-fl-fv { color: #f0867f; }
+
+/* ─── 3. PREFIX LIST ───────────────────────────────── */
+.v3-pl-before, .v3-pl-after { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+.v3-pl-group { background: #21262d; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+.v3-pl-group-name { font-size: 11.5px; font-weight: 700; color: #79c0ff; margin-bottom: 6px; }
+.v3-pl-cidrs { display: flex; flex-wrap: wrap; gap: 5px; }
+.v3-pl-cidr { font-size: 10px; font-family: "SF Mono", Consolas, monospace; color: #b9c2cc; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 5px; padding: 2px 7px; }
+.v3-pl-cidr.added { color: #5fc943; border-color: rgba(63,185,80,0.4); background: rgba(63,185,80,0.1); }
+.v3-pl-pain { font-size: 11.5px; color: #f0867f; margin-top: 8px; }
+.v3-pl-gain { font-size: 11.5px; color: #5fc943; margin-top: 8px; }
+
+.v3-pl-list { background: rgba(140,79,255,0.1); border: 1px solid rgba(140,79,255,0.35); border-radius: 8px; padding: 10px; }
+.v3-pl-list-name { font-size: 11.5px; font-weight: 700; color: #c9a3ff; margin-bottom: 6px; }
+.v3-pl-arrows { text-align: center; font-size: 11px; color: #8b949e; margin: 8px 0; }
+.v3-pl-refs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.v3-pl-ref { font-size: 11px; font-weight: 600; color: #79c0ff; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 5px 9px; }
+
+.v3-pl-add-btn { width: 100%; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px dashed rgba(140,79,255,0.4); color: #b88cff; margin-bottom: 14px; }
+
+.v3-pl-types { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.v3-pl-type { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.v3-pl-type-h { font-size: 13px; font-weight: 800; color: #b88cff; margin-bottom: 8px; }
+.v3-pl-type ul { padding-left: 16px; margin: 0; }
+.v3-pl-type li { font-size: 11.5px; color: #e6edf3; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .v3-dhcp-row { grid-template-columns: 1fr 1.4fr 0.8fr; }
+  .v3-pl-types { grid-template-columns: 1fr; }
+}

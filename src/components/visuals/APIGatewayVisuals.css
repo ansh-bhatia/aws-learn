@@ -1,0 +1,73 @@
+/* ─── shared base (purple Networking theme) ────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.apig-title { color: #b18cff; border-bottom: 1px solid rgba(140,79,255,0.3); }
+.apig-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.apig-intro code, .apig-detail code, .apig-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #c8a6ff; font-size: 11.5px; }
+.apig-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(140,79,255,0.1); border: 1px solid rgba(140,79,255,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.apig-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.apig-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.apig-toggle, .apig-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.apig-toggle button, .apig-tab { flex: 1; min-width: 110px; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.apig-toggle button.active, .apig-tab.active { border-color: #8C4FFF; color: #b18cff; background: rgba(140,79,255,0.1); }
+.apig-detail { background: #161b22; border-left: 4px solid #8C4FFF; border-radius: 10px; padding: 13px 15px; }
+.apig-detail b { font-size: 13px; color: #b18cff; }
+.apig-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.apig-detail ul { padding-left: 18px; margin: 8px 0 0; }
+.apig-detail li { font-size: 11.5px; color: #b9c2cc; margin-bottom: 5px; line-height: 1.45; }
+
+/* ─── 2. SCALING ───────────────────────────────────── */
+.apig-scale-grid { display: flex; gap: 12px; justify-content: center; align-items: flex-end; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 18px; }
+.apig-scale-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.apig-scale-name { font-size: 11px; font-weight: 700; color: #c9d1d9; }
+.apig-scale-bar-wrap { width: 36px; height: 110px; background: #161b22; border-radius: 6px; display: flex; align-items: flex-end; overflow: hidden; }
+.apig-scale-bar { width: 100%; background: linear-gradient(180deg, #b18cff, #8C4FFF); border-radius: 6px 6px 0 0; transition: height 0.5s; }
+.apig-scale-num { font-size: 10.5px; font-weight: 700; color: #b18cff; }
+
+/* ─── 3. SYNC/ASYNC ────────────────────────────────── */
+.apig-syncflow { display: flex; align-items: center; justify-content: center; gap: 12px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 20px; margin-bottom: 12px; flex-wrap: wrap; }
+.apig-sf-node { font-size: 12.5px; font-weight: 800; color: #e6edf3; background: #161b22; border: 2px solid rgba(140,79,255,0.3); border-radius: 10px; padding: 14px 18px; }
+.apig-sf-arrow { display: flex; flex-direction: column; align-items: center; font-size: 12px; font-weight: 700; color: #b18cff; }
+.apig-sf-arrow small { font-size: 10px; color: #8b949e; margin-top: 4px; }
+
+/* ─── 4. GATEWAY DIAGRAM ───────────────────────────── */
+.apig-gw-diagram { display: flex; align-items: center; justify-content: center; gap: 10px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 12px; flex-wrap: wrap; }
+.apig-gw-clients, .apig-gw-backends { display: flex; flex-direction: column; gap: 6px; }
+.apig-gw-chip { font-size: 11px; font-weight: 700; color: #c9d1d9; background: #161b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; padding: 7px 11px; text-align: center; }
+.apig-gw-chip.be { border-color: rgba(140,79,255,0.3); }
+.apig-gw-arrow { font-size: 20px; color: #8C4FFF; }
+.apig-gw-core { font-size: 13px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #8C4FFF, #5a2db8); border-radius: 12px; padding: 18px 16px; text-align: center; box-shadow: 0 0 18px rgba(140,79,255,0.4); }
+.apig-gw-core small { display: block; font-size: 9.5px; font-weight: 500; opacity: 0.85; margin-top: 4px; }
+
+/* ─── 6. REST vs HTTP table ────────────────────────── */
+.apig-rh-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.apig-rh-row { display: grid; grid-template-columns: 1.8fr 1fr 1fr; }
+.apig-rh-row > span { padding: 8px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.35; }
+.apig-rh-row.head > span { font-weight: 800; background: #161b22; }
+.apig-rh-row.head .rest { color: #b18cff; }
+.apig-rh-row.head .http { color: #3fb950; }
+.apig-rh-row > span:not(:first-child) { text-align: center; }
+.apig-rh-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── 7. WEBSOCKET ─────────────────────────────────── */
+.apig-ws-stage { display: flex; align-items: center; justify-content: center; gap: 12px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 20px 12px; flex-wrap: wrap; }
+.apig-ws-node { font-size: 12.5px; font-weight: 800; color: #e6edf3; background: #161b22; border: 2px solid rgba(140,79,255,0.3); border-radius: 10px; padding: 14px 16px; }
+.apig-ws-link { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 160px; }
+.apig-ws-msg { font-size: 11px; font-weight: 700; color: #b18cff; }
+.apig-ws-msg.both { color: #f0883e; }
+.apig-ws-closed { font-size: 10px; color: #ff7b72; }
+.apig-ws-open { font-size: 10px; color: #9be59b; }
+.apig-ws-link.ws { border-top: 2px dashed rgba(63,185,80,0.5); border-bottom: 2px dashed rgba(63,185,80,0.5); padding: 8px 0; }
+
+/* ─── 8. CRUD FLOW ─────────────────────────────────── */
+.apig-crud-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.apig-cf-node { font-size: 11px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; padding: 10px 12px; text-align: center; }
+.apig-cf-node small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 3px; }
+.apig-cf-node.hl { border-color: #8C4FFF; color: #b18cff; background: rgba(140,79,255,0.1); }
+.apig-crud-flow span { color: #8C4FFF; font-weight: 700; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .apig-gw-diagram, .apig-syncflow, .apig-ws-stage { flex-direction: column; }
+  .apig-rh-row { grid-template-columns: 1.4fr 1fr 1fr; }
+}

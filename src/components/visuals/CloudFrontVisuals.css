@@ -1,0 +1,131 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.cf-title { color: #b88cff; border-bottom: 1px solid rgba(140,79,255,0.25); }
+.cf-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.cf-intro code, .cf-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #c9a3ff; font-size: 11.5px; }
+.cf-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(140,79,255,0.08); border: 1px solid rgba(140,79,255,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+
+/* ─── 1. 3D GLOBE ──────────────────────────────────── */
+.cf-globe-controls { display: flex; gap: 10px; margin-bottom: 14px; align-items: center; }
+.cf-toggle { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; transition: all 0.2s; }
+.cf-toggle.active.good { border-color: #3fb950; color: #5fc943; background: rgba(63,185,80,0.1); }
+.cf-toggle.active.bad { border-color: #f85149; color: #f0867f; background: rgba(248,81,73,0.08); }
+.cf-spin-btn { width: 40px; padding: 10px; border-radius: 9px; cursor: pointer; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+
+.cf-globe-scene { height: 280px; display: flex; align-items: center; justify-content: center; perspective: 900px; margin-bottom: 14px; }
+.cf-globe { position: relative; width: 200px; height: 200px; transform-style: preserve-3d; transform: rotateX(-15deg); }
+.cf-globe.spin { animation: cf-rotate 18s linear infinite; }
+@keyframes cf-rotate { from { transform: rotateX(-15deg) rotateY(0deg); } to { transform: rotateX(-15deg) rotateY(360deg); } }
+.cf-globe-sphere { position: absolute; inset: 0; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2e73b8, #1a3a5c 60%, #0d1f33);
+  box-shadow: inset -16px -16px 40px rgba(0,0,0,0.5), 0 0 50px rgba(140,79,255,0.25);
+  border: 1px solid rgba(140,79,255,0.3); }
+.cf-edge { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform-style: preserve-3d; }
+.cf-edge-dot { position: absolute; transform: translate(-50%, -50%); font-size: 20px; filter: drop-shadow(0 0 6px rgba(0,0,0,0.6)); }
+.cf-edge-dot.cached { animation: cf-pulse 1.5s ease-in-out infinite; }
+@keyframes cf-pulse { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.25); } }
+
+.cf-latency-table { display: flex; flex-direction: column; gap: 5px; }
+.cf-lat-row { display: grid; grid-template-columns: 1.2fr 0.8fr 2fr; align-items: center; gap: 10px; font-size: 12px; color: #e6edf3; }
+.cf-lat-row.head { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; }
+.cf-lat-row .good { color: #5fc943; font-weight: 700; }
+.cf-lat-row .bad { color: #f0867f; font-weight: 700; }
+.cf-lat-bar-track { height: 8px; background: #0d1117; border-radius: 4px; overflow: hidden; }
+.cf-lat-bar { height: 100%; border-radius: 4px; transition: width 0.5s; }
+.cf-lat-bar.good { background: #3fb950; }
+.cf-lat-bar.bad { background: #f85149; }
+
+/* ─── 2. CONFIG EXPLORER ───────────────────────────── */
+.cf-cfg-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.cf-cfg-tab { flex: 1; min-width: 130px; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.cf-cfg-tab.active { border-color: #8c4fff; color: #b88cff; background: rgba(140,79,255,0.1); }
+.cf-cfg-list { display: flex; flex-direction: column; gap: 7px; }
+.cf-cfg-item { background: #161b22; border: 1px solid rgba(255,255,255,0.05); border-left: 3px solid #8c4fff; border-radius: 7px; padding: 10px 13px; }
+.cf-cfg-t { display: block; font-size: 12.5px; font-weight: 800; color: #b88cff; margin-bottom: 3px; }
+.cf-cfg-d { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; }
+
+/* ─── 3. ORIGIN ACCESS ─────────────────────────────── */
+.cf-oac-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.cf-oac-tab { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.cf-oac-tab.active { border-color: var(--oc); color: #e6edf3; background: color-mix(in srgb, var(--oc) 12%, #21262d); }
+.cf-oac-detail { background: #161b22; border: 1px solid color-mix(in srgb, var(--oc) 30%, transparent); border-left: 4px solid var(--oc); border-radius: 10px; padding: 16px 18px; }
+.cf-oac-secure { display: inline-block; font-size: 11px; font-weight: 800; color: var(--oc); background: color-mix(in srgb, var(--oc) 15%, transparent); border-radius: 5px; padding: 2px 10px; margin-bottom: 10px; }
+.cf-oac-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; margin-bottom: 10px; }
+.cf-oac-flow { font-size: 11.5px; color: #c9a3ff; font-family: "SF Mono", Consolas, monospace; background: #0d1117; border-radius: 7px; padding: 9px 11px; margin-bottom: 8px; }
+.cf-oac-note { font-size: 11.5px; color: #b9c2cc; }
+
+/* ─── 4. CACHE HIT/MISS ────────────────────────────── */
+.cf-hm-switch { display: flex; gap: 10px; margin-bottom: 14px; }
+.cf-hm-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.cf-hm-btn.active.good { border-color: #3fb950; color: #5fc943; background: rgba(63,185,80,0.1); }
+.cf-hm-btn.active.warn { border-color: #e3b341; color: #e8cd8a; background: rgba(227,179,65,0.1); }
+.cf-hm-flow { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px; margin-bottom: 12px; }
+.cf-hm-node { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 24px; min-width: 84px; text-align: center; }
+.cf-hm-node span { font-size: 10px; color: #b9c2cc; line-height: 1.3; }
+.cf-hm-node small { color: #8b949e; }
+.cf-hm-node.edge { color: #b88cff; }
+.cf-hm-arrow { font-size: 18px; color: #8b949e; }
+.cf-hm-arrow.on { color: #8c4fff; }
+.cf-hm-verdict { display: flex; flex-direction: column; align-items: center; font-size: 13px; font-weight: 800; border-radius: 8px; padding: 10px 14px; }
+.cf-hm-verdict small { font-size: 9px; font-weight: 500; }
+.cf-hm-verdict.good { color: #5fc943; background: rgba(63,185,80,0.12); }
+.cf-hm-verdict.warn { color: #e8cd8a; background: rgba(227,179,65,0.12); }
+.cf-hm-result { font-size: 12px; line-height: 1.5; border-radius: 9px; padding: 12px 14px; }
+.cf-hm-result.good { color: #5fc943; background: rgba(63,185,80,0.08); border: 1px solid rgba(63,185,80,0.25); }
+.cf-hm-result.warn { color: #e8cd8a; background: rgba(227,179,65,0.08); border: 1px solid rgba(227,179,65,0.25); }
+
+/* ─── 5. FAILOVER ──────────────────────────────────── */
+.cf-fo-stage { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+.cf-fo-cf { text-align: center; font-size: 13px; font-weight: 800; color: #b88cff; background: rgba(140,79,255,0.1); border: 1px solid rgba(140,79,255,0.3); border-radius: 8px; padding: 8px; margin-bottom: 12px; }
+.cf-fo-origins { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.cf-fo-origin { position: relative; text-align: center; border-radius: 12px; padding: 14px; border: 2px solid rgba(255,255,255,0.1); background: #21262d; transition: all 0.3s; }
+.cf-fo-origin.serving { border-color: #8c4fff; box-shadow: 0 6px 20px rgba(140,79,255,0.3); }
+.cf-fo-origin.down { opacity: 0.6; }
+.cf-fo-origin.idle { opacity: 0.7; }
+.cf-fo-badge { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: #3fb950; background: rgba(63,185,80,0.15); border-radius: 5px; padding: 2px 8px; display: inline-block; margin-bottom: 6px; }
+.cf-fo-badge.sec { color: #e3b341; background: rgba(227,179,65,0.15); }
+.cf-fo-icon { font-size: 24px; }
+.cf-fo-label { font-size: 11px; color: #8b949e; }
+.cf-fo-state { font-size: 11px; color: #e6edf3; margin: 6px 0; font-weight: 600; }
+.cf-fo-toggle { width: 100%; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.15); color: #e6edf3; }
+.cf-fo-result { font-size: 12.5px; line-height: 1.5; border-radius: 9px; padding: 12px 14px; }
+.cf-fo-result.good { color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.cf-fo-result.warn { color: #e8cd8a; background: rgba(227,179,65,0.1); border: 1px solid rgba(227,179,65,0.3); }
+
+/* ─── 6. GEO RESTRICTIONS ──────────────────────────── */
+.cf-geo-modes { display: flex; gap: 8px; margin-bottom: 12px; }
+.cf-geo-mode { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.cf-geo-mode.active { border-color: #8c4fff; color: #b88cff; background: rgba(140,79,255,0.1); }
+.cf-geo-picker { font-size: 11.5px; color: #8b949e; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.cf-geo-chip { padding: 4px 10px; border-radius: 12px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #8b949e; }
+.cf-geo-chip.on { border-color: #8c4fff; color: #b88cff; background: rgba(140,79,255,0.12); }
+.cf-geo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.cf-geo-country { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 700; border-radius: 9px; padding: 12px; border: 2px solid; }
+.cf-geo-country small { font-size: 9px; font-weight: 500; }
+.cf-geo-country.ok { color: #5fc943; border-color: rgba(63,185,80,0.3); background: rgba(63,185,80,0.06); }
+.cf-geo-country.blocked { color: #f0867f; border-color: rgba(248,81,73,0.3); background: rgba(248,81,73,0.06); }
+.cf-geo-flag { font-size: 18px; }
+
+/* ─── 7. INVALIDATION ──────────────────────────────── */
+.cf-inv-stage { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+.cf-inv-node { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 100px; }
+.cf-inv-label { font-size: 11px; font-weight: 700; color: #e6edf3; }
+.cf-inv-ver { font-size: 18px; font-weight: 800; color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); border-radius: 8px; padding: 4px 14px; }
+.cf-inv-ver.stale { color: #f0867f; background: rgba(248,81,73,0.1); border-color: rgba(248,81,73,0.3); }
+.cf-inv-ver.fresh { color: #5fc943; }
+.cf-inv-btn { padding: 6px 10px; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.cf-inv-btn.warn { border-color: #8c4fff; color: #b88cff; }
+.cf-inv-arrow { font-size: 11px; color: #8b949e; }
+.cf-inv-result { font-size: 12px; line-height: 1.5; border-radius: 9px; padding: 12px 14px; }
+.cf-inv-result.good { color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.cf-inv-result.warn { color: #e8cd8a; background: rgba(227,179,65,0.1); border: 1px solid rgba(227,179,65,0.3); }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .cf-cfg-tabs { flex-direction: column; }
+  .cf-geo-grid { grid-template-columns: 1fr 1fr; }
+  .cf-fo-origins { grid-template-columns: 1fr; }
+  .cf-inv-stage, .cf-hm-flow { flex-direction: column; }
+  .cf-inv-arrow, .cf-hm-arrow { transform: rotate(90deg); }
+}

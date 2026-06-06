@@ -1,0 +1,92 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.iam2-title { color: #ff6b7a; border-bottom: 1px solid rgba(221,52,76,0.3); }
+.iam2-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.iam2-intro code, .iam2-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ff9eaa; font-size: 11.5px; }
+.iam2-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(221,52,76,0.08); border: 1px solid rgba(221,52,76,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+
+/* ─── 1. REPORTS ───────────────────────────────────── */
+.iam2-rep-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.iam2-rep-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 12px 6px; border-radius: 9px; cursor: pointer; background: #21262d; border: 2px solid rgba(255,255,255,0.06); color: #8b949e; font-size: 11.5px; font-weight: 700; transition: all 0.2s; }
+.iam2-rep-tab.active { border-color: var(--rc); color: #e6edf3; background: color-mix(in srgb, var(--rc) 12%, #21262d); }
+.iam2-rep-icon { font-size: 22px; }
+.iam2-rep-detail { background: #161b22; border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent); border-left: 4px solid var(--rc); border-radius: 10px; padding: 16px 18px; }
+.iam2-rep-name { font-size: 15px; font-weight: 800; color: var(--rc); margin-bottom: 8px; }
+.iam2-rep-what { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin-bottom: 12px; }
+.iam2-rep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.iam2-rep-grid div { font-size: 11.5px; color: #e6edf3; background: rgba(255,255,255,0.04); border-radius: 7px; padding: 7px 10px; }
+.iam2-rep-grid span { display: block; font-size: 9.5px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
+.iam2-rep-use { font-size: 12px; color: var(--rc); }
+
+/* ─── 2. ORGANIZATIONS ─────────────────────────────── */
+.iam2-org-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+.iam2-org-tab { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.iam2-org-tab.active { border-color: #dd344c; color: #ff6b7a; background: rgba(221,52,76,0.1); }
+.iam2-org-tree { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; }
+.iam2-org-root { text-align: center; font-size: 13px; font-weight: 800; color: #3fb950; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); border-radius: 8px; padding: 8px; margin-bottom: 10px; }
+.iam2-org-branch { display: flex; flex-direction: column; gap: 10px; }
+.iam2-org-node { border-radius: 8px; padding: 9px 12px; font-size: 11.5px; font-weight: 700; color: #e6edf3; }
+.iam2-org-node small { font-weight: 500; color: #8b949e; margin-left: 6px; }
+.iam2-org-node.mgmt { background: rgba(227,179,65,0.12); border: 1px solid rgba(227,179,65,0.35); color: #e8cd8a; text-align: center; }
+.iam2-org-ou { border: 1px dashed rgba(140,79,255,0.4); border-radius: 8px; padding: 10px; }
+.iam2-org-node.ou { background: rgba(140,79,255,0.12); border: 1px solid rgba(140,79,255,0.3); color: #c9a3ff; text-align: center; margin-bottom: 10px; }
+.iam2-org-members { display: flex; gap: 8px; }
+.iam2-org-node.member { flex: 1; background: #21262d; border: 1px solid rgba(255,255,255,0.1); text-align: center; }
+
+.iam2-billing { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; }
+.iam2-bill-flow { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+.iam2-bill-acct { text-align: center; font-size: 11.5px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; }
+.iam2-bill-acct span { display: block; font-size: 13px; color: #8b949e; margin-top: 4px; }
+.iam2-bill-arrow { font-size: 18px; color: #8b949e; }
+.iam2-bill-mgmt { text-align: center; font-size: 12px; font-weight: 800; color: #e8cd8a; background: rgba(227,179,65,0.12); border: 1px solid rgba(227,179,65,0.35); border-radius: 8px; padding: 10px 16px; }
+.iam2-bill-mgmt span { display: block; font-size: 14px; color: #5fc943; margin-top: 4px; }
+.iam2-bill-pts { padding-left: 18px; margin: 0; }
+.iam2-bill-pts li { font-size: 12px; color: #e6edf3; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── 3. SCP SIMULATOR ─────────────────────────────── */
+.iam2-scp-levels { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+.iam2-scp-level { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 12px; position: relative; }
+.iam2-scp-level-name { font-size: 11px; font-weight: 800; color: #ff6b7a; margin-bottom: 6px; }
+.iam2-scp-select { width: 100%; padding: 7px 10px; border-radius: 7px; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; font-size: 12px; cursor: pointer; }
+.iam2-scp-down { text-align: center; font-size: 9.5px; color: #8b949e; margin-top: 6px; }
+
+.iam2-scp-result { background: #0d1117; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 14px; }
+.iam2-scp-result-title { font-size: 11.5px; color: #8b949e; margin-bottom: 10px; }
+.iam2-scp-services { display: flex; gap: 10px; }
+.iam2-scp-svc { flex: 1; text-align: center; font-size: 13px; font-weight: 800; border-radius: 9px; padding: 12px; border: 2px solid; }
+.iam2-scp-svc span { display: block; font-size: 10px; font-weight: 600; margin-top: 3px; }
+.iam2-scp-svc.allow { color: #5fc943; border-color: rgba(63,185,80,0.4); background: rgba(63,185,80,0.08); }
+.iam2-scp-svc.deny { color: #f0867f; border-color: rgba(248,81,73,0.4); background: rgba(248,81,73,0.08); }
+
+/* ─── 4. IDENTITY CENTER ───────────────────────────── */
+.iam2-sso-switch { display: flex; gap: 10px; margin-bottom: 16px; }
+.iam2-sso-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.iam2-sso-btn.active.good { border-color: #3fb950; color: #5fc943; background: rgba(63,185,80,0.1); }
+.iam2-sso-btn.active.bad { border-color: #f85149; color: #f0867f; background: rgba(248,81,73,0.08); }
+.iam2-sso-stage { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+.iam2-sso-user { text-align: center; font-size: 22px; }
+.iam2-sso-user small { display: block; font-size: 10px; color: #8b949e; }
+.iam2-sso-arrow { font-size: 18px; color: #8b949e; }
+.iam2-sso-hub { text-align: center; font-size: 13px; font-weight: 800; color: #ff6b7a; background: rgba(221,52,76,0.1); border: 1px solid rgba(221,52,76,0.35); border-radius: 9px; padding: 12px; }
+.iam2-sso-hub small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 3px; }
+.iam2-sso-lines { display: flex; gap: 8px; flex-wrap: wrap; }
+.iam2-sso-acct { text-align: center; font-size: 11px; font-weight: 700; color: #e6edf3; background: #21262d; border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 9px 11px; }
+.iam2-sso-acct small { color: #8b949e; font-weight: 500; }
+.iam2-sso-lines.good .iam2-sso-acct { border-color: rgba(63,185,80,0.3); }
+.iam2-sso-lines.bad .iam2-sso-acct { border-color: rgba(248,81,73,0.3); }
+.iam2-sso-verdict { width: 100%; text-align: center; font-size: 12px; font-weight: 600; margin-top: 6px; }
+.iam2-sso-verdict.bad { color: #f0867f; }
+
+.iam2-sso-terms { display: flex; flex-direction: column; gap: 6px; }
+.iam2-sso-term { font-size: 11.5px; color: #b9c2cc; line-height: 1.45; background: #161b22; border: 1px solid rgba(255,255,255,0.05); border-radius: 7px; padding: 9px 12px; }
+.iam2-sso-term span { font-weight: 800; color: #ff6b7a; margin-right: 6px; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .iam2-rep-tabs { flex-direction: column; }
+  .iam2-rep-grid { grid-template-columns: 1fr; }
+  .iam2-scp-services { flex-direction: column; }
+  .iam2-sso-stage { flex-direction: column; }
+  .iam2-sso-arrow { transform: rotate(90deg); }
+}

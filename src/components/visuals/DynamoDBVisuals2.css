@@ -1,0 +1,110 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.ddb2-title { color: #5aa0e6; border-bottom: 1px solid rgba(46,115,184,0.3); }
+.ddb2-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.ddb2-intro code, .ddb2-policy code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11.5px; }
+.ddb2-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.ddb2-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.ddb2-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+
+.ddb2-toggle { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.ddb2-toggle button { flex: 1; min-width: 120px; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.ddb2-toggle button.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+
+.ddb2-calc { margin-bottom: 14px; }
+.ddb2-calc label { font-size: 12px; color: #c9d1d9; display: flex; flex-direction: column; gap: 7px; }
+.ddb2-calc label b { color: #79c0ff; }
+.ddb2-calc input[type=range] { accent-color: #2e73b8; width: 100%; }
+
+.ddb2-dep-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.ddb2-dep-detail.ok { border-color: #3fb950; }
+.ddb2-dep-detail.warn { border-color: #e3b341; }
+.ddb2-dep-detail.purple { border-color: #a371f7; }
+.ddb2-dep-detail p { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin: 0 0 8px; }
+.ddb2-dep-detail ul { padding-left: 18px; margin: 0; }
+.ddb2-dep-detail li { font-size: 12px; color: #b9c2cc; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── 1. PROVISIONED bars ──────────────────────────── */
+.ddb2-prov-bars { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.ddb2-prov-row { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; }
+.ddb2-prov-row > span { font-size: 11px; color: #b9c2cc; }
+.ddb2-track { height: 14px; background: #0d1117; border-radius: 7px; overflow: hidden; }
+.ddb2-fill { height: 100%; border-radius: 7px; transition: width 0.3s; }
+.ddb2-fill.min { background: rgba(139,148,158,0.5); }
+.ddb2-fill.alloc { background: #2e73b8; }
+.ddb2-fill.max { background: rgba(46,115,184,0.3); }
+.ddb2-fill.traffic { background: #3fb950; }
+.ddb2-fill.traffic.over { background: #f85149; }
+
+/* ─── 3/6/8. COMPARISON TABLE ──────────────────────── */
+.ddb2-idx-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; margin-top: 14px; }
+.ddb2-idx-row { display: grid; grid-template-columns: 1.2fr 1.5fr 1.5fr; }
+.ddb2-idx-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.ddb2-idx-row.head > span { font-weight: 800; background: #161b22; }
+.ddb2-idx-row.head .lsi { color: #5aa0e6; }
+.ddb2-idx-row.head .gsi { color: #a371f7; }
+.ddb2-idx-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── 4. RESOURCE POLICY ───────────────────────────── */
+.ddb2-policy { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+.ddb2-policy-json { background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; font-family: ui-monospace, monospace; }
+.ddb2-policy-line { font-size: 11px; padding: 6px 8px; border-radius: 6px; cursor: pointer; margin-bottom: 3px; line-height: 1.4; word-break: break-all; border: 1px solid transparent; }
+.ddb2-policy-line.active { background: rgba(46,115,184,0.14); border-color: rgba(46,115,184,0.4); }
+.ddb2-pk { color: #ff7b72; }
+.ddb2-pv { color: #a5d6ff; }
+.ddb2-policy-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px; }
+.ddb2-policy-dt { font-size: 13px; font-weight: 800; color: #5aa0e6; margin-bottom: 6px; }
+.ddb2-policy-dd { font-size: 12px; color: #c9d1d9; line-height: 1.5; }
+
+/* ─── 5. GLOBAL TABLES MAP ─────────────────────────── */
+.ddb2-gt-map { position: relative; height: 150px; background: linear-gradient(180deg, #0d1117, #131a24); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 6px; overflow: hidden; }
+.ddb2-gt-node { position: absolute; top: 28px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; }
+.ddb2-gt-globe { font-size: 30px; filter: grayscale(0.4); transition: all 0.2s; }
+.ddb2-gt-node.active .ddb2-gt-globe { filter: none; transform: scale(1.2); }
+.ddb2-gt-lbl { font-size: 10px; color: #b9c2cc; white-space: nowrap; font-weight: 600; }
+.ddb2-gt-node.active .ddb2-gt-lbl { color: #5aa0e6; }
+.ddb2-gt-write { font-size: 10px; font-weight: 700; color: #f0883e; background: rgba(240,136,62,0.14); border-radius: 6px; padding: 2px 7px; }
+.ddb2-gt-sync { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 10.5px; color: #8b949e; background: rgba(255,255,255,0.04); padding: 4px 12px; border-radius: 20px; }
+
+/* ─── 8. STREAMS track ─────────────────────────────── */
+.ddb2-st-track { display: flex; align-items: center; justify-content: center; gap: 6px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 18px 10px; margin-bottom: 12px; }
+.ddb2-st-node { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; background: #21262d; border: 2px solid rgba(255,255,255,0.08); transition: all 0.25s; }
+.ddb2-st-node.on { border-color: #2e73b8; background: rgba(46,115,184,0.14); box-shadow: 0 0 14px rgba(46,115,184,0.3); }
+.ddb2-st-ic { font-size: 22px; }
+.ddb2-st-arrow { font-size: 18px; color: #555c66; }
+.ddb2-st-arrow.on { color: #2e73b8; }
+.ddb2-st-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 12px 15px; }
+.ddb2-st-detail b { font-size: 13px; color: #5aa0e6; }
+.ddb2-st-detail p { font-size: 12px; color: #c9d1d9; line-height: 1.5; margin: 6px 0 0; }
+
+/* ─── 9. DAX flow ──────────────────────────────────── */
+.ddb2-dax-flow { display: flex; align-items: center; justify-content: center; gap: 10px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 20px 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.ddb2-dax-node { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; color: #e6edf3; min-width: 90px; text-align: center; padding: 12px; border-radius: 10px; background: #161b22; border: 2px solid rgba(255,255,255,0.08); transition: all 0.3s; }
+.ddb2-dax-node small { font-size: 9.5px; color: #8b949e; font-weight: 500; }
+.ddb2-dax-node.on { border-color: #2e73b8; box-shadow: 0 0 14px rgba(46,115,184,0.25); }
+.ddb2-dax-node.dim { opacity: 0.35; }
+.ddb2-dax-arrow { font-size: 22px; color: #2e73b8; }
+.ddb2-dax-arrow.dim { color: #555c66; }
+
+/* ─── 10. CHEAT SHEET ──────────────────────────────── */
+.ddb2-cheats { display: flex; flex-direction: column; gap: 8px; }
+.ddb2-cheat { background: #161b22; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: all 0.2s; }
+.ddb2-cheat.open { border-color: #3fb950; background: rgba(63,185,80,0.06); }
+.ddb2-cheat-kw { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ddb2-kwchip { font-size: 10.5px; color: #e8cd8a; background: rgba(227,179,65,0.12); border: 1px solid rgba(227,179,65,0.25); border-radius: 6px; padding: 3px 8px; }
+.ddb2-cheat-a { font-size: 12.5px; font-weight: 700; color: #8b949e; }
+.ddb2-cheat.open .ddb2-cheat-a { color: #9be59b; }
+
+/* ─── 11. DB OVERVIEW ──────────────────────────────── */
+.ddb2-db-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ddb2-db-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-left: 4px solid #2e73b8; border-radius: 9px; padding: 11px 13px; }
+.ddb2-db-name { font-size: 12.5px; font-weight: 800; margin-bottom: 4px; }
+.ddb2-db-desc { font-size: 11px; color: #b9c2cc; line-height: 1.45; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .ddb2-policy, .ddb2-db-grid { grid-template-columns: 1fr; }
+  .ddb2-idx-row { grid-template-columns: 1fr; }
+  .ddb2-prov-row { grid-template-columns: 80px 1fr; }
+}

@@ -1,0 +1,105 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.lam-title { color: #ffb84d; border-bottom: 1px solid rgba(255,153,0,0.3); }
+.lam-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.lam-intro code, .lam-role-key code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ffcb7d; font-size: 11.5px; }
+.lam-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.lam-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.lam-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+
+/* shared cube */
+.lam-cube { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.lam-cube-face { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; border-radius: 14px; transform: perspective(400px) rotateX(12deg) rotateY(-14deg); box-shadow: 6px 8px 0 rgba(0,0,0,0.35); }
+.lam-cube.small .lam-cube-face { width: 50px; height: 50px; font-size: 22px; }
+.lam-cube small { font-size: 11px; color: #b9c2cc; font-weight: 600; }
+.lam-cube.source .lam-cube-face { background: linear-gradient(135deg, #1f6feb, #163d8c); color: #fff; }
+.lam-cube.lambda .lam-cube-face { background: linear-gradient(135deg, #ff9900, #cc6f00); color: #fff; }
+.lam-cube.resp .lam-cube-face { background: linear-gradient(135deg, #3fb950, #2a7d38); color: #fff; }
+.lam-cube.target .lam-cube-face { background: linear-gradient(135deg, #8957e5, #5a3aa3); color: #fff; }
+
+/* ─── 1. SERVERLESS FLOW 3D ────────────────────────── */
+.lam-src-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.lam-src-tab { flex: 1; min-width: 100px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.lam-src-tab span { font-size: 16px; }
+.lam-src-tab.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+.lam-flow3d { display: flex; align-items: center; justify-content: center; gap: 12px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 26px 14px; margin-bottom: 12px; flex-wrap: wrap; perspective: 700px; }
+.lam-bolt { font-size: 11px; font-weight: 700; color: #ff9900; letter-spacing: 0.5px; }
+
+/* ─── 2. SPECTRUM ──────────────────────────────────── */
+.lam-spectrum { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.lam-spec-btn { flex: 1; min-width: 140px; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.lam-spec-btn.active { background: rgba(255,255,255,0.04); }
+.lam-spec-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.lam-spec-col { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 12px; }
+.lam-spec-h { font-size: 12px; font-weight: 800; margin-bottom: 9px; color: #c9d1d9; }
+.lam-spec-item { font-size: 11.5px; padding: 6px 9px; border-radius: 6px; margin-bottom: 5px; }
+.lam-spec-item.you { background: rgba(240,136,62,0.1); color: #f0b58e; }
+.lam-spec-item.aws { background: rgba(63,185,80,0.1); color: #9be59b; }
+
+/* ─── 3. TRADE-OFFS ────────────────────────────────── */
+.lam-trade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lam-trade-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-left: 4px solid #e3b341; border-radius: 9px; padding: 13px; }
+.lam-trade-ic { font-size: 24px; margin-bottom: 6px; }
+.lam-trade-t { font-size: 13px; font-weight: 800; color: #e8cd8a; margin-bottom: 5px; }
+.lam-trade-d { font-size: 11.5px; color: #b9c2cc; line-height: 1.45; }
+
+/* ─── 4/6. VS TABLE ────────────────────────────────── */
+.lam-vs-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.lam-vs-row { display: grid; grid-template-columns: 1.1fr 1.5fr 1.5fr; }
+.lam-vs-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.lam-vs-row.head > span { font-weight: 800; background: #161b22; }
+.lam-vs-row.head .ec2 { color: #58a6ff; }
+.lam-vs-row.head .lam { color: #ffb84d; }
+.lam-vs-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── 5/8. CODE BLOCK ──────────────────────────────── */
+.lam-code { background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; font-family: ui-monospace, monospace; margin-bottom: 12px; }
+.lam-code-line { font-size: 12.5px; color: #e6edf3; padding: 4px 8px; border-radius: 6px; cursor: pointer; line-height: 1.5; }
+.lam-code.small .lam-code-line { font-size: 11.5px; cursor: default; }
+.lam-code-line.indent { padding-left: 28px; }
+.lam-code-line.hl { background: rgba(255,153,0,0.14); }
+.lam-kw { color: #ff7b72; }
+.lam-fn { color: #d2a8ff; }
+.lam-str { color: #a5d6ff; }
+.lam-cmt { color: #8b949e; }
+.lam-anatomy-tabs, .lam-author-tabs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.lam-anatomy-tabs button, .lam-author-tab { flex: 1; min-width: 90px; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.lam-anatomy-tabs button.active, .lam-author-tab.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+.lam-anatomy-detail { background: #161b22; border-left: 4px solid #ff9900; border-radius: 10px; padding: 13px 15px; }
+.lam-anatomy-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 0; }
+
+/* ─── 6. AUTHORING ─────────────────────────────────── */
+.lam-author-detail { background: #161b22; border-left: 4px solid #ff9900; border-radius: 10px; padding: 14px 16px; margin-bottom: 4px; }
+.lam-author-tag { display: inline-block; font-size: 10px; font-weight: 800; color: #ffb84d; background: rgba(255,153,0,0.14); border-radius: 6px; padding: 3px 9px; margin-bottom: 8px; }
+.lam-author-detail p { font-size: 12.5px; color: #d6dde5; line-height: 1.5; margin: 0; }
+
+/* ─── 7. EXECUTION ROLE ────────────────────────────── */
+.lam-role-flow { display: flex; align-items: center; justify-content: center; gap: 16px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 24px 14px; margin-bottom: 12px; flex-wrap: wrap; }
+.lam-role-arrow { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 22px; color: #ff9900; }
+.lam-role-key { font-size: 10.5px; font-weight: 700; color: #ffb84d; text-align: center; background: rgba(255,153,0,0.1); border: 1px dashed rgba(255,153,0,0.4); border-radius: 8px; padding: 6px 10px; line-height: 1.5; }
+
+/* ─── 8. EC2 AUTOMATION ────────────────────────────── */
+.lam-ec2-demo { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; align-items: center; }
+.lam-ec2-state { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.lam-ec2-box { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 24px; border-radius: 12px; border: 2px solid; transition: all 0.3s; }
+.lam-ec2-box.on { border-color: #3fb950; background: rgba(63,185,80,0.1); box-shadow: 0 0 18px rgba(63,185,80,0.25); }
+.lam-ec2-box.off { border-color: #f85149; background: rgba(248,81,73,0.08); }
+.lam-ec2-ic { font-size: 34px; }
+.lam-ec2-status { font-size: 12px; font-weight: 700; color: #e6edf3; }
+.lam-ec2-btn { padding: 10px 14px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #ff9900; border: none; color: #1c1300; }
+
+/* ─── 9. TRIGGERS RING ─────────────────────────────── */
+.lam-trig-ring { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; position: relative; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 14px; margin-bottom: 12px; }
+.lam-trig-node { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; min-width: 100px; border-radius: 11px; cursor: pointer; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #b9c2cc; }
+.lam-trig-node span { font-size: 22px; }
+.lam-trig-node small { font-size: 10.5px; font-weight: 600; }
+.lam-trig-node.active { border-color: #ff9900; background: rgba(255,153,0,0.12); color: #ffb84d; box-shadow: 0 0 14px rgba(255,153,0,0.25); }
+.lam-trig-center { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); width: 30px; height: 30px; border-radius: 50%; background: #ff9900; color: #1c1300; font-weight: 800; display: flex; align-items: center; justify-content: center; font-size: 16px; box-shadow: 0 0 14px rgba(255,153,0,0.5); }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .lam-spec-cols, .lam-trade-grid, .lam-ec2-demo { grid-template-columns: 1fr; }
+  .lam-vs-row { grid-template-columns: 1fr; }
+  .lam-flow3d, .lam-role-flow { flex-direction: column; }
+}

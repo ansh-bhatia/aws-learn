@@ -1,0 +1,30 @@
+/* ─── shared base (orange Monitoring theme) ────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.mon-title { color: #f0a368; border-bottom: 1px solid rgba(224,123,57,0.4); }
+.mon-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.mon-intro code, .mon-note code, .mon-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #f0a368; font-size: 11.5px; }
+.mon-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(224,123,57,0.1); border: 1px solid rgba(224,123,57,0.28); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.mon-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.mon-tabs, .mon-toggle, .mon-ta-cats { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.mon-tab, .mon-toggle button, .mon-ta-cat { flex: 1; min-width: 110px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.mon-tab.active, .mon-toggle button.active, .mon-ta-cat.active { border-color: #E07B39; color: #f0a368; background: rgba(224,123,57,0.12); }
+.mon-detail { background: #161b22; border-left: 4px solid #E07B39; border-radius: 10px; padding: 13px 15px; }
+.mon-detail b { font-size: 13px; color: #f0a368; }
+.mon-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+
+/* table */
+.mon-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.mon-row { display: grid; grid-template-columns: 1.2fr 1.5fr 1.5fr; }
+.mon-table.tri .mon-row { grid-template-columns: 1.1fr 1.2fr 1.2fr 1.2fr; }
+.mon-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.mon-row.head > span { font-weight: 800; background: #161b22; }
+.mon-row.head .c1 { color: #f0a368; }
+.mon-row.head .c2 { color: #58a6ff; }
+.mon-row.head .c3 { color: #9be59b; }
+.mon-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .mon-row, .mon-table.tri .mon-row { grid-template-columns: 1fr; }
+}

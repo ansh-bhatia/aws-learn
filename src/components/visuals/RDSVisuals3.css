@@ -1,0 +1,90 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.rds3-title { color: #5aa0e6; border-bottom: 1px solid rgba(46,115,184,0.3); }
+.rds3-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.rds3-intro code, .rds3-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #79c0ff; font-size: 11.5px; }
+.rds3-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.rds3-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.rds3-btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.rds3-btn.primary { background: #2e73b8; border-color: #2e73b8; color: #fff; }
+.rds3-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── 1. CACHE FLOW ────────────────────────────────── */
+.rds3-cf-stage { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 20px; margin-bottom: 12px; }
+.rds3-cf-node { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 26px; min-width: 100px; text-align: center; padding: 10px; border-radius: 10px; border: 2px solid transparent; transition: all 0.25s; }
+.rds3-cf-node span { font-size: 10.5px; color: #b9c2cc; line-height: 1.3; }
+.rds3-cf-node small { color: #8b949e; }
+.rds3-cf-node.on { border-color: #2e73b8; background: rgba(46,115,184,0.12); box-shadow: 0 0 14px rgba(46,115,184,0.3); }
+.rds3-cf-node.cache.on { border-color: #f0883e; box-shadow: 0 0 14px rgba(240,136,62,0.3); }
+.rds3-cf-arrow { font-size: 18px; color: #8b949e; }
+.rds3-cf-arrow.lit { color: #2e73b8; }
+.rds3-cf-detail { font-size: 12.5px; color: #e6edf3; line-height: 1.5; background: rgba(46,115,184,0.08); border: 1px solid rgba(46,115,184,0.22); border-radius: 9px; padding: 12px 14px; margin-bottom: 12px; }
+.rds3-cf-num { display: inline-block; font-size: 10px; font-weight: 800; color: #fff; background: #2e73b8; border-radius: 10px; padding: 2px 8px; margin-right: 8px; }
+.rds3-cf-controls { display: flex; gap: 10px; justify-content: space-between; }
+
+/* ─── 2. REDIS vs MEMCACHED ────────────────────────── */
+.rds3-rm-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.rds3-rm-row { display: grid; grid-template-columns: 1.4fr 1.4fr 1.3fr; }
+.rds3-rm-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.rds3-rm-row.head > span { font-weight: 800; background: #161b22; font-size: 11px; }
+.rds3-rm-row.head .redis { color: #f85149; }
+.rds3-rm-row.head .memc { color: #3fb950; }
+.rds3-rm-feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── 3. DEPLOYMENT ────────────────────────────────── */
+.rds3-dep-switch { display: flex; gap: 10px; margin-bottom: 14px; }
+.rds3-dep-btn { flex: 1; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds3-dep-btn.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.rds3-dep-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.rds3-dep-detail p { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin: 0 0 8px; }
+.rds3-dep-detail ul { padding-left: 18px; margin: 0; }
+.rds3-dep-detail li { font-size: 12px; color: #b9c2cc; margin-bottom: 6px; line-height: 1.45; }
+
+/* ─── 4. CLUSTER MODE ──────────────────────────────── */
+.rds3-cm-switch { display: flex; gap: 10px; margin-bottom: 12px; }
+.rds3-cm-btn { flex: 1; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds3-cm-btn.active { border-color: #2e73b8; color: #5aa0e6; background: rgba(46,115,184,0.1); }
+.rds3-cm-controls { margin-bottom: 10px; }
+.rds3-cm-ctrl { display: grid; grid-template-columns: 1.2fr 2fr; align-items: center; gap: 12px; font-size: 12px; color: #e6edf3; }
+.rds3-cm-ctrl input { accent-color: #2e73b8; }
+.rds3-cm-scene { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; margin: 10px 0; }
+.rds3-cm-shard { background: rgba(46,115,184,0.06); border: 1px dashed rgba(46,115,184,0.35); border-radius: 9px; padding: 10px; min-width: 90px; }
+.rds3-cm-shard-label { font-size: 9px; font-weight: 700; color: #5aa0e6; text-align: center; margin-bottom: 6px; }
+.rds3-cm-primary { font-size: 10.5px; font-weight: 700; color: #79c0ff; background: rgba(46,115,184,0.15); border-radius: 6px; padding: 5px; text-align: center; margin-bottom: 4px; }
+.rds3-cm-replica { font-size: 10px; color: #5fc943; background: rgba(63,185,80,0.1); border-radius: 6px; padding: 4px; text-align: center; margin-bottom: 3px; }
+.rds3-cm-count { font-size: 11.5px; color: #b9c2cc; text-align: center; }
+
+/* ─── 5. CACHING STRATEGIES ────────────────────────── */
+.rds3-cs-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.rds3-cs-tab { flex: 1; min-width: 120px; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 10.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.rds3-cs-tab.active { border-color: var(--cc); color: #e6edf3; background: color-mix(in srgb, var(--cc) 12%, #21262d); }
+.rds3-cs-detail { background: #161b22; border-left: 4px solid var(--cc); border-radius: 10px; padding: 14px 16px; }
+.rds3-cs-type { font-size: 11px; font-weight: 800; color: var(--cc); margin-bottom: 8px; }
+.rds3-cs-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.5; margin-bottom: 10px; }
+.rds3-cs-procon { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rds3-cs-pro, .rds3-cs-con { font-size: 11.5px; line-height: 1.4; border-radius: 7px; padding: 8px 10px; }
+.rds3-cs-pro { color: #5fc943; background: rgba(63,185,80,0.08); }
+.rds3-cs-con { color: #e8cd8a; background: rgba(227,179,65,0.08); }
+
+/* ─── 6. RESTORE FROM S3 ───────────────────────────── */
+.rds3-rs-track { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.rds3-rs-node { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; flex-shrink: 0; background: #21262d; border: 2px solid rgba(255,255,255,0.1); }
+.rds3-rs-icon { font-size: 19px; filter: grayscale(0.5); }
+.rds3-rs-node.active { border-color: #2e73b8; background: rgba(46,115,184,0.15); transform: scale(1.12); }
+.rds3-rs-node.active .rds3-rs-icon, .rds3-rs-node.done .rds3-rs-icon { filter: none; }
+.rds3-rs-node.done { border-color: rgba(46,115,184,0.5); }
+.rds3-rs-line { position: absolute; left: 44px; width: 100%; height: 2px; background: rgba(255,255,255,0.1); z-index: -1; }
+.rds3-rs-node.done .rds3-rs-line { background: rgba(46,115,184,0.5); }
+.rds3-rs-detail { background: #161b22; border-left: 4px solid #2e73b8; border-radius: 10px; padding: 14px 16px; }
+.rds3-rs-head { font-size: 14px; font-weight: 800; color: #5aa0e6; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.rds3-rs-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.5; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .rds3-rm-row { grid-template-columns: 1fr; }
+  .rds3-rm-row > span { border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .rds3-dep-switch, .rds3-cm-switch, .rds3-cm-ctrl { grid-template-columns: 1fr; }
+  .rds3-cs-procon { grid-template-columns: 1fr; }
+  .rds3-cf-stage { flex-direction: column; }
+}

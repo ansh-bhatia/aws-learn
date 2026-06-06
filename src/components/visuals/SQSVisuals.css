@@ -1,0 +1,78 @@
+/* ─── shared base (pink Messaging theme) ───────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.sqs-title { color: #ff85ad; border-bottom: 1px solid rgba(255,79,139,0.3); }
+.sqs-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.sqs-intro code, .sqs-detail code, .sqs-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ff9ec0; font-size: 11.5px; }
+.sqs-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(255,79,139,0.1); border: 1px solid rgba(255,79,139,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.sqs-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.sqs-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.sqs-tabs, .sqs-toggle { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.sqs-tab, .sqs-toggle button { flex: 1; min-width: 100px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.sqs-tab.active, .sqs-toggle button.active { border-color: #FF4F8B; color: #ff85ad; background: rgba(255,79,139,0.1); }
+.sqs-detail { background: #161b22; border-left: 4px solid #FF4F8B; border-radius: 10px; padding: 13px 15px; }
+.sqs-detail b { font-size: 13px; color: #ff85ad; }
+.sqs-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.sqs-btn { padding: 9px 16px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #FF4F8B; border: none; color: #fff; margin-top: 4px; }
+
+/* ─── 1. FLOW ──────────────────────────────────────── */
+.sqs-flow { display: flex; align-items: center; justify-content: center; gap: 10px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.sqs-node { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 13px; font-weight: 700; color: #e6edf3; background: #161b22; border: 2px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 14px; text-align: center; }
+.sqs-node small { font-size: 9.5px; color: #8b949e; font-weight: 500; }
+.sqs-node.cons.down { border-color: #f85149; background: rgba(248,81,73,0.1); }
+.sqs-arrow { font-size: 11px; font-weight: 700; color: #ff85ad; }
+.sqs-queue { background: #161b22; border: 2px solid rgba(255,79,139,0.3); border-radius: 10px; padding: 10px; min-width: 120px; }
+.sqs-queue-label { font-size: 11px; font-weight: 800; color: #ff85ad; text-align: center; margin-bottom: 8px; }
+.sqs-msgs { display: flex; gap: 4px; justify-content: center; font-size: 16px; min-height: 22px; align-items: center; }
+.sqs-empty { font-size: 10.5px; color: #8b949e; }
+
+/* ─── 3/5. TABLE ───────────────────────────────────── */
+.sqs-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.sqs-row { display: grid; grid-template-columns: 1fr 1.5fr 1.5fr; }
+.sqs-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.sqs-row.head > span { font-weight: 800; background: #161b22; }
+.sqs-row.head .std { color: #58a6ff; }
+.sqs-row.head .fifo { color: #ff85ad; }
+.sqs-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* ─── 5. VISIBILITY TIMELINE ───────────────────────── */
+.sqs-calc label { font-size: 12px; color: #c9d1d9; display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.sqs-calc label b { color: #ff85ad; }
+.sqs-calc input[type=range] { accent-color: #FF4F8B; width: 100%; }
+.sqs-timeline { position: relative; height: 34px; background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 4px; }
+.sqs-tl-bar { height: 100%; border-radius: 8px 0 0 8px; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #fff; background: rgba(255,79,139,0.4); transition: width 0.3s; }
+.sqs-tl-marker { position: absolute; top: -2px; transform: translateX(-50%); font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 5px; }
+.sqs-tl-marker.ok { color: #9be59b; background: rgba(63,185,80,0.2); }
+.sqs-tl-marker.bad { color: #ff7b72; background: rgba(248,81,73,0.2); }
+
+/* ─── 6. POLLING ───────────────────────────────────── */
+.sqs-poll-viz { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+.sqs-poll-row { font-family: ui-monospace, monospace; font-size: 11.5px; color: #c9d1d9; padding: 5px 0; }
+.sqs-poll-note { font-size: 11px; font-weight: 700; margin-top: 6px; }
+.sqs-poll-note.bad { color: #e8cd8a; }
+.sqs-poll-note.ok { color: #9be59b; }
+
+/* ─── 7. DLQ ───────────────────────────────────────── */
+.sqs-dlq-stage { display: flex; align-items: center; justify-content: center; gap: 12px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; margin-bottom: 12px; flex-wrap: wrap; }
+.sqs-dlq-main, .sqs-dlq-dead { background: #161b22; border: 2px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; min-width: 120px; text-align: center; }
+.sqs-dlq-main { border-color: rgba(255,79,139,0.3); }
+.sqs-dlq-dead { opacity: 0.4; }
+.sqs-dlq-dead.on { opacity: 1; border-color: #f85149; }
+.sqs-dlq-label { font-size: 11px; font-weight: 800; color: #ff85ad; margin-bottom: 8px; }
+.sqs-dlq-dead .sqs-dlq-label { color: #ff7b72; }
+.sqs-dlq-msg { font-size: 14px; font-weight: 700; color: #e6edf3; margin-bottom: 6px; }
+.sqs-dlq-count { font-size: 10px; color: #8b949e; }
+.sqs-dlq-arrow { font-size: 11px; font-weight: 700; color: #ff85ad; }
+
+/* ─── 8. FIFO GROUPS ───────────────────────────────── */
+.sqs-groups { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.sqs-group { font-size: 12px; font-weight: 700; color: #e6edf3; border-radius: 9px; padding: 11px 13px; }
+.sqs-group small { display: block; font-size: 10px; color: #b9c2cc; font-weight: 500; margin-top: 3px; }
+.sqs-group.a { background: rgba(255,79,139,0.12); border: 1px solid rgba(255,79,139,0.3); }
+.sqs-group.b { background: rgba(88,166,255,0.12); border: 1px solid rgba(88,166,255,0.3); }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .sqs-flow, .sqs-dlq-stage { flex-direction: column; }
+  .sqs-row { grid-template-columns: 1fr; }
+}

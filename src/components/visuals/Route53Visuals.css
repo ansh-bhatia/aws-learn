@@ -1,0 +1,140 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; padding-bottom: 10px; }
+.r53-title { color: #b88cff; border-bottom: 1px solid rgba(140,79,255,0.25); }
+.r53-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.r53-intro code, .r53-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #c9a3ff; font-size: 11.5px; }
+.r53-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; background: rgba(140,79,255,0.08); border: 1px solid rgba(140,79,255,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+
+/* ─── 1. DNS FLOW ──────────────────────────────────── */
+.r53-flow-controls { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
+.r53-play { padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #8c4fff; border: none; color: #fff; }
+.r53-play:hover { filter: brightness(1.12); }
+.r53-cache-toggle { font-size: 11.5px; color: #b9c2cc; display: flex; align-items: center; gap: 6px; cursor: pointer; }
+
+.r53-flow { display: flex; align-items: stretch; gap: 4px; overflow-x: auto; padding: 8px 2px 12px; perspective: 900px; }
+.r53-flow-item { display: flex; align-items: center; gap: 4px; }
+.r53-node { min-width: 92px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 8px; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(155deg, #2b3340, #21262d); border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35); transform: rotateX(7deg); transition: all 0.3s; }
+.r53-node.active { border-color: #8c4fff; box-shadow: 0 10px 26px rgba(140,79,255,0.4); transform: rotateX(0deg) translateY(-4px) scale(1.05); }
+.r53-node.done { border-color: rgba(63,185,80,0.5); }
+.r53-node-icon { font-size: 24px; }
+.r53-node-label { font-size: 11px; font-weight: 800; color: #e6edf3; text-align: center; }
+.r53-node-sub { font-size: 8.5px; color: #8b949e; text-align: center; line-height: 1.2; }
+.r53-flow-arrow { color: rgba(255,255,255,0.2); font-size: 16px; transition: color 0.3s; }
+.r53-flow-arrow.lit { color: #8c4fff; }
+
+.r53-flow-detail { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: #e6edf3; line-height: 1.55; background: #161b22; border: 1px solid rgba(140,79,255,0.2); border-left: 4px solid #8c4fff; border-radius: 10px; padding: 14px 16px; }
+.r53-flow-detail-icon { font-size: 22px; }
+
+/* ─── 2. FQDN ──────────────────────────────────────── */
+.r53-fqdn { display: flex; align-items: center; justify-content: center; gap: 2px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 22px; margin-bottom: 14px; font-family: "SF Mono", Consolas, monospace; }
+.r53-fqdn-wrap { display: inline-flex; align-items: center; }
+.r53-fqdn-part { font-size: 26px; font-weight: 800; color: var(--fc); padding: 4px 8px; border-radius: 8px; cursor: pointer; transition: all 0.2s; border-bottom: 3px solid var(--fc); }
+.r53-fqdn-part.hov { background: color-mix(in srgb, var(--fc) 18%, transparent); transform: translateY(-3px); }
+.r53-fqdn-dot { font-size: 26px; font-weight: 800; color: #8b949e; }
+.r53-fqdn-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.r53-fqdn-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-top: 3px solid var(--fc); border-radius: 10px; padding: 12px; transition: all 0.2s; }
+.r53-fqdn-card.hov { background: color-mix(in srgb, var(--fc) 8%, #161b22); transform: translateY(-2px); }
+.r53-fqdn-card-name { font-size: 12px; font-weight: 800; color: var(--fc); margin-bottom: 5px; }
+.r53-fqdn-card-desc { font-size: 11px; color: #b9c2cc; line-height: 1.45; }
+
+/* ─── 3. RECORD TYPES ──────────────────────────────── */
+.r53-rec-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.r53-rec-tab { padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 800; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; font-family: "SF Mono", Consolas, monospace; transition: all 0.2s; }
+.r53-rec-tab.active { border-color: var(--rc); color: var(--rc); background: color-mix(in srgb, var(--rc) 12%, #21262d); }
+.r53-rec-detail { background: #161b22; border: 1px solid color-mix(in srgb, var(--rc) 30%, transparent); border-left: 4px solid var(--rc); border-radius: 10px; padding: 16px 18px; }
+.r53-rec-name { font-size: 16px; font-weight: 800; color: var(--rc); }
+.r53-rec-maps { font-size: 12px; color: #8b949e; font-weight: 700; margin: 4px 0 10px; }
+.r53-rec-ex { margin-bottom: 10px; }
+.r53-rec-ex code { background: #0d1117; padding: 6px 10px; border-radius: 6px; color: #c9a3ff; font-size: 11.5px; display: inline-block; }
+.r53-rec-use { font-size: 12px; color: #e6edf3; line-height: 1.5; }
+
+/* ─── 4. POLICY OVERVIEW ───────────────────────────── */
+.r53-pol-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+.r53-pol-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px; border-radius: 10px; cursor: pointer; background: #21262d; border: 2px solid rgba(255,255,255,0.06); color: #8b949e; transition: all 0.2s; }
+.r53-pol-chip.active { border-color: #8c4fff; color: #b88cff; background: rgba(140,79,255,0.12); transform: translateY(-2px); }
+.r53-pol-chip-icon { font-size: 20px; }
+.r53-pol-chip-name { font-size: 11px; font-weight: 700; }
+.r53-pol-detail { background: #161b22; border: 1px solid rgba(140,79,255,0.2); border-radius: 10px; padding: 16px 18px; }
+.r53-pol-head { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.r53-pol-big { font-size: 34px; }
+.r53-pol-name { font-size: 16px; font-weight: 800; color: #e6edf3; }
+.r53-pol-mode { font-size: 10px; font-weight: 700; border-radius: 5px; padding: 2px 8px; display: inline-block; margin-top: 4px; color: #8b949e; background: rgba(139,148,158,0.15); }
+.r53-pol-mode.active { color: #3fb950; background: rgba(63,185,80,0.15); }
+.r53-pol-mode.passive { color: #e3b341; background: rgba(227,179,65,0.15); }
+.r53-pol-desc { font-size: 12.5px; color: #e6edf3; line-height: 1.55; margin-bottom: 10px; }
+.r53-pol-when { font-size: 11.5px; color: #b88cff; }
+
+/* ─── 5. WEIGHTED CALC ─────────────────────────────── */
+.r53-weight-layout { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.r53-pie { flex-shrink: 0; filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4)); }
+.r53-weight-sliders { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 12px; }
+.r53-weight-row { display: grid; grid-template-columns: 1.2fr 2fr auto auto; align-items: center; gap: 10px; }
+.r53-weight-name { font-size: 11.5px; font-weight: 700; color: var(--wc); }
+.r53-weight-row input[type=range] { accent-color: var(--wc); }
+.r53-weight-val { font-size: 10.5px; color: #8b949e; font-family: "SF Mono", Consolas, monospace; }
+.r53-weight-pct { font-size: 12px; font-weight: 800; color: var(--wc); min-width: 48px; text-align: right; }
+
+/* ─── 6. HEALTH CHECK ──────────────────────────────── */
+.r53-hc-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.r53-hc-server { text-align: center; border-radius: 12px; padding: 16px; border: 2px solid; transition: all 0.3s; }
+.r53-hc-server.up { border-color: rgba(63,185,80,0.4); background: rgba(63,185,80,0.06); }
+.r53-hc-server.down { border-color: rgba(248,81,73,0.4); background: rgba(248,81,73,0.06); }
+.r53-hc-server-icon { font-size: 28px; }
+.r53-hc-server-name { font-size: 13px; font-weight: 800; color: #e6edf3; margin-top: 4px; }
+.r53-hc-server-ip { font-size: 11px; color: #8b949e; font-family: "SF Mono", Consolas, monospace; }
+.r53-hc-status { font-size: 11px; font-weight: 700; margin: 8px 0; border-radius: 12px; padding: 3px; }
+.r53-hc-status.h { color: #5fc943; background: rgba(63,185,80,0.15); }
+.r53-hc-status.u { color: #f0867f; background: rgba(248,81,73,0.15); }
+.r53-hc-toggle { width: 100%; padding: 7px; border-radius: 7px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.r53-hc-answer { background: #0d1117; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 14px; }
+.r53-hc-answer-label { font-size: 11.5px; color: #8b949e; margin-bottom: 8px; }
+.r53-hc-answer-ips { display: flex; gap: 8px; flex-wrap: wrap; }
+.r53-hc-ip-chip { font-size: 12px; font-weight: 700; color: #5fc943; background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.3); border-radius: 6px; padding: 4px 10px; font-family: "SF Mono", Consolas, monospace; }
+.r53-hc-answer-fail { font-size: 12.5px; color: #f0867f; font-weight: 700; }
+
+/* ─── 7. GEOPROXIMITY ──────────────────────────────── */
+.r53-geo-regions { display: flex; gap: 10px; justify-content: center; margin-bottom: 14px; }
+.r53-geo-tag { font-size: 11.5px; font-weight: 700; border-radius: 8px; padding: 5px 12px; }
+.r53-geo-tag.mumbai { color: #b88cff; background: rgba(140,79,255,0.12); border: 1px solid rgba(140,79,255,0.35); }
+.r53-geo-tag.hyd { color: #5fc943; background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.35); }
+.r53-geo-map { display: flex; gap: 4px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px 10px; margin-bottom: 14px; overflow-x: auto; }
+.r53-geo-city { flex: 1; min-width: 70px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border-radius: 8px; transition: all 0.3s; }
+.r53-geo-city.mumbai { background: rgba(140,79,255,0.1); border: 1px solid rgba(140,79,255,0.3); }
+.r53-geo-city.hyd { background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.r53-geo-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.r53-geo-city.mumbai .r53-geo-dot { color: #b88cff; }
+.r53-geo-city.hyd .r53-geo-dot { color: #5fc943; }
+.r53-geo-city-name { font-size: 11px; font-weight: 700; color: #e6edf3; }
+.r53-geo-city-ip { font-size: 8.5px; color: #8b949e; }
+.r53-geo-slider { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #e6edf3; }
+.r53-geo-slider input { flex: 1; accent-color: #8c4fff; }
+
+/* ─── 8. FAILOVER ──────────────────────────────────── */
+.r53-fo-stage { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+.r53-fo-dns { text-align: center; font-size: 13px; font-weight: 800; color: #b88cff; background: rgba(140,79,255,0.1); border: 1px solid rgba(140,79,255,0.3); border-radius: 8px; padding: 8px; margin-bottom: 4px; }
+.r53-fo-split { display: flex; justify-content: space-around; }
+.r53-fo-arrow { font-size: 16px; color: rgba(255,255,255,0.15); transform: rotate(90deg); padding: 6px 0; transition: color 0.3s; }
+.r53-fo-arrow.lit { color: #8c4fff; }
+.r53-fo-servers { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.r53-fo-server { position: relative; text-align: center; border-radius: 12px; padding: 14px; border: 2px solid rgba(255,255,255,0.1); background: #21262d; transition: all 0.3s; }
+.r53-fo-server.serving { border-color: #8c4fff; box-shadow: 0 8px 22px rgba(140,79,255,0.3); }
+.r53-fo-server.down { opacity: 0.6; }
+.r53-fo-server.idle { opacity: 0.7; }
+.r53-fo-badge { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; color: #3fb950; background: rgba(63,185,80,0.15); border-radius: 5px; padding: 2px 8px; display: inline-block; margin-bottom: 6px; }
+.r53-fo-badge.secondary { color: #e3b341; background: rgba(227,179,65,0.15); }
+.r53-fo-icon { font-size: 24px; }
+.r53-fo-ip { font-size: 11px; color: #8b949e; font-family: "SF Mono", Consolas, monospace; }
+.r53-fo-state { font-size: 11px; color: #e6edf3; margin: 6px 0; }
+.r53-fo-result { font-size: 12.5px; font-weight: 600; border-radius: 9px; padding: 12px 14px; }
+.r53-fo-result.good { color: #5fc943; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.r53-fo-result.warn { color: #e8cd8a; background: rgba(227,179,65,0.1); border: 1px solid rgba(227,179,65,0.3); }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .r53-fqdn-cards, .r53-pol-grid { grid-template-columns: 1fr 1fr; }
+  .r53-hc-stage, .r53-fo-servers { grid-template-columns: 1fr; }
+  .r53-fqdn-part, .r53-fqdn-dot { font-size: 20px; }
+}

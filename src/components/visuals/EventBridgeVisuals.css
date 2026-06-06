@@ -1,0 +1,32 @@
+/* ─── shared base (pink Messaging theme) ───────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.eb-title { color: #ff85ad; border-bottom: 1px solid rgba(255,79,139,0.3); }
+.eb-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.eb-intro code, .eb-note code, .eb-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ff9ec0; font-size: 11.5px; }
+.eb-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(255,79,139,0.1); border: 1px solid rgba(255,79,139,0.25); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.eb-tabs, .eb-toggle { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.eb-tab, .eb-toggle button { flex: 1; min-width: 100px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11.5px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.eb-tab.active, .eb-toggle button.active { border-color: #FF4F8B; color: #ff85ad; background: rgba(255,79,139,0.1); }
+.eb-detail { background: #161b22; border-left: 4px solid #FF4F8B; border-radius: 10px; padding: 13px 15px; }
+.eb-detail b { font-size: 13px; color: #ff85ad; }
+.eb-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+
+/* flow */
+.eb-flow { display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.eb-flow-node { font-size: 18px; width: 46px; height: 46px; border-radius: 12px; cursor: pointer; background: #21262d; border: 2px solid rgba(255,255,255,0.1); }
+.eb-flow-node.on { border-color: #FF4F8B; background: rgba(255,79,139,0.14); }
+.eb-flow-arr { font-size: 16px; color: #555c66; }
+.eb-flow-arr.on { color: #ff85ad; }
+
+/* code */
+.eb-code { background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; padding: 13px; font-family: ui-monospace, monospace; font-size: 11.5px; color: #a5d6ff; line-height: 1.5; margin-bottom: 12px; overflow-x: auto; }
+
+/* cheats */
+.eb-cheats { display: flex; flex-direction: column; gap: 8px; }
+.eb-cheat { background: #161b22; border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 12px 14px; cursor: pointer; }
+.eb-cheat.open { border-color: #FF4F8B; background: rgba(255,79,139,0.06); }
+.eb-cheat-kw { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.eb-kwchip { font-size: 10.5px; color: #ff9ec0; background: rgba(255,79,139,0.12); border: 1px solid rgba(255,79,139,0.25); border-radius: 6px; padding: 3px 8px; }
+.eb-cheat-a { font-size: 12.5px; font-weight: 700; color: #8b949e; }
+.eb-cheat.open .eb-cheat-a { color: #ff9ec0; }

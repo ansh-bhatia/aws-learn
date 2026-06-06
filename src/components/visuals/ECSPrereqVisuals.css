@@ -1,0 +1,108 @@
+/* ─── shared base ──────────────────────────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.ecs-title { color: #ffb84d; border-bottom: 1px solid rgba(255,153,0,0.3); }
+.ecs-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.ecs-intro code, .ecs-note code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ffcb7d; font-size: 11.5px; }
+.ecs-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.ecs-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.ecs-btn { padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 1px solid rgba(255,255,255,0.12); color: #e6edf3; }
+.ecs-btn.primary { background: #ff9900; border-color: #ff9900; color: #1c1300; }
+.ecs-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.ecs-controls { display: flex; gap: 10px; justify-content: space-between; margin-top: 12px; }
+.ecs-toggle { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.ecs-toggle button { flex: 1; min-width: 120px; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.ecs-toggle button.active { border-color: #ff9900; color: #ffb84d; background: rgba(255,153,0,0.1); }
+.ecs-detail { background: #161b22; border-left: 4px solid #ff9900; border-radius: 10px; padding: 13px 15px; }
+.ecs-detail b { font-size: 13px; color: #ffb84d; }
+.ecs-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+
+/* ─── 1. LEO STORY ─────────────────────────────────── */
+.ecs-story-stage { display: flex; justify-content: center; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 22px; margin-bottom: 12px; }
+.ecs-story-server { width: 320px; max-width: 100%; border: 2px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 14px; background: #161b22; }
+.ecs-story-srvlabel { font-size: 12px; font-weight: 800; color: #c9d1d9; text-align: center; margin-bottom: 12px; }
+.ecs-story-apps { display: flex; gap: 8px; justify-content: center; padding: 10px; border-radius: 9px; transition: all 0.3s; }
+.ecs-story-apps.warn { background: rgba(227,179,65,0.08); }
+.ecs-story-apps.bad { background: rgba(248,81,73,0.1); }
+.ecs-story-app { flex: 1; font-size: 11px; font-weight: 700; color: #e6edf3; text-align: center; padding: 12px 6px; border-radius: 8px; background: #21262d; border: 1px solid rgba(255,255,255,0.08); }
+.ecs-story-app.hot { border-color: #f85149; background: rgba(248,81,73,0.15); color: #ff9d96; animation: ecsPulse 1s infinite; }
+@keyframes ecsPulse { 0%,100% { box-shadow: 0 0 0 rgba(248,81,73,0); } 50% { box-shadow: 0 0 14px rgba(248,81,73,0.5); } }
+.ecs-story-flag { text-align: center; font-size: 12px; font-weight: 800; margin-top: 12px; }
+.ecs-story-flag.ok { color: #9be59b; }
+.ecs-story-flag.warn { color: #e8cd8a; }
+.ecs-story-flag.bad { color: #ff7b72; }
+
+/* ─── 2. OS STACK ──────────────────────────────────── */
+.ecs-os-stack { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.ecs-os-layer { padding: 14px; border-radius: 9px; text-align: center; font-size: 12.5px; font-weight: 700; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+.ecs-os-layer.app { background: rgba(31,111,235,0.14); color: #79c0ff; }
+.ecs-os-layer.applayer { background: rgba(163,113,247,0.14); color: #c8a6ff; }
+.ecs-os-layer.kernel { background: rgba(255,153,0,0.14); color: #ffb84d; }
+.ecs-os-layer.hw { background: rgba(110,118,129,0.18); color: #c9d1d9; }
+.ecs-os-layer.active { border-color: currentColor; transform: scale(1.02); }
+
+/* ─── 3. VM vs CONTAINER 3D ────────────────────────── */
+.ecs-3d-stage { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 22px 16px; margin-bottom: 12px; perspective: 1000px; }
+.ecs-3d-tower { transform: rotateX(6deg); transform-style: preserve-3d; display: flex; flex-direction: column; gap: 7px; }
+.ecs-3d-row { display: flex; gap: 8px; }
+.ecs-3d-vm, .ecs-3d-ct { flex: 1; display: flex; flex-direction: column; gap: 4px; padding: 6px; border-radius: 9px; background: #161b22; border: 1px solid rgba(255,255,255,0.08); box-shadow: 3px 4px 0 rgba(0,0,0,0.3); }
+.ecs-3d-vm { border-color: rgba(88,166,255,0.3); }
+.ecs-3d-ct { border-color: rgba(63,185,80,0.3); }
+.ecs-3d-app { font-size: 11px; font-weight: 800; color: #e6edf3; text-align: center; background: rgba(31,111,235,0.18); border-radius: 6px; padding: 7px; }
+.ecs-3d-layer { font-size: 9.5px; font-weight: 600; text-align: center; padding: 5px; border-radius: 5px; }
+.ecs-3d-layer.al { background: rgba(163,113,247,0.16); color: #c8a6ff; }
+.ecs-3d-layer.kn { background: rgba(255,153,0,0.16); color: #ffb84d; }
+.ecs-3d-base { font-size: 11px; font-weight: 700; text-align: center; padding: 10px; border-radius: 8px; box-shadow: 3px 4px 0 rgba(0,0,0,0.3); }
+.ecs-3d-base.hv { background: rgba(163,113,247,0.16); color: #c8a6ff; }
+.ecs-3d-base.dk { background: rgba(31,111,235,0.18); color: #79c0ff; }
+.ecs-3d-base.kn { background: rgba(255,153,0,0.16); color: #ffb84d; }
+.ecs-3d-base.kn.shared { border: 1px dashed rgba(255,153,0,0.5); }
+.ecs-3d-base.os { background: rgba(110,118,129,0.16); color: #c9d1d9; }
+.ecs-3d-base.hw { background: rgba(110,118,129,0.22); color: #e6edf3; }
+.ecs-3d-tag { font-size: 11px; font-weight: 700; text-align: center; padding: 9px; border-radius: 8px; margin-top: 4px; }
+.ecs-3d-tag.heavy { background: rgba(227,179,65,0.12); color: #e8cd8a; }
+.ecs-3d-tag.light { background: rgba(63,185,80,0.12); color: #9be59b; }
+
+/* ─── 4. VM LIMITATIONS ────────────────────────────── */
+.ecs-limit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ecs-limit-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-left: 4px solid #e3b341; border-radius: 9px; padding: 13px; }
+.ecs-limit-ic { font-size: 22px; margin-bottom: 5px; }
+.ecs-limit-t { font-size: 12.5px; font-weight: 800; color: #e8cd8a; margin-bottom: 4px; }
+.ecs-limit-d { font-size: 11.5px; color: #b9c2cc; line-height: 1.45; }
+
+/* ─── 5. DOCKER LIFECYCLE ──────────────────────────── */
+.ecs-dl-track { display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.ecs-dl-node { width: 38px; height: 38px; border-radius: 50%; cursor: pointer; font-size: 14px; font-weight: 800; background: #21262d; border: 2px solid rgba(255,255,255,0.1); color: #8b949e; flex-shrink: 0; }
+.ecs-dl-node.on { border-color: #ff9900; background: rgba(255,153,0,0.15); color: #ffb84d; }
+.ecs-dl-line { flex: 1; height: 2px; background: rgba(255,255,255,0.1); max-width: 60px; }
+.ecs-dl-line.on { background: rgba(255,153,0,0.5); }
+.ecs-dl-cmd { font-family: ui-monospace, monospace; font-size: 12.5px; color: #79c0ff; background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 9px; padding: 12px 14px; margin-bottom: 12px; }
+
+/* ─── 6. ORCHESTRATION ─────────────────────────────── */
+.ecs-orch-stage { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+.ecs-orch-captain { text-align: center; font-size: 12.5px; font-weight: 800; color: #ffb84d; background: rgba(255,153,0,0.12); border: 1px solid rgba(255,153,0,0.4); border-radius: 10px; padding: 10px; margin-bottom: 16px; position: relative; }
+.ecs-orch-captain small { display: block; font-size: 9.5px; color: #b9c2cc; font-weight: 500; }
+.ecs-orch-hosts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.ecs-orch-host { flex: 1; min-width: 90px; border: 2px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px; background: #161b22; transition: all 0.3s; }
+.ecs-orch-host.ghost { opacity: 0.25; }
+.ecs-orch-host.spof { border-color: #f85149; box-shadow: 0 0 14px rgba(248,81,73,0.3); }
+.ecs-orch-host.linked { border-color: rgba(255,153,0,0.5); }
+.ecs-orch-hl { font-size: 11px; font-weight: 800; color: #c9d1d9; text-align: center; margin-bottom: 8px; }
+.ecs-orch-cts { display: flex; gap: 5px; justify-content: center; font-size: 18px; }
+
+/* ─── 7. ORCHESTRATOR COMPARE ──────────────────────── */
+.ecs-oc-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-top: 4px solid #ff9900; border-radius: 11px; padding: 14px; position: relative; }
+.ecs-oc-tag { position: absolute; top: -11px; left: 14px; font-size: 10px; font-weight: 800; color: #1c1300; border-radius: 6px; padding: 3px 9px; }
+.ecs-oc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.ecs-oc-h { font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+.ecs-oc-h.good { color: #9be59b; }
+.ecs-oc-h.bad { color: #e8cd8a; }
+.ecs-oc-item { font-size: 11.5px; line-height: 1.4; padding: 7px 9px; border-radius: 7px; margin-bottom: 5px; }
+.ecs-oc-item.good { background: rgba(63,185,80,0.08); color: #c9d1d9; }
+.ecs-oc-item.bad { background: rgba(227,179,65,0.08); color: #c9d1d9; }
+
+/* ─── responsive ───────────────────────────────────── */
+@media (max-width: 760px) {
+  .ecs-limit-grid, .ecs-oc-cols { grid-template-columns: 1fr; }
+  .ecs-3d-row { flex-direction: column; }
+}
