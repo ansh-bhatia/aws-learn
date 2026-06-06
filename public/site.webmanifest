@@ -1,0 +1,17 @@
+{
+  "name": "AWS Learn — Interactive SAA-C03 Study Guide",
+  "short_name": "AWS Learn",
+  "description": "Free interactive AWS Solutions Architect Associate (SAA-C03) study guide with 3D visualisations.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -2,23 +2,97 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0f1117" />
+
+    <!-- Primary meta -->
+    <title>AWS Learn — Interactive SAA-C03 Study Guide & Visual Notes</title>
     <meta
       name="description"
-      content="AWS Learn — an interactive study guide for the AWS Certified Solutions Architect Associate (SAA-C03) exam, with 3D visualisations and hands-on explainers for every service."
+      content="Free interactive study guide for the AWS Certified Solutions Architect Associate (SAA-C03) exam. Learn EC2, S3, VPC, IAM, Lambda, DynamoDB, ECS, EKS and more with 3D visualisations, diagrams and hands-on explainers."
     />
-    <meta property="og:title" content="AWS Learn — Interactive Study Guide" />
+    <meta
+      name="keywords"
+      content="AWS, SAA-C03, AWS Solutions Architect Associate, AWS certification, AWS study guide, AWS notes, EC2, S3, VPC, IAM, Lambda, DynamoDB, ECS, EKS, CloudFront, Route 53, AWS exam prep, learn AWS, cloud computing"
+    />
+    <meta name="author" content="AWS Learn" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#0f1117" />
+
+    <!-- Canonical (replace with your final domain) -->
+    <link rel="canonical" href="https://aws-learn.vercel.app/" />
+
+    <!-- Icons & manifest -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph (Facebook, LinkedIn, WhatsApp) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AWS Learn" />
+    <meta property="og:title" content="AWS Learn — Interactive SAA-C03 Study Guide" />
     <meta
       property="og:description"
-      content="Master every AWS service for the SAA-C03 exam with interactive visualisations."
+      content="Master every AWS service for the Solutions Architect Associate exam with interactive 3D visualisations and clear, exam-focused notes — 100% free."
     />
-    <meta property="og:type" content="website" />
-    <title>AWS Learn — Interactive SAA-C03 Study Guide</title>
+    <meta property="og:url" content="https://aws-learn.vercel.app/" />
+    <meta property="og:image" content="https://aws-learn.vercel.app/og-image.svg" />
+    <meta property="og:image:alt" content="AWS Learn — Interactive SAA-C03 Study Guide" />
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AWS Learn — Interactive SAA-C03 Study Guide" />
+    <meta
+      name="twitter:description"
+      content="Free interactive AWS SAA-C03 study guide with 3D visualisations for EC2, S3, VPC, IAM, Lambda, DynamoDB, ECS, EKS and more."
+    />
+    <meta name="twitter:image" content="https://aws-learn.vercel.app/og-image.svg" />
+
+    <!-- Structured data: helps Google understand it's a learning resource -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "AWS Learn",
+        "alternateName": "AWS Learn — Interactive SAA-C03 Study Guide",
+        "url": "https://aws-learn.vercel.app/",
+        "description": "Interactive study guide for the AWS Certified Solutions Architect Associate (SAA-C03) exam with 3D visualisations and hands-on explainers.",
+        "inLanguage": "en"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Course",
+        "name": "AWS Solutions Architect Associate (SAA-C03) — Interactive Study Guide",
+        "description": "A free, interactive course covering every AWS service in the SAA-C03 exam: compute, storage, networking, databases, security, monitoring and more, taught with 3D visualisations and diagrams.",
+        "provider": {
+          "@type": "Organization",
+          "name": "AWS Learn",
+          "url": "https://aws-learn.vercel.app/"
+        },
+        "educationalLevel": "Associate",
+        "about": ["Amazon Web Services", "Cloud Computing", "AWS Certification"],
+        "isAccessibleForFree": true
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+
+    <!-- Fallback content for crawlers/users without JavaScript -->
+    <noscript>
+      <div style="max-width:680px;margin:60px auto;padding:0 20px;font-family:system-ui,sans-serif;color:#e6edf3;background:#0f1117;">
+        <h1>AWS Learn — Interactive SAA-C03 Study Guide</h1>
+        <p>
+          A free, interactive study guide for the AWS Certified Solutions Architect
+          Associate (SAA-C03) exam. Learn EC2, S3, VPC, IAM, Lambda, DynamoDB, ECS,
+          EKS, CloudFront, Route 53 and more — with 3D visualisations and hands-on
+          explainers for every service.
+        </p>
+        <p>Please enable JavaScript to use the interactive app.</p>
+      </div>
+    </noscript>
+
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

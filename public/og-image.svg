@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="AWS Learn — Interactive SAA-C03 Study Guide">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF9900"/>
+      <stop offset="1" stop-color="#ffb84d"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1200" height="8" fill="url(#accent)"/>
+
+  <!-- cloud mark -->
+  <text x="80" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="90">☁️</text>
+
+  <!-- title -->
+  <text x="80" y="320" font-family="Segoe UI, Arial, sans-serif" font-size="86" font-weight="800" fill="#e6edf3">AWS Learn</text>
+  <text x="80" y="395" font-family="Segoe UI, Arial, sans-serif" font-size="40" font-weight="600" fill="#FF9900">Interactive SAA-C03 Study Guide</text>
+
+  <!-- subtitle -->
+  <text x="80" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="30" fill="#8b949e">3D visualisations &amp; hands-on notes for every AWS service</text>
+
+  <!-- service chips -->
+  <g font-family="Segoe UI, Arial, sans-serif" font-size="26" font-weight="600">
+    <rect x="80"  y="520" width="150" height="56" rx="28" fill="#1c2128" stroke="#FF9900" stroke-opacity="0.5"/>
+    <text x="155" y="557" fill="#ffb84d" text-anchor="middle">EC2</text>
+    <rect x="250" y="520" width="150" height="56" rx="28" fill="#1c2128" stroke="#3F8624" stroke-opacity="0.6"/>
+    <text x="325" y="557" fill="#6fc44a" text-anchor="middle">S3</text>
+    <rect x="420" y="520" width="170" height="56" rx="28" fill="#1c2128" stroke="#8C4FFF" stroke-opacity="0.6"/>
+    <text x="505" y="557" fill="#b18cff" text-anchor="middle">VPC</text>
+    <rect x="610" y="520" width="200" height="56" rx="28" fill="#1c2128" stroke="#2E73B8" stroke-opacity="0.6"/>
+    <text x="710" y="557" fill="#5aa0e6" text-anchor="middle">DynamoDB</text>
+    <rect x="830" y="520" width="180" height="56" rx="28" fill="#1c2128" stroke="#DD344C" stroke-opacity="0.6"/>
+    <text x="920" y="557" fill="#ff6b7a" text-anchor="middle">Lambda</text>
+  </g>
+</svg>
