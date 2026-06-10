@@ -947,7 +947,14 @@ Create **before** cluster creation (or it fails):
         shortDesc: "PaaS — deploy apps without managing infrastructure",
         content: `## Elastic Beanstalk
 
-*Notes coming soon.*`,
+**Elastic Beanstalk** is a **PaaS** that deploys & manages your web app without you managing the infrastructure. You upload code (or a Docker image); Beanstalk provisions the **EC2, Auto Scaling, Load Balancer, security groups & health monitoring** for you.
+
+- Supports **Java, .NET, Node.js, Python, PHP, Ruby, Go, Docker**.
+- You keep **full control** of the underlying resources (unlike fully serverless).
+- **Free** — you only pay for the resources it creates.
+- Deployment options: **All-at-once, Rolling, Rolling with additional batch, Immutable, Blue/Green**.
+
+> Exam: "deploy a web app quickly **without managing infrastructure**, but keep control of the EC2 layer" → **Elastic Beanstalk**.`,
       },
       {
         id: "lightsail",
@@ -955,7 +962,13 @@ Create **before** cluster creation (or it fails):
         shortDesc: "Simple virtual private servers",
         content: `## Lightsail
 
-*Notes coming soon.*`,
+**Amazon Lightsail** is the **simplest** way to launch a virtual server, with **predictable flat monthly pricing**. It bundles compute, storage, networking, a static IP, DNS and snapshots into easy plans.
+
+- Pre-built blueprints: **WordPress, LAMP, Node.js, plain Linux/Windows**, databases, containers.
+- Great for **small websites, blogs, dev/test, simple apps** and people new to AWS.
+- Limited integration with the broader AWS ecosystem (by design — simplicity over flexibility).
+
+> Exam: "**simple, low-cost, fixed-price** server for a small project / beginner" → **Lightsail**. Need full control/scale → EC2.`,
       },
       {
         id: "batch",
@@ -963,7 +976,13 @@ Create **before** cluster creation (or it fails):
         shortDesc: "Fully managed batch computing workloads",
         content: `## AWS Batch
 
-*Notes coming soon.*`,
+**AWS Batch** runs **batch computing jobs** at any scale — it dynamically provisions the right amount/type of compute (EC2 or Fargate, including **Spot**) based on the jobs in the queue.
+
+- You define **job definitions**, submit jobs to **job queues**, and Batch schedules them onto **compute environments**.
+- No cluster to manage; scales to thousands of jobs.
+- Ideal for **scientific simulation, media/image processing, ETL, financial modelling** — long-running, parallel workloads.
+
+> Batch (managed job scheduler) vs Lambda (15-min limit, event-driven). Heavy/long batch jobs → **AWS Batch**.`,
       },
       {
         id: "auto-scaling",
@@ -1186,7 +1205,20 @@ Designed for storing **massive amounts of unstructured, static data** — files 
         shortDesc: "Object storage — store any amount of data",
         content: `## S3 – Simple Storage Service
 
-*Notes coming soon.*`,
+**Amazon S3** is durable, virtually unlimited **object storage** (not a filesystem). Data is stored as **objects** in **buckets** (globally unique names); **11 nines (99.999999999%) durability**.
+
+### Storage classes (by access pattern)
+- **S3 Standard** — frequent access, low latency.
+- **S3 Intelligent-Tiering** — auto-moves objects between tiers; unknown/changing access.
+- **S3 Standard-IA** / **One Zone-IA** — infrequent access, cheaper (One Zone = single AZ, less resilient).
+- **S3 Glacier Instant / Flexible Retrieval / Deep Archive** — archival, cheapest, retrieval times from ms to hours.
+
+### Key features
+- **Versioning** (keep object history), **Lifecycle rules** (auto-transition/expire), **Replication** (CRR cross-region / SRR same-region).
+- **Security:** private by default; **bucket policies**, **IAM**, **Block Public Access**, **encryption** (SSE-S3, SSE-KMS, SSE-C), **Object Lock** (WORM/compliance), **pre-signed URLs**.
+- **Static website hosting**, **event notifications** (→ Lambda/SQS/SNS), **Transfer Acceleration**, **multipart upload**.
+
+> Exam: "store any amount of data, highly durable, lifecycle to archive" → **S3**. Pick the class by access frequency + retrieval need.`,
       },
       {
         id: "ebs",
@@ -1984,7 +2016,13 @@ ONTAP must be deleted **in sequence** or it errors:
         shortDesc: "Low-cost archival storage",
         content: `## S3 Glacier
 
-*Notes coming soon.*`,
+**S3 Glacier** is low-cost **archival** storage for data you rarely access but must retain. It's a set of S3 storage classes:
+
+- **Glacier Instant Retrieval** — archive with **millisecond** access; for data accessed ~once a quarter.
+- **Glacier Flexible Retrieval** — retrieval in minutes–hours (Expedited / Standard / Bulk); backups, DR.
+- **Glacier Deep Archive** — **cheapest** AWS storage; retrieval in **12 hours**; for 7–10-year compliance/regulatory retention.
+
+> Use **lifecycle rules** to auto-move S3 objects to Glacier over time. Choose the tier by how fast you need data back. **Vault Lock** enforces WORM/compliance.`,
       },
       {
         id: "datasync",
@@ -2629,7 +2667,14 @@ SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services
         shortDesc: "In-memory caching (Redis / Memcached)",
         content: `## ElastiCache
 
-*Notes coming soon.*`,
+**Amazon ElastiCache** is a managed **in-memory cache** (microsecond latency) that sits in front of a database to offload reads and speed up apps. Two engines:
+
+- **Redis** — rich data structures, **persistence**, replication, **Multi-AZ + automatic failover**, pub/sub, sorted sets, encryption. Use when you need HA or advanced features.
+- **Memcached** — simple, multi-threaded, easy horizontal scaling; pure cache, no persistence/replication.
+
+**Caching strategies:** lazy loading, write-through, TTL. Common for **session stores, leaderboards, DB query caching**.
+
+> Redis = features + HA; Memcached = simple & scalable. Need durability/failover/pub-sub → **Redis**.`,
       },
       {
         id: "redshift",
@@ -2637,7 +2682,13 @@ SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services
         shortDesc: "Cloud data warehouse for analytics",
         content: `## Redshift
 
-*Notes coming soon.*`,
+**Amazon Redshift** is a managed, petabyte-scale **data warehouse** for **OLAP / analytics** (not transactional). It uses **columnar storage** + **massively parallel processing (MPP)** for fast aggregate queries over huge datasets.
+
+- Query with standard **SQL**; integrates with BI tools (QuickSight, Tableau).
+- **Redshift Spectrum** queries data directly in **S3** without loading it.
+- **Redshift Serverless** auto-scales capacity; no cluster to manage.
+
+> Exam: "**complex analytical queries / reporting** over large structured data / data warehouse" → **Redshift**. Transactional workload → RDS/Aurora.`,
       },
       {
         id: "documentdb",
@@ -2645,7 +2696,12 @@ SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services
         shortDesc: "MongoDB-compatible document database",
         content: `## DocumentDB
 
-*Notes coming soon.*`,
+**Amazon DocumentDB** is a managed, **MongoDB-compatible** document (JSON) database. It scales storage automatically, replicates **6 copies across 3 AZs**, and supports MongoDB drivers/tools.
+
+- For **content management, catalogs, user profiles** — flexible JSON documents.
+- Fully managed: backups, patching, Multi-AZ failover handled by AWS.
+
+> Exam keyword: "**MongoDB-compatible** managed document database" → **DocumentDB**.`,
       },
       {
         id: "neptune",
@@ -2653,7 +2709,12 @@ SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services
         shortDesc: "Fully managed graph database",
         content: `## Neptune
 
-*Notes coming soon.*`,
+**Amazon Neptune** is a managed **graph database** for highly connected data. Optimized for storing and querying **relationships**.
+
+- Supports **property graph** (Gremlin / openCypher) and **RDF** (SPARQL).
+- Use cases: **social networks, recommendation engines, fraud detection, knowledge graphs, network/IT topology**.
+
+> Exam keyword: "**graph / relationships / social network / recommendations / fraud**" → **Neptune**.`,
       },
       {
         id: "db-overview",
@@ -3729,7 +3790,13 @@ The **Classic Load Balancer (CLB)** was built for the old **EC2-Classic** networ
         shortDesc: "Dedicated network connection to AWS",
         content: `## Direct Connect
 
-*Notes coming soon.*`,
+**AWS Direct Connect (DX)** is a **dedicated, private fibre connection** from your data center to AWS — bypassing the public internet for **consistent low latency, higher bandwidth, and lower data-transfer cost**.
+
+- Takes weeks to provision (physical link via a DX location).
+- For **hybrid cloud, large/steady data transfer, latency-sensitive** workloads.
+- **VPN over DX** adds encryption (DX itself is private but not encrypted).
+
+> DX = private/consistent but slow to set up & costly. **Site-to-Site VPN** = quick, cheap, over the internet. Need a backup for DX → a VPN.`,
       },
       {
         id: "transit-gateway",
@@ -3737,7 +3804,13 @@ The **Classic Load Balancer (CLB)** was built for the old **EC2-Classic** networ
         shortDesc: "Connect VPCs and on-premise networks",
         content: `## Transit Gateway
 
-*Notes coming soon.*`,
+**AWS Transit Gateway (TGW)** is a **network hub** that connects many **VPCs** and **on-prem** networks through a single gateway — replacing a messy full mesh of VPC peering connections.
+
+- **Hub-and-spoke** routing; supports thousands of VPCs.
+- Connects VPCs, **Site-to-Site VPN**, and **Direct Connect**; can route across **regions** (peering).
+- Centralizes routing, security inspection, and simplifies management.
+
+> Exam: "connect **many VPCs** / hybrid network at scale without complex peering" → **Transit Gateway**.`,
       },
     ],
   },
@@ -3940,7 +4013,12 @@ Create the user **once**; assign **permission sets** per account. e.g. User X �
         shortDesc: "User authentication and authorization",
         content: `## Cognito
 
-*Notes coming soon.*`,
+**Amazon Cognito** adds **authentication, authorization & user management** to web/mobile apps. Two parts:
+
+- **User Pools** — a user directory; sign-up/sign-in, MFA, **social & enterprise login** (Google, Facebook, SAML, OIDC). Issues **JWT tokens** to call your APIs (integrates with API Gateway).
+- **Identity Pools (Federated Identities)** — exchange a verified identity for **temporary AWS credentials** (via STS) to access AWS services directly (e.g. upload to S3).
+
+> Exam: "**sign-in / user directory / social login** for an app" → User Pool. "give app users **temporary AWS access**" → Identity Pool.`,
       },
       {
         id: "acm",
@@ -4024,7 +4102,12 @@ An **HSM** is dedicated tamper-proof hardware for generating/storing cryptograph
         shortDesc: "DDoS protection for AWS resources",
         content: `## Shield
 
-*Notes coming soon.*`,
+**AWS Shield** is **DDoS protection**.
+
+- **Shield Standard** — **free**, automatic for all AWS customers; protects against common layer 3/4 (network/transport) attacks.
+- **Shield Advanced** — paid; enhanced protection for **EC2, ELB, CloudFront, Global Accelerator, Route 53**, with 24/7 DDoS response team, cost-protection for scaling during attacks, and detailed reporting.
+
+> Shield = **DDoS** (volumetric/network). **WAF** = layer-7 app exploits (SQL injection, XSS). Often used together.`,
       },
       {
         id: "secrets-manager",
@@ -4032,7 +4115,12 @@ An **HSM** is dedicated tamper-proof hardware for generating/storing cryptograph
         shortDesc: "Store and rotate secrets securely",
         content: `## Secrets Manager
 
-*Notes coming soon.*`,
+**AWS Secrets Manager** securely **stores, encrypts (KMS) & automatically rotates** secrets — database credentials, API keys, tokens. Apps retrieve secrets at runtime via API instead of hardcoding them.
+
+- **Automatic rotation** (built-in for RDS/Aurora/Redshift/DocumentDB; custom via Lambda).
+- Fine-grained access via IAM; full audit via CloudTrail.
+
+> **Secrets Manager** vs **SSM Parameter Store**: Parameter Store is free & simple (config + secrets) but **no built-in rotation**; Secrets Manager costs per secret but **auto-rotates**. Need rotation → Secrets Manager.`,
       },
       {
         id: "guardduty",
@@ -4040,7 +4128,12 @@ An **HSM** is dedicated tamper-proof hardware for generating/storing cryptograph
         shortDesc: "Intelligent threat detection",
         content: `## GuardDuty
 
-*Notes coming soon.*`,
+**Amazon GuardDuty** is an intelligent **threat detection** service. It continuously analyzes **VPC Flow Logs, CloudTrail, and DNS logs** using ML to spot malicious or unauthorized activity — no agents to install.
+
+- Detects compromised instances, crypto-mining, unusual API calls, reconnaissance, data exfiltration.
+- Findings can trigger **EventBridge → Lambda/SNS** for automated response.
+
+> Exam: "**automatically detect threats / suspicious activity** across the account using logs + ML" → **GuardDuty**. (Inspector = vulnerability scan of EC2; GuardDuty = active threat detection.)`,
       },
     ],
   },
@@ -4133,7 +4226,14 @@ An **HSM** is dedicated tamper-proof hardware for generating/storing cryptograph
         shortDesc: "Operational hub for AWS resources",
         content: `## Systems Manager
 
-*Notes coming soon.*`,
+**AWS Systems Manager (SSM)** is an operations hub to **manage EC2 & on-prem servers at scale** (needs the SSM agent + an IAM role). Key capabilities:
+
+- **Session Manager** — secure shell access **without SSH keys, bastion hosts, or open port 22**.
+- **Parameter Store** — store config & secrets (free; secrets via KMS).
+- **Patch Manager** — automate OS patching; **Run Command** — run commands across fleets.
+- **Fleet/Inventory, State Manager, Automation** runbooks.
+
+> Exam: "access instances **without SSH / bastion**" → **Session Manager**. "store config/secrets cheaply" → **Parameter Store**. "patch a fleet" → **Patch Manager**.`,
       },
       {
         id: "trusted-advisor",
@@ -4373,7 +4473,13 @@ Targets: Lambda, EC2 start/stop, Step Functions, SNS, SQS, API calls. Needs an I
         shortDesc: "Coordinate distributed applications as workflows",
         content: `## Step Functions
 
-*Notes coming soon.*`,
+**AWS Step Functions** orchestrates **serverless workflows** as a visual **state machine** — coordinating Lambda, ECS, SNS, SQS, DynamoDB and more with built-in **error handling, retries, branching, parallelism & waits**.
+
+- Defined in **Amazon States Language** (JSON); you see the flow as a diagram.
+- **Standard** workflows (long-running, up to 1 year, exactly-once) vs **Express** (high-volume, short, cheap).
+- Use cases: **order processing, ETL pipelines, ML workflows, approval flows, saga transactions**.
+
+> Exam: "coordinate **multiple Lambdas / steps with retries & sequencing**" → **Step Functions** (vs EventBridge = routing single events).`,
       },
       {
         id: "kinesis",
@@ -4441,7 +4547,11 @@ Umbrella for real-time streaming:
         shortDesc: "Managed Git repositories",
         content: `## CodeCommit
 
-*Notes coming soon.*`,
+**AWS CodeCommit** is a managed, private **Git repository** service — like a hosted GitHub inside AWS. Secure (IAM, KMS encryption), scalable, integrates with the rest of the **Code\*** CI/CD suite.
+
+- Access via HTTPS/SSH; supports pull requests, branches, triggers (→ Lambda/SNS).
+
+> The "source" stage in an AWS-native CI/CD pipeline. (Pairs with CodeBuild → CodeDeploy → CodePipeline.)`,
       },
       {
         id: "codebuild",
@@ -4449,7 +4559,12 @@ Umbrella for real-time streaming:
         shortDesc: "Fully managed build service",
         content: `## CodeBuild
 
-*Notes coming soon.*`,
+**AWS CodeBuild** is a fully managed **build service** — it compiles source, runs tests, and produces deployable artifacts. No build servers to manage; **pay per build minute**.
+
+- Build steps defined in a **buildspec.yml**.
+- Scales automatically; integrates with CodeCommit/GitHub and CodePipeline.
+
+> The "build/test" stage of CI/CD. Serverless build → **CodeBuild**.`,
       },
       {
         id: "codedeploy",
@@ -4457,7 +4572,13 @@ Umbrella for real-time streaming:
         shortDesc: "Automated application deployments",
         content: `## CodeDeploy
 
-*Notes coming soon.*`,
+**AWS CodeDeploy** automates **application deployments** to EC2, on-prem servers, ECS, or Lambda — with strategies that minimize downtime and enable rollback.
+
+- **Deployment styles:** **In-place** (update existing instances) and **Blue/Green** (new fleet, then switch).
+- **Traffic shifting** for Lambda/ECS: **Canary** (% then rest) and **Linear** (gradual).
+- Automatic **rollback** on failure (CloudWatch alarms).
+
+> The "deploy" stage of CI/CD. Safe rollout with rollback → **CodeDeploy**.`,
       },
       {
         id: "codepipeline",
@@ -4465,7 +4586,12 @@ Umbrella for real-time streaming:
         shortDesc: "Continuous delivery pipeline",
         content: `## CodePipeline
 
-*Notes coming soon.*`,
+**AWS CodePipeline** is the **CI/CD orchestrator** that ties the stages together: **Source → Build → Test → Deploy**, triggered automatically on every code change.
+
+- Integrates **CodeCommit/GitHub → CodeBuild → CodeDeploy** (and manual-approval, CloudFormation, ECS, Lambda stages).
+- Models the full release workflow; each commit flows through automatically.
+
+> Exam: "**automate the whole release process / CI-CD pipeline**" → **CodePipeline** (the conductor; the Code\* services are the players).`,
       },
       {
         id: "cloudformation",
@@ -4473,7 +4599,14 @@ Umbrella for real-time streaming:
         shortDesc: "Infrastructure as Code (IaC)",
         content: `## CloudFormation
 
-*Notes coming soon.*`,
+**AWS CloudFormation** is **Infrastructure as Code (IaC)** — you describe your AWS resources in a **template** (YAML/JSON) and CloudFormation provisions them as a managed **stack**, repeatably and consistently.
+
+- **Declarative**: define the desired end state; CloudFormation figures out the order (dependencies).
+- **Change Sets** preview updates; **automatic rollback** on failure; **drift detection**.
+- Reusable across environments/regions; **StackSets** deploy to many accounts/regions.
+- **Free** — pay only for the resources created.
+
+> Exam: "**provision infrastructure repeatably / as code**, AWS-native, declarative" → **CloudFormation**.`,
       },
       {
         id: "cdk",
@@ -4481,7 +4614,12 @@ Umbrella for real-time streaming:
         shortDesc: "Define cloud infra using familiar languages",
         content: `## CDK – Cloud Development Kit
 
-*Notes coming soon.*`,
+**AWS CDK** lets you define infrastructure using **real programming languages** (TypeScript, Python, Java, C#, Go) instead of YAML/JSON. Your code **synthesizes into a CloudFormation template** and deploys as a stack.
+
+- Use loops, conditions, functions & **reusable constructs** to build infra.
+- Higher-level abstractions than raw CloudFormation (sensible defaults).
+
+> CDK (code) vs CloudFormation (templates): both end up as CloudFormation stacks. Prefer real code & abstractions → **CDK**.`,
       },
     ],
   },
@@ -4497,7 +4635,12 @@ Umbrella for real-time streaming:
         shortDesc: "Build, train, and deploy ML models",
         content: `## SageMaker
 
-*Notes coming soon.*`,
+**Amazon SageMaker** is the end-to-end platform to **build, train, tune, and deploy machine-learning models** at scale — covering the full ML lifecycle in one managed service.
+
+- **Notebooks**, built-in algorithms, automatic model tuning, one-click **training & hosting (endpoints)**.
+- For data scientists/ML engineers building **custom models** (vs the pre-trained AI services like Rekognition/Comprehend).
+
+> Exam: "**build & train your own ML model**" → **SageMaker**. "ready-made AI (vision/text/speech)" → the specific AI service.`,
       },
       {
         id: "rekognition",
@@ -4505,7 +4648,11 @@ Umbrella for real-time streaming:
         shortDesc: "Image and video analysis",
         content: `## Rekognition
 
-*Notes coming soon.*`,
+**Amazon Rekognition** is a pre-trained **image & video analysis** (computer vision) service — no ML expertise needed.
+
+- Detects **objects, scenes, faces, text, celebrities**; **facial comparison & analysis**; **content moderation** (unsafe content).
+
+> Exam keyword: "**analyze images/video / detect faces / moderate content**" → **Rekognition**.`,
       },
       {
         id: "bedrock",
@@ -4513,7 +4660,12 @@ Umbrella for real-time streaming:
         shortDesc: "Foundation models as a service",
         content: `## Bedrock
 
-*Notes coming soon.*`,
+**Amazon Bedrock** is a fully managed service to build **generative AI** apps using **foundation models (FMs)** from Amazon (Titan), Anthropic (Claude), Meta, Mistral, Cohere, AI21 — via a single API, **serverless**.
+
+- **Customize** models with your data (fine-tuning, **RAG / Knowledge Bases**), build **Agents**.
+- Your data stays private; not used to train the base models.
+
+> Exam keyword: "**generative AI / foundation models / chatbots / LLMs** without managing infrastructure" → **Bedrock**.`,
       },
       {
         id: "comprehend",
@@ -4521,7 +4673,12 @@ Umbrella for real-time streaming:
         shortDesc: "NLP — extract meaning from text",
         content: `## Comprehend
 
-*Notes coming soon.*`,
+**Amazon Comprehend** is a pre-trained **NLP** (natural language processing) service that extracts insights from text.
+
+- Detects **sentiment, entities, key phrases, language, PII**, and topics.
+- **Comprehend Medical** extracts info from clinical text.
+
+> Exam keyword: "**analyze text / sentiment / extract entities / detect PII in documents**" → **Comprehend**.`,
       },
       {
         id: "polly",
@@ -4529,7 +4686,11 @@ Umbrella for real-time streaming:
         shortDesc: "Text-to-speech",
         content: `## Polly
 
-*Notes coming soon.*`,
+**Amazon Polly** is **text-to-speech** — converts written text into lifelike spoken audio in dozens of languages and voices (including neural voices).
+
+- Use cases: voice assistants, IVR, e-learning narration, accessibility.
+
+> Keyword: "**text → speech / generate voice / read text aloud**" → **Polly**. (The reverse — speech → text — is **Transcribe**.)`,
       },
       {
         id: "lex",
@@ -4537,7 +4698,12 @@ Umbrella for real-time streaming:
         shortDesc: "Build conversational chatbots",
         content: `## Lex
 
-*Notes coming soon.*`,
+**Amazon Lex** builds **conversational interfaces** — chatbots & voice bots — using the same tech as Alexa (automatic speech recognition + natural language understanding).
+
+- Define **intents, utterances & slots**; integrate with **Lambda** for fulfillment.
+- Use cases: customer-support bots, IVR, virtual agents.
+
+> Keyword: "**build a chatbot / voice assistant**" → **Lex** (often Lex + Polly + Lambda together).`,
       },
     ],
   },
@@ -4553,7 +4719,12 @@ Umbrella for real-time streaming:
         shortDesc: "Query S3 data with SQL",
         content: `## Athena
 
-*Notes coming soon.*`,
+**Amazon Athena** is **serverless, interactive SQL queries directly on data in S3** — no servers, no loading. You **pay per query** (per TB scanned).
+
+- Uses **Presto**; works with CSV, JSON, Parquet, ORC. Pair with the **Glue Data Catalog** for table schemas.
+- Tip: use **columnar formats (Parquet) + partitioning + compression** to scan less data = cheaper/faster.
+
+> Exam: "**query S3 data with SQL, serverless, ad-hoc, no infrastructure**" → **Athena**. (Heavy/continuous warehousing → Redshift.)`,
       },
       {
         id: "glue",
@@ -4561,7 +4732,12 @@ Umbrella for real-time streaming:
         shortDesc: "Serverless ETL and data integration",
         content: `## AWS Glue
 
-*Notes coming soon.*`,
+**AWS Glue** is a serverless **ETL** (extract, transform, load) and data-integration service for preparing data for analytics.
+
+- **Glue Crawlers** auto-discover schemas and populate the **Glue Data Catalog** (central metadata used by Athena, Redshift Spectrum, EMR).
+- Run **Spark/Python** ETL jobs serverlessly; no clusters to manage.
+
+> Exam: "**ETL / discover schema / catalog data / prepare data** serverlessly" → **Glue**. The **Data Catalog** is the shared metadata store.`,
       },
       {
         id: "quicksight",
@@ -4569,7 +4745,12 @@ Umbrella for real-time streaming:
         shortDesc: "Business intelligence and data visualization",
         content: `## QuickSight
 
-*Notes coming soon.*`,
+**Amazon QuickSight** is a serverless **business intelligence (BI)** service — build interactive **dashboards & visualizations** from your data.
+
+- Connects to S3, Athena, Redshift, RDS, Aurora and more; **SPICE** in-memory engine for fast queries.
+- **ML Insights** (anomaly detection, forecasting) and **Q** (natural-language questions).
+
+> Exam keyword: "**dashboards / data visualization / BI reports**" → **QuickSight**.`,
       },
       {
         id: "emr",
@@ -4577,7 +4758,12 @@ Umbrella for real-time streaming:
         shortDesc: "Big data with Hadoop / Spark",
         content: `## EMR
 
-*Notes coming soon.*`,
+**Amazon EMR (Elastic MapReduce)** is a managed **big-data platform** for running open-source frameworks — **Apache Spark, Hadoop, Hive, Presto, HBase** — on scalable clusters (EC2, EKS, or **EMR Serverless**).
+
+- For **massive-scale data processing, ML, large ETL** over petabytes.
+- Can use **Spot** instances to cut cost; integrates with S3 (data lake).
+
+> Exam: "run **Spark/Hadoop / huge-scale big-data processing**" → **EMR**. (Simple S3 SQL → Athena; managed ETL → Glue.)`,
       },
       {
         id: "opensearch",
@@ -4585,7 +4771,12 @@ Umbrella for real-time streaming:
         shortDesc: "Search and analytics (Elasticsearch fork)",
         content: `## OpenSearch Service
 
-*Notes coming soon.*`,
+**Amazon OpenSearch Service** (formerly Elasticsearch Service) is managed **search, log analytics & observability**. Store, search, and visualize large volumes of data in near-real-time, with built-in **OpenSearch Dashboards** (Kibana).
+
+- Use cases: **full-text search, log/event analytics, application & infrastructure monitoring, SIEM**.
+- Often fed by **Kinesis Data Firehose** or CloudWatch Logs.
+
+> Exam keyword: "**search / analyze logs in near-real-time / dashboards over log data**" → **OpenSearch**.`,
       },
     ],
   },
@@ -4601,7 +4792,13 @@ Umbrella for real-time streaming:
         shortDesc: "AWS global physical infrastructure",
         content: `## Regions & Availability Zones
 
-*Notes coming soon.*`,
+AWS's **global infrastructure** is the foundation of resilient design.
+
+- **Region** — a geographic area (e.g. Mumbai \`ap-south-1\`). Isolated from other regions; choose based on **latency to users, data-residency/compliance, cost, and service availability**.
+- **Availability Zone (AZ)** — one or more discrete data centers within a region, with independent power/cooling/networking, connected by low-latency links. Regions have **2–6 AZs**.
+- **High availability** = deploy across **multiple AZs** (e.g. Multi-AZ RDS, ELB + Auto Scaling across AZs). **Disaster recovery** = across **multiple Regions**.
+
+> Exam: protect against a data-center failure → **multi-AZ**; protect against a whole-region failure → **multi-region**.`,
       },
       {
         id: "edge-locations",
@@ -4609,7 +4806,15 @@ Umbrella for real-time streaming:
         shortDesc: "Low-latency delivery points",
         content: `## Edge Locations & Local Zones
 
-*Notes coming soon.*`,
+Beyond Regions/AZs, AWS has infrastructure closer to users:
+
+- **Edge Locations** — hundreds of sites worldwide used by **CloudFront** (CDN cache), **Route 53**, **Global Accelerator** and **AWS WAF/Shield** to deliver content and DNS with **low latency**.
+- **Regional Edge Caches** — larger caches between edge locations and the origin to improve cache hit ratio.
+- **Local Zones** — place compute/storage in large metro areas **close to end users** for single-digit-millisecond latency (e.g. gaming, live media).
+- **Wavelength** — AWS infrastructure inside **5G** networks for ultra-low-latency mobile apps.
+- **Outposts** — AWS hardware **on-premises** for hybrid / data-residency needs.
+
+> Exam: "cache content near users / reduce latency globally" → **CloudFront edge locations**. "very low latency in a specific city" → **Local Zones**.`,
       },
       {
         id: "shared-responsibility",
@@ -4617,7 +4822,17 @@ Umbrella for real-time streaming:
         shortDesc: "Who is responsible for what in AWS",
         content: `## Shared Responsibility Model
 
-*Notes coming soon.*`,
+Security in AWS is **shared** between AWS and you:
+
+- **AWS — security OF the cloud:** the physical data centers, hardware, the global network, and the managed-service software (hypervisor, managed DB engine patching, etc.).
+- **You — security IN the cloud:** your **data**, **IAM users/permissions**, **OS/network/firewall config** (security groups, NACLs), **encryption** choices, and application code.
+
+The line shifts by service type:
+- **IaaS (EC2):** you patch the OS, configure firewalls, manage everything above the hypervisor.
+- **Managed (RDS):** AWS patches the OS/engine; you manage data, access, and network config.
+- **Serverless (Lambda, S3):** AWS manages most of the stack; you still own **data, IAM & encryption**.
+
+> Exam: **patching the guest OS of EC2** = customer. **Physical security / hypervisor** = AWS. **Your data & IAM** = always the customer.`,
       },
       {
         id: "well-architected",
@@ -4625,7 +4840,16 @@ Umbrella for real-time streaming:
         shortDesc: "Six pillars for building on AWS",
         content: `## Well-Architected Framework
 
-*Notes coming soon.*`,
+AWS's set of best practices for designing good systems, organized into **6 pillars**:
+
+1. **Operational Excellence** — run & monitor systems, automate, improve (IaC, observability).
+2. **Security** — protect data & systems (least privilege, encryption, traceability).
+3. **Reliability** — recover from failure, scale, meet demand (multi-AZ, backups, auto-recovery).
+4. **Performance Efficiency** — use resources efficiently, right-size, adopt new tech.
+5. **Cost Optimization** — avoid unnecessary spend (right-sizing, Spot/Savings Plans, managed services).
+6. **Sustainability** — minimize environmental impact (efficient resource use, managed services).
+
+> The **Well-Architected Tool** reviews your workloads against these pillars and flags risks. Remember **trade-offs** — e.g. higher reliability/performance often costs more.`,
       },
       {
         id: "pricing",
@@ -4633,7 +4857,23 @@ Umbrella for real-time streaming:
         shortDesc: "How AWS charges and how to optimize cost",
         content: `## AWS Pricing & Billing
 
-*Notes coming soon.*`,
+Core AWS pricing principles and cost-control tools.
+
+### How AWS charges (3 fundamentals)
+- **Compute** (per second/hour of EC2, per request+duration for Lambda)
+- **Storage** (per GB)
+- **Data transfer OUT** (inbound is free; outbound & cross-AZ/region cost money)
+
+### EC2 purchase options (cheapest → most flexible)
+- **Spot** (up to ~90% off, interruptible) · **Reserved Instances / Savings Plans** (1–3 yr commit, big discount) · **On-Demand** (pay as you go) · **Dedicated Hosts** (compliance).
+
+### Cost-management tools
+- **Cost Explorer** — visualize & forecast spend.
+- **Budgets** — alerts when cost/usage crosses a threshold.
+- **Pricing Calculator** — estimate before you build.
+- **Cost Allocation Tags** + **Consolidated Billing** (AWS Organizations) for multi-account.
+
+> Exam: predictable steady workload → **Reserved/Savings Plans**; fault-tolerant/batch → **Spot**; short-term/unpredictable → **On-Demand**. **Free Tier** covers learning.`,
       },
     ],
   },
