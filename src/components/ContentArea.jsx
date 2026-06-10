@@ -717,6 +717,22 @@ function inlineFormat(rawText) {
   return parts;
 }
 
+// Cursor-following 3D tilt for cards
+function handleTilt(e) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const el = e.currentTarget;
+  const r = el.getBoundingClientRect();
+  const px = (e.clientX - r.left) / r.width - 0.5;
+  const py = (e.clientY - r.top) / r.height - 0.5;
+  el.style.setProperty("--ry", `${px * 12}deg`);
+  el.style.setProperty("--rx", `${-py * 12}deg`);
+}
+function resetTilt(e) {
+  const el = e.currentTarget;
+  el.style.setProperty("--ry", "0deg");
+  el.style.setProperty("--rx", "0deg");
+}
+
 // Dashboard shown when nothing is selected
 function Dashboard({ onSelect, progress }) {
   const total = awsCategories.reduce((a, c) => a + c.topics.length, 0);
@@ -755,10 +771,13 @@ function Dashboard({ onSelect, progress }) {
           return (
             <button
               key={cat.id}
-              className="cat-card"
+              className="cat-card tilt"
               onClick={() => onSelect(cat.topics[0].id)}
+              onMouseMove={handleTilt}
+              onMouseLeave={resetTilt}
               style={{ "--cat-color": cat.color }}
             >
+              <div className="cat-card-glow" />
               <div className="cat-card-icon">{cat.icon}</div>
               <div className="cat-card-info">
                 <div className="cat-card-label">{cat.label}</div>
