@@ -329,6 +329,18 @@ import {
   BillingTools,
   DataTransferCost,
 } from "./visuals/MigrationBillingVisuals";
+import {
+  ObjectVsBlock,
+  S3Features,
+  StorageClasses,
+  ExpressOneZone,
+  Versioning,
+  LifecycleRules,
+  AccessControl,
+  IAMvsBucketPolicy,
+  ObjectLock,
+  S3Encryption,
+} from "./visuals/S3Visuals";
 
 const VISUAL_MAP = {
   VirtualizationDiagram,
@@ -581,6 +593,16 @@ const VISUAL_MAP = {
   ServerMigration,
   BillingTools,
   DataTransferCost,
+  ObjectVsBlock,
+  S3Features,
+  StorageClasses,
+  ExpressOneZone,
+  Versioning,
+  LifecycleRules,
+  AccessControl,
+  IAMvsBucketPolicy,
+  ObjectLock,
+  S3Encryption,
 };
 
 function renderMarkdown(text) {

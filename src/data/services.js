@@ -1201,24 +1201,60 @@ Designed for storing **massive amounts of unstructured, static data** — files 
       },
       {
         id: "s3",
-        title: "S3 – Simple Storage Service",
-        shortDesc: "Object storage — store any amount of data",
-        content: `## S3 – Simple Storage Service
+        title: "S3 – Simple Storage Service (Part 1)",
+        shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
+        visuals: ["ObjectVsBlock", "S3Features", "StorageClasses", "ExpressOneZone", "Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
+        content: `## S3 – Simple Storage Service (Part 1)
 
-**Amazon S3** is durable, virtually unlimited **object storage** (not a filesystem). Data is stored as **objects** in **buckets** (globally unique names); **11 nines (99.999999999%) durability**.
+**Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
 
-### Storage classes (by access pattern)
-- **S3 Standard** — frequent access, low latency.
-- **S3 Intelligent-Tiering** — auto-moves objects between tiers; unknown/changing access.
-- **S3 Standard-IA** / **One Zone-IA** — infrequent access, cheaper (One Zone = single AZ, less resilient).
-- **S3 Glacier Instant / Flexible Retrieval / Deep Archive** — archival, cheapest, retrieval times from ms to hours.
+### Object vs Block storage
+- **Object (S3):** each file = one whole **object** with a unique ID + metadata, in a flat namespace; each has its own **URL** (access over HTTP, no mounting). Scalable, cheap, best for **static/unstructured data** (photos, videos, backups). Higher latency; not for frequent edits or tiny-file-heavy workloads.
+- **Block (EBS):** file split into blocks, must be mounted to a server; low latency, for OS disks/databases.
 
-### Key features
-- **Versioning** (keep object history), **Lifecycle rules** (auto-transition/expire), **Replication** (CRR cross-region / SRR same-region).
-- **Security:** private by default; **bucket policies**, **IAM**, **Block Public Access**, **encryption** (SSE-S3, SSE-KMS, SSE-C), **Object Lock** (WORM/compliance), **pre-signed URLs**.
-- **Static website hosting**, **event notifications** (→ Lambda/SQS/SNS), **Transfer Acceleration**, **multipart upload**.
+### Features
+- **11 9s durability** (99.999999999%), **99.99% availability**, objects **0 bytes–5 TB**, virtually unlimited.
+- **Versioning, lifecycle rules, storage classes, encryption (default), event notifications.**
+- **Consistency:** read-after-write for NEW objects; eventual consistency for overwrites/deletes.
+- **Bucket naming:** globally unique, 3–63 chars, lowercase + numbers + dots/hyphens, not an IP. Pay for **storage + requests + data transfer**.
 
-> Exam: "store any amount of data, highly durable, lifecycle to archive" → **S3**. Pick the class by access frequency + retrieval need.`,
+---
+
+## Storage Classes (match cost to access pattern)
+
+| Class | Access | AZs | Retrieval | Min |
+|---|---|---|---|---|
+| **Standard** | Frequent | ≥3 | ms | — |
+| **Standard-IA** | Infrequent | ≥3 | ms (+retrieval fee) | 30 days |
+| **One Zone-IA** | Infrequent, recreatable | **1** | ms | 30 days |
+| **Intelligent-Tiering** | Unknown/changing | ≥3 | ms (monitoring fee) | — |
+| **Express One Zone** | Ultra-low latency | 1 (you pick) | single-digit ms | — |
+| **Glacier Instant** | Archive ~1/qtr | ≥3 | ms | 90 days |
+| **Glacier Flexible** | Archive 1–2/yr | ≥3 | mins–hours | 90 days |
+| **Glacier Deep Archive** | Very rare | ≥3 | 12–48 h | 180 days |
+
+> IA/One-Zone/Glacier add a **retrieval fee** — storing hot data there costs more. **Express One Zone** uses a **directory bucket** in an AZ you choose, co-located with compute for ~10× faster access.
+
+---
+
+## Versioning
+Keeps multiple versions so you can recover overwritten/deleted objects. Delete just adds a **delete marker** (remove it to restore); permanent delete = delete the specific version. Once enabled, can only be **suspended**. You pay per version.
+
+## Lifecycle Rules
+Auto-transition objects to cheaper classes and expire them over time (e.g. Standard → Standard-IA at 30d → One Zone-IA at 90d → Glacier → Deep Archive → expire). Filter by **prefix, tag, or size**; apply to current/non-current versions. (Standard → Standard-IA needs ≥30 days.)
+
+---
+
+## Controlling Access (3 layers)
+- **IAM policy** (identity-based, attach to user/role), **Bucket policy** (resource-based, needs a \`Principal\`, supports cross-account & public), **ACL** (legacy, basic).
+- Rule: **any explicit DENY wins; otherwise one ALLOW grants access** (default deny). Console browsing also needs \`s3:ListAllMyBuckets\`.
+
+## Object Lock (WORM)
+Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance** mode = privileged users can override; **Compliance** mode = no one (even root) can delete until retention ends. **Legal hold** = lock with no expiry, toggled manually.
+
+## Encryption
+- **At rest:** default ON — **SSE-S3** (AWS key), **SSE-KMS** (your key, auditable), **SSE-C** (you supply key).
+- **In transit:** **HTTPS (TLS)** protects data moving to/from S3.`,
       },
       {
         id: "ebs",

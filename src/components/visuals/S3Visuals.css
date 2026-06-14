@@ -1,0 +1,93 @@
+/* ─── shared base (green Storage theme) ────────────── */
+.sv-card { background: #1c2128; border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 24px; margin: 28px 0; }
+.sv-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 10px; }
+.s3-title { color: #6fc44a; border-bottom: 1px solid rgba(63,134,36,0.4); }
+.s3-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.s3-intro code, .s3-note code, .s3-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #9be59b; font-size: 11.5px; }
+.s3-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(63,134,36,0.12); border: 1px solid rgba(63,134,36,0.3); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.s3-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.s3-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.s3-toggle, .s3-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.s3-tab, .s3-toggle button { flex: 1; min-width: 96px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.s3-tab.active, .s3-toggle button.active { border-color: #3F8624; color: #6fc44a; background: rgba(63,134,36,0.12); }
+.s3-detail { background: #161b22; border-left: 4px solid #3F8624; border-radius: 10px; padding: 13px 15px; }
+.s3-detail b { font-size: 13px; color: #6fc44a; }
+.s3-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.s3-btn { padding: 9px 16px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #3F8624; border: none; color: #fff; margin-top: 4px; }
+
+/* 1. object vs block */
+.s3-ovb-stage { display: flex; justify-content: center; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 22px; margin-bottom: 12px; }
+.s3-ovb-object { font-size: 13px; font-weight: 700; color: #9be59b; background: rgba(63,134,36,0.12); border: 2px solid rgba(63,134,36,0.4); border-radius: 10px; padding: 20px 26px; text-align: center; }
+.s3-ovb-object small, .s3-ovb-blocks small { display: block; font-size: 10px; color: #8b949e; font-weight: 500; margin-top: 6px; }
+.s3-ovb-blocks { display: grid; grid-template-columns: repeat(3, 36px); gap: 5px; justify-content: center; }
+.s3-ovb-blocks span { font-size: 9px; font-weight: 700; color: #79c0ff; background: rgba(31,111,235,0.15); border: 1px solid rgba(31,111,235,0.4); border-radius: 5px; padding: 9px 0; text-align: center; }
+.s3-ovb-blocks small { grid-column: 1 / -1; }
+
+/* 2. features */
+.s3-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.s3-feat { display: flex; gap: 10px; align-items: flex-start; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px; }
+.s3-feat-ic { font-size: 20px; }
+.s3-feat-t { font-size: 12px; font-weight: 800; color: #e6edf3; }
+.s3-feat-d { font-size: 10.5px; color: #b9c2cc; line-height: 1.4; margin-top: 2px; }
+
+/* 3. classes */
+.s3-class-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+.s3-class-stats span { background: #0d1117; border-radius: 7px; padding: 8px; font-size: 11px; color: #e6edf3; }
+.s3-class-stats small { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; margin-bottom: 3px; }
+
+/* 4. express one zone */
+.s3-eoz { display: flex; align-items: center; justify-content: center; gap: 12px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; margin-bottom: 12px; flex-wrap: wrap; }
+.s3-eoz-az { border: 1px dashed rgba(63,134,36,0.4); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.s3-eoz-lbl { font-size: 10px; font-weight: 800; color: #6fc44a; text-align: center; }
+.s3-eoz-box { font-size: 11px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.1); border-radius: 7px; padding: 9px 12px; text-align: center; }
+.s3-eoz-box.hot { border-color: rgba(63,134,36,0.5); color: #9be59b; }
+.s3-eoz-link { font-size: 11px; font-weight: 700; }
+.s3-eoz-link.fast { color: #9be59b; }
+.s3-eoz-link.slow { color: #e8cd8a; }
+
+/* 5. versioning */
+.s3-ver-stack { display: flex; flex-direction: column; gap: 6px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+.s3-ver-row { font-size: 12px; font-weight: 700; color: #e6edf3; border-radius: 7px; padding: 9px 12px; border: 1px solid rgba(255,255,255,0.08); background: #161b22; }
+.s3-ver-row small { font-weight: 500; color: #8b949e; margin-left: 8px; }
+.s3-ver-row.cur { border-color: rgba(63,134,36,0.5); }
+.s3-ver-row.prev { opacity: 0.6; }
+.s3-ver-row.marker { border-color: rgba(248,81,73,0.5); color: #ff9d96; }
+.s3-ver-gone { font-size: 12px; font-weight: 700; color: #ff7b72; text-align: center; padding: 16px; }
+
+/* 6. lifecycle */
+.s3-lc-track { display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.s3-lc-node { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 800; background: #21262d; border: 2px solid rgba(255,255,255,0.1); color: #8b949e; flex-shrink: 0; }
+.s3-lc-line { flex: 1; height: 2px; background: rgba(255,255,255,0.1); max-width: 44px; }
+.s3-lc-line.on { background: rgba(63,134,36,0.5); }
+
+/* 7. access control */
+.s3-acl-layers { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.s3-acl-layer { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 4px; padding: 12px; border-radius: 9px; cursor: pointer; background: #161b22; border: 2px solid rgba(255,255,255,0.1); color: #c9d1d9; font-size: 12px; font-weight: 600; }
+.s3-acl-layer b { font-size: 12px; }
+.s3-acl-layer.allow { border-color: rgba(63,185,80,0.5); }
+.s3-acl-layer.deny { border-color: rgba(248,81,73,0.5); }
+.s3-acl-verdict { font-size: 13px; font-weight: 800; text-align: center; padding: 12px; border-radius: 9px; }
+.s3-acl-verdict.ok { background: rgba(63,185,80,0.12); color: #9be59b; }
+.s3-acl-verdict.bad { background: rgba(248,81,73,0.12); color: #ff7b72; }
+
+/* 8. table */
+.s3-table { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.s3-row { display: grid; grid-template-columns: 1.1fr 1.4fr 1.4fr; }
+.s3-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.s3-row.head > span { font-weight: 800; background: #161b22; }
+.s3-row.head .a { color: #58a6ff; }
+.s3-row.head .b { color: #6fc44a; }
+.s3-row .feat { color: #8b949e !important; font-weight: 600; }
+
+/* 10. encryption */
+.s3-enc-msg { font-family: ui-monospace, monospace; font-size: 18px; font-weight: 700; letter-spacing: 3px; color: #9be59b; text-align: center; background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 18px; margin-bottom: 10px; }
+.s3-enc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.s3-enc-card { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-left: 4px solid #3F8624; border-radius: 9px; padding: 12px; }
+.s3-enc-card b { font-size: 12.5px; color: #6fc44a; }
+.s3-enc-card p { font-size: 11px; color: #b9c2cc; line-height: 1.45; margin: 5px 0 0; }
+
+/* responsive */
+@media (max-width: 760px) {
+  .s3-feat-grid, .s3-class-stats, .s3-enc-grid, .s3-row { grid-template-columns: 1fr; }
+  .s3-eoz, .s3-acl-layers { flex-direction: column; }
+}
