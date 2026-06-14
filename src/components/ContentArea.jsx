@@ -365,6 +365,17 @@ import {
   VPCEndpoint,
   AccessPoints,
 } from "./visuals/S3Visuals3";
+import {
+  ProjectArchitecture,
+  ProjectRoadmap,
+  HybridCluster,
+  BuildImageFlow,
+  EnvVarsBestPractice,
+  IAMRoleVsKeys,
+  ECRBridge,
+  ECRvsDockerHub,
+  TagMutability,
+} from "./visuals/ProjectECSVisuals";
 
 const VISUAL_MAP = {
   VirtualizationDiagram,
@@ -647,6 +658,15 @@ const VISUAL_MAP = {
   MultipartUpload,
   VPCEndpoint,
   AccessPoints,
+  ProjectArchitecture,
+  ProjectRoadmap,
+  HybridCluster,
+  BuildImageFlow,
+  EnvVarsBestPractice,
+  IAMRoleVsKeys,
+  ECRBridge,
+  ECRvsDockerHub,
+  TagMutability,
 };
 
 function renderMarkdown(text) {

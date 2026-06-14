@@ -5224,6 +5224,87 @@ Golden rule: **inbound is free; outbound & crossing AZ/region boundaries cost mo
       },
     ],
   },
+  {
+    id: "projects",
+    label: "Projects / Hands-On Labs",
+    icon: "🚀",
+    color: "#EC7211",
+    topics: [
+      {
+        id: "project-ecs-php",
+        title: "Project: Scalable PHP App on ECS — Part 1 (Cluster, Docker Image, ECR)",
+        shortDesc: "Real-world hands-on: build a PHP image, push to ECR, ready for ECS",
+        visuals: ["ProjectArchitecture", "ProjectRoadmap", "HybridCluster", "BuildImageFlow", "EnvVarsBestPractice", "IAMRoleVsKeys", "ECRBridge", "ECRvsDockerHub", "TagMutability"],
+        content: `## Project: Deploy a Scalable PHP Web App on Amazon ECS
+
+A real-world, production-style project — the best way to truly learn ECS. We deploy a simple but powerful PHP app: users **upload a picture**, and it gets stored in **Amazon S3**.
+
+**What you'll learn:** containerize an app, push to ECR, run tasks/services on ECS (Fargate + EC2), attach a load balancer, scale, and wire up networking + IAM the right way.
+
+**Architecture (two halves):**
+- **Build pipeline:** GitHub (code) → Build machine (Docker) → ECR (image registry).
+- **Runtime:** User → Application Load Balancer → ECS containers → S3 (image storage).
+
+Best practices throughout: **IAM roles** (no hardcoded keys) and **environment variables** (no baked-in config).
+
+> The full project is **8 steps**. This Part 1 covers steps **1–3**.
+
+---
+
+## Step 1 — Create a Hybrid ECS Cluster
+
+Goal: one cluster that supports **both Fargate and EC2**, so we can try and compare both launch types later.
+- **Fargate** (default): serverless — no servers to manage.
+- **EC2**: we create an **Auto Scaling Group** (ECS-optimized Amazon Linux 2023, t2.micro, min 1 / max 2), a key pair, a security group (open ports 22 and 8080), in the default VPC.
+
+**Pro tip — avoid charges:** the cluster is free; you pay for running tasks/EC2. Pausing? Set the Auto Scaling Group's **desired + min capacity to 0** to terminate the instance; set it back to **1** to resume.
+
+> 🇮🇳 In Mumbai, t2.micro free tier is sometimes missing in **ap-south-1c** — deselect that subnet to avoid launch failures.
+
+---
+
+## Step 2 — Build the Docker Image
+
+**Why a separate "build machine"?** ECS only **runs** images — it can't **build** them. So we use a separate EC2 (a Docker host).
+
+1. **Launch build machine** — Amazon Linux 2023; open ports 22 (SSH) and 8080 (to test the app).
+2. **Install Docker** — we build images with Docker commands.
+3. **Clone the code** — \`git clone\` the PHP app (index.php, upload.php, Dockerfile) from GitHub.
+4. **Install PHP + Composer** — Composer is PHP's dependency manager; it installs the **AWS SDK for PHP** so the app can talk to S3.
+5. **Build** — \`docker build .\` (the \`.\` means "use the Dockerfile in the current folder"). Verify with \`docker images\`.
+
+### Test it locally first
+Run the image with \`docker run -d -p 8080:80 …\` and open \`http://<build-machine-ip>:8080\`. Upload a picture → confirm it appears in the S3 \`upload/\` folder. Testing here saves pain later.
+
+### Two best-practice lessons from the test
+- **Environment variables, not hardcoding:** pass \`S3_BUCKET\` and \`AWS_REGION\` as env vars. Change them anytime with no rebuild. (ECS task definitions support env vars too.)
+- **IAM role, not access keys:** never hardcode AWS keys in code (a leak = account takeover). Attach an **IAM role** so the app gets temporary, auto-rotating credentials. (We pass keys only briefly during local testing, then delete them.)
+
+---
+
+## Step 3 — Amazon ECR (Elastic Container Registry)
+
+The image is on the build machine, but **ECS can't pull from there**. **ECR** is the bridge: you **push** from the build machine → ECS **pulls** from ECR.
+
+**Why ECR over Docker Hub?**
+
+| | ECR ✅ | Docker Hub |
+|---|---|---|
+| **Privacy** | Private by default | Public or private |
+| **Access** | IAM roles (AWS-native) | Docker Hub login |
+| **Speed** | Same region as ECS = low latency | Location unknown |
+| **Rate limits** | None | Pull limits apply |
+
+**Create the repository:** ECR repos are **private only**. Name it (e.g. \`cloudfox-php-app\`), then choose:
+- **Tag mutability** — **Mutable** = a tag like \`latest\` can be overwritten (handy while learning, but risky — hard to roll back). **Immutable** = tags can't be reused (safer, best for production). We pick **Mutable** for the lab.
+- **Encryption** — **AES-256** (ECR-managed) is fine; use **KMS** for audit/compliance.
+
+> Update flow later: change code → push to GitHub → rebuild → push to ECR → ECS pulls the new image. A CI/CD pipeline can automate all of it.
+
+**Next part:** push the image to ECR, then create the ECS **task definition**, IAM roles, service, and load balancer.`,
+      },
+    ],
+  },
 ];
 
 // Flat lookup map for quick access by topic id
