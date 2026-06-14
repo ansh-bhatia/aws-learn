@@ -285,6 +285,34 @@ a { color: var(--aws-orange); }
 @media (prefers-reduced-motion: reduce) {
   .hero-rise { animation: none; opacity: 1; transform: none; }
 }
+
+/* ── Scroll-reveal (applied app-wide via JS) ────────── */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-in { opacity: 1; transform: none; }
+
+/* ── Staggered entrance for category cards ──────────── */
+.cat-grid .cat-card { animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards; }
+.cat-grid .cat-card:nth-child(1)  { animation-delay: 0.04s; }
+.cat-grid .cat-card:nth-child(2)  { animation-delay: 0.08s; }
+.cat-grid .cat-card:nth-child(3)  { animation-delay: 0.12s; }
+.cat-grid .cat-card:nth-child(4)  { animation-delay: 0.16s; }
+.cat-grid .cat-card:nth-child(5)  { animation-delay: 0.20s; }
+.cat-grid .cat-card:nth-child(6)  { animation-delay: 0.24s; }
+.cat-grid .cat-card:nth-child(7)  { animation-delay: 0.28s; }
+.cat-grid .cat-card:nth-child(8)  { animation-delay: 0.32s; }
+.cat-grid .cat-card:nth-child(9)  { animation-delay: 0.36s; }
+.cat-grid .cat-card:nth-child(10) { animation-delay: 0.40s; }
+.cat-grid .cat-card:nth-child(11) { animation-delay: 0.44s; }
+.cat-grid .cat-card:nth-child(12) { animation-delay: 0.48s; }
+.cat-grid .cat-card:nth-child(n+13) { animation-delay: 0.52s; }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 .hero-badge {
   font-size: 56px;
   margin-bottom: 16px;
@@ -604,6 +632,8 @@ a { color: var(--aws-orange); }
   .cat-card-icon,
   .sv-card,
   .nav-btn { transform: none !important; transition: none; }
+  .reveal { opacity: 1; transform: none; }
+  .cat-grid .cat-card { animation: none; }
   * { scroll-behavior: auto !important; }
 }
 

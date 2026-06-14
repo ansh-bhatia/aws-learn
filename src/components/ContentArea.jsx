@@ -885,6 +885,29 @@ function resetTilt(e) {
   el.style.setProperty("--rx", "0deg");
 }
 
+// Small animated count-up for the hero stat numbers
+function CountUp({ value }) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setN(value);
+      return;
+    }
+    let raf;
+    const dur = 900;
+    const start = performance.now();
+    const tick = (t) => {
+      const p = Math.min(1, (t - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setN(Math.round(eased * value));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{n}</>;
+}
+
 // Dashboard shown when nothing is selected
 function Dashboard({ onSelect, progress }) {
   const total = awsCategories.reduce((a, c) => a + c.topics.length, 0);
@@ -900,15 +923,15 @@ function Dashboard({ onSelect, progress }) {
           <p className="hero-rise" style={{ "--d": "160ms" }}>Master every AWS service — from compute to AI. Pick a category to start.</p>
           <div className="hero-stats hero-rise" style={{ "--d": "240ms" }}>
             <div className="stat">
-              <span className="stat-num">{awsCategories.length}</span>
+              <span className="stat-num"><CountUp value={awsCategories.length} /></span>
               <span className="stat-label">Categories</span>
             </div>
             <div className="stat">
-              <span className="stat-num">{total}</span>
+              <span className="stat-num"><CountUp value={total} /></span>
               <span className="stat-label">Topics</span>
             </div>
             <div className="stat">
-              <span className="stat-num">{done}</span>
+              <span className="stat-num"><CountUp value={done} /></span>
               <span className="stat-label">Completed</span>
             </div>
           </div>
@@ -971,6 +994,37 @@ export default function ContentArea({ selectedId, onSelect }) {
   useEffect(() => {
     const main = document.querySelector(".main-content");
     if (main) main.scrollTo({ top: 0, behavior: "smooth" });
+  }, [selectedId]);
+
+  // Scroll-reveal: fade-and-rise sections/visuals into view on every page.
+  // Progressive enhancement — class is added by JS, so no-JS/reduced-motion stays visible.
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const root = document.querySelector(".main-content") || document;
+    const id = requestAnimationFrame(() => {
+      const els = root.querySelectorAll(
+        ".sv-card, .topic-content h2, .topic-content table, .topic-content blockquote"
+      );
+      if (!els.length) return;
+      els.forEach((el) => el.classList.add("reveal"));
+      const io = new IntersectionObserver(
+        (entries, obs) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              e.target.classList.add("reveal-in");
+              obs.unobserve(e.target);
+            }
+          });
+        },
+        { threshold: 0.06, rootMargin: "0px 0px -40px 0px" }
+      );
+      els.forEach((el) => io.observe(el));
+      root._revealObserver = io;
+    });
+    return () => {
+      cancelAnimationFrame(id);
+      if (root._revealObserver) root._revealObserver.disconnect();
+    };
   }, [selectedId]);
 
   const toggleDone = (id) =>
