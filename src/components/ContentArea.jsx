@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { BookOpen, ChevronRight, CheckCircle, Circle } from "lucide-react";
 import { awsCategories, topicMap } from "../data/services";
+import CloudNetworkHero from "./CloudNetworkHero";
 import {
   VirtualizationDiagram,
   ServerTypesCards,
@@ -892,28 +893,31 @@ function Dashboard({ onSelect, progress }) {
   return (
     <div className="dashboard">
       <div className="dashboard-hero">
-        <div className="hero-badge">☁️</div>
-        <h1>AWS Learning Hub</h1>
-        <p>Master every AWS service — from compute to AI. Pick a category to start.</p>
-        <div className="hero-stats">
-          <div className="stat">
-            <span className="stat-num">{awsCategories.length}</span>
-            <span className="stat-label">Categories</span>
+        <CloudNetworkHero />
+        <div className="hero-inner">
+          <div className="hero-badge">☁️</div>
+          <h1 className="hero-rise" style={{ "--d": "80ms" }}>AWS Learning Hub</h1>
+          <p className="hero-rise" style={{ "--d": "160ms" }}>Master every AWS service — from compute to AI. Pick a category to start.</p>
+          <div className="hero-stats hero-rise" style={{ "--d": "240ms" }}>
+            <div className="stat">
+              <span className="stat-num">{awsCategories.length}</span>
+              <span className="stat-label">Categories</span>
+            </div>
+            <div className="stat">
+              <span className="stat-num">{total}</span>
+              <span className="stat-label">Topics</span>
+            </div>
+            <div className="stat">
+              <span className="stat-num">{done}</span>
+              <span className="stat-label">Completed</span>
+            </div>
           </div>
-          <div className="stat">
-            <span className="stat-num">{total}</span>
-            <span className="stat-label">Topics</span>
-          </div>
-          <div className="stat">
-            <span className="stat-num">{done}</span>
-            <span className="stat-label">Completed</span>
-          </div>
+          {total > 0 && (
+            <div className="progress-bar-wrap hero-rise" style={{ "--d": "320ms" }}>
+              <div className="progress-bar" style={{ width: `${(done / total) * 100}%` }} />
+            </div>
+          )}
         </div>
-        {total > 0 && (
-          <div className="progress-bar-wrap">
-            <div className="progress-bar" style={{ width: `${(done / total) * 100}%` }} />
-          </div>
-        )}
       </div>
 
       <div className="cat-grid">
