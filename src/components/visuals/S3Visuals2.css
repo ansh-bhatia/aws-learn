@@ -1,0 +1,96 @@
+/* ─── shared base (green Storage theme, prefix s3b-) ────────────── */
+.s3b-title { color: #6fc44a; border-bottom: 1px solid rgba(63,134,36,0.4); }
+.s3b-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.s3b-intro code, .s3b-note code, .s3b-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #9be59b; font-size: 11.5px; }
+.s3b-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(63,134,36,0.12); border: 1px solid rgba(63,134,36,0.3); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.s3b-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.s3b-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.s3b-toggle, .s3b-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.s3b-tab, .s3b-toggle button { flex: 1; min-width: 96px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.s3b-tab.active, .s3b-toggle button.active { border-color: #3F8624; color: #6fc44a; background: rgba(63,134,36,0.12); }
+.s3b-detail { background: #161b22; border-left: 4px solid #3F8624; border-radius: 10px; padding: 13px 15px; }
+.s3b-detail b { font-size: 13px; color: #6fc44a; }
+.s3b-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.s3b-pill { font-size: 9.5px; font-weight: 700; color: #9be59b; background: rgba(63,134,36,0.2); border-radius: 20px; padding: 2px 8px; vertical-align: middle; }
+.s3b-verdict { font-size: 13px; font-weight: 800; text-align: center; padding: 12px; border-radius: 9px; margin-top: 12px; line-height: 1.4; }
+.s3b-verdict.ok { background: rgba(63,185,80,0.12); color: #9be59b; }
+.s3b-verdict.bad { background: rgba(248,81,73,0.12); color: #ff7b72; }
+
+/* 1. flow */
+.s3b-flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; margin-bottom: 12px; }
+.s3b-flow-box { font-size: 12px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 12px 14px; text-align: center; }
+.s3b-flow-box.hot { border-color: rgba(63,134,36,0.5); color: #9be59b; }
+.s3b-flow-arrow { font-size: 18px; text-align: center; color: #8b949e; }
+.s3b-flow-arrow small { display: block; font-size: 9px; margin-top: 3px; color: #8b949e; }
+
+/* comparison tables (s3b-cmp) */
+.s3b-cmp { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.s3b-cmp-head, .s3b-cmp-row { display: grid; grid-template-columns: 1fr 1.5fr 1.5fr; }
+.s3b-cmp-head > span, .s3b-cmp-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.s3b-cmp-head > span { font-weight: 800; background: #161b22; }
+.s3b-cmp-head .a, .s3b-cmp-row .a { color: #58a6ff; }
+.s3b-cmp-head .b { color: #6fc44a; }
+.s3b-cmp .feat { color: #8b949e !important; font-weight: 600; }
+
+/* 3. SSE options mini */
+.s3b-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+.s3b-mini span { background: #0d1117; border-radius: 7px; padding: 9px; font-size: 11px; color: #e6edf3; line-height: 1.4; }
+.s3b-mini small { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; }
+
+/* 4. checks */
+.s3b-checks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.s3b-check { font-size: 12px; font-weight: 700; border-radius: 8px; padding: 11px 13px; }
+.s3b-check.ok { background: rgba(63,185,80,0.1); color: #9be59b; border: 1px solid rgba(63,185,80,0.28); }
+.s3b-check.bad { background: rgba(248,81,73,0.1); color: #ff7b72; border: 1px solid rgba(248,81,73,0.28); }
+
+/* 5. steps */
+.s3b-steps { display: flex; flex-direction: column; gap: 9px; }
+.s3b-step { display: flex; gap: 11px; align-items: flex-start; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; }
+.s3b-step > span { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #3F8624; color: #fff; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.s3b-step b { font-size: 12px; color: #e6edf3; display: block; margin-bottom: 4px; }
+.s3b-step code { font-size: 10.5px; color: #9be59b; background: #0d1117; padding: 3px 7px; border-radius: 5px; display: inline-block; word-break: break-all; }
+
+/* 7. block public access */
+.s3b-bpa { display: flex; gap: 11px; align-items: flex-start; border-radius: 9px; padding: 11px 13px; margin-bottom: 8px; cursor: pointer; border: 2px solid rgba(255,255,255,0.08); background: #161b22; }
+.s3b-bpa.on { border-color: rgba(248,81,73,0.45); }
+.s3b-bpa.off { border-color: rgba(63,185,80,0.4); opacity: 0.85; }
+.s3b-bpa-sw { font-size: 18px; }
+.s3b-bpa b { font-size: 12px; color: #e6edf3; }
+.s3b-bpa p { font-size: 10.5px; color: #b9c2cc; line-height: 1.4; margin: 3px 0 0; }
+
+/* 8. json */
+.s3b-json { background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px; font-family: ui-monospace, monospace; margin-bottom: 12px; }
+.s3b-json-row { font-size: 12px; padding: 4px 8px; border-radius: 5px; cursor: pointer; }
+.s3b-json-row.active { background: rgba(63,134,36,0.15); }
+.s3b-json-k { color: #79c0ff; }
+.s3b-json-v { color: #a5d6ff; }
+
+/* 9. feature grid */
+.s3b-feat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.s3b-feat { display: flex; gap: 10px; align-items: flex-start; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px; }
+.s3b-feat-ic { font-size: 20px; }
+.s3b-feat-t { font-size: 12px; font-weight: 800; color: #e6edf3; }
+.s3b-feat-d { font-size: 10.5px; color: #b9c2cc; line-height: 1.4; margin-top: 2px; }
+
+/* 10. cors */
+.s3b-cors, .s3b-crr { display: flex; align-items: center; justify-content: center; gap: 12px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; margin-bottom: 4px; flex-wrap: wrap; }
+.s3b-cors-box, .s3b-crr-box { font-size: 12px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 12px 14px; text-align: center; }
+.s3b-cors-box small, .s3b-crr-box small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 5px; }
+.s3b-crr-box.hot { border-color: rgba(63,134,36,0.5); color: #9be59b; }
+.s3b-cors-arrow, .s3b-crr-arrow { font-size: 12px; font-weight: 700; text-align: center; }
+.s3b-cors-arrow.ok { color: #9be59b; }
+.s3b-cors-arrow.bad { color: #ff7b72; }
+.s3b-crr-arrow { color: #6fc44a; }
+.s3b-crr-arrow small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 3px; }
+
+/* 11. crr opts */
+.s3b-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.s3b-opts label { font-size: 11px; color: #b9c2cc; line-height: 1.45; background: #161b22; border: 2px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.s3b-opts label.on { border-color: #3F8624; background: rgba(63,134,36,0.1); color: #d6dde5; }
+.s3b-opts label b { color: #6fc44a; }
+
+/* responsive */
+@media (max-width: 760px) {
+  .s3b-feat-grid, .s3b-mini, .s3b-cmp-head, .s3b-cmp-row { grid-template-columns: 1fr; }
+  .s3b-flow, .s3b-cors, .s3b-crr { flex-direction: column; }
+}

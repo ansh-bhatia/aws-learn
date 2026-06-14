@@ -1257,6 +1257,84 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
 - **In transit:** **HTTPS (TLS)** protects data moving to/from S3.`,
       },
       {
+        id: "s3-part2",
+        title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
+        shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
+        visuals: ["SymmetricAsymmetric", "ServerVsClientEnc", "SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "BucketPolicyAnatomy", "StaticHosting", "CORSDemo", "CRRDemo"],
+        content: `## S3 – Part 2
+
+Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
+
+---
+
+## Encryption foundations
+
+### Symmetric vs Asymmetric
+- **Symmetric — one shared key** encrypts and decrypts. Fast and efficient for large data, so it's what **S3 uses**. Standards: **AES** (128/192/**256-bit**) and 3DES; **AES-256 is the default**. Weakness: securely transporting that one key.
+- **Asymmetric — two keys:** a **public key** encrypts, a separate **private key** decrypts (RSA, ECC, Diffie-Hellman). Stronger but slower; used by **EC2 key pairs (.pem)**, not S3.
+
+> Exam: **S3 uses symmetric AES-256.**
+
+### Server-Side vs Client-Side
+- **SSE (server-side):** you send plaintext, **S3 encrypts** before storing. Since data travels in plaintext, **use HTTPS**. Keys can be AWS-managed or customer-provided.
+- **CSE (client-side):** **you encrypt before sending**; S3's role is nil. Data is safe even over HTTP, but you manage everything (SDK/OpenSSL/GnuPG + keys). Best for strict/regulatory compliance.
+
+---
+
+## The 4 Server-Side Encryption options
+
+| Option | Keys | Control | Cost |
+|---|---|---|---|
+| **SSE-S3** (default) | AWS-managed, AES-256 | None (no rotate/audit) | Free |
+| **SSE-KMS** | KMS (AWS or your CMK) | Full control + rotation + **CloudTrail audit** | Extra (KMS) |
+| **DSSE-KMS** | SSE-S3 **then** SSE-KMS (two layers) | KMS control, dual encryption | Extra (KMS) |
+| **SSE-C** | **You provide** on every request | Total — AWS never stores the key | S3 storage only |
+
+- **SSE-S3** is the default; encryption is mandatory on all objects. Transparent, free, but no key control/audit.
+- **SSE-KMS**: needs **both** S3 permission **and** KMS key permission. (Demo: Amit has the key → access; Ravi has S3 read-only but no key → \`kms:Decrypt\` denied.)
+- **DSSE-KMS** added for US gov multi-layer requirement (FIPS / CNSSP-15). Lab is identical to SSE-KMS, just pick the 3rd option.
+- **SSE-C** is **CLI/SDK only** (hidden from console): \`openssl rand 32\` → base64 + MD5 → pass \`--sse-customer-key\` on upload **and** download. Lose the key = lose the data.
+
+---
+
+## Public Access
+
+By default **every object is private**. Two ways to grant public access:
+- **ACL** — older, per-object, **disabled by default**, **not recommended** by AWS.
+- **Bucket Policy** — JSON, **recommended**, centralized, supports cross-account. Use the **Policy Generator**.
+
+> Both fail while **Block Public Access** is ON.
+
+### Block Public Access (master switch)
+Set at **account level** (takes precedence) or **bucket level**; **ON by default**. Four sub-settings: block via **new ACLs**, **any ACL (new+existing)**, **new bucket policies**, and **any policy + cross-account**.
+
+### Bucket policy anatomy (public-read)
+\`Version\` → \`Statement[]\` → \`Sid\`, \`Effect: Allow\`, \`Principal: "*"\` (everyone), \`Action: s3:GetObject\`, \`Resource: arn:aws:s3:::bucket/*\` (every object).
+
+---
+
+## Static Website Hosting
+- **Static** = fixed content (HTML/CSS/JS), no server-side processing — ~80-90% of business sites. **Dynamic** (PHP/Node.js) needs servers.
+- Steps: create bucket (**name = domain**, e.g. \`web.cloudfox.in\` when using GoDaddy) → upload files → disable Block Public Access + bucket policy → enable **Static website hosting** (set \`index.html\`) → point domain (**Route 53 Alias/A record** or **GoDaddy CNAME**).
+- Benefits: scalable, cheap (pay storage + outbound), 11 9s durable, simple, secure; add **CloudFront** for global speed.
+- ⚠️ **Exam: S3 hosting is HTTP only — use CloudFront for HTTPS.** Route 53 alias record name **must match** the bucket name.
+
+---
+
+## CORS (Cross-Origin Resource Sharing)
+A page in **bucket A** fetching from **bucket B** (different origin) is **blocked by the browser** by default. Fix: add a **CORS JSON rule on the resource bucket (B)** with \`AllowedOrigins\`, \`AllowedMethods\`, \`AllowedHeaders\`. Test in **incognito** to avoid cached results.
+
+---
+
+## Cross-Region Replication (CRR)
+Auto-replicates objects to a destination bucket in **another region** — **one-way**. Requires **versioning on both buckets** + an **IAM role**.
+- **Benefits:** disaster recovery, compliance (off-site), low-latency for distant users; can **change storage class** at destination to save money.
+- **RTC** (Replication Time Control): 99.99% within **15 min** (SLA) + metrics, extra cost.
+- **Delete-marker replication:** OFF = destination keeps object even if source deleted; ON = deletes propagate.
+- **Replicate existing objects:** OFF by default (only new/modified); opt in to backfill.
+- **Replica modification sync:** sync destination changes back to source (otherwise one-way).`,
+      },
+      {
         id: "ebs",
         title: "EBS – Elastic Block Store",
         shortDesc: "Persistent block storage volumes for EC2",

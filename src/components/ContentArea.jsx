@@ -341,6 +341,19 @@ import {
   ObjectLock,
   S3Encryption,
 } from "./visuals/S3Visuals";
+import {
+  SymmetricAsymmetric,
+  ServerVsClientEnc,
+  SSEOptions,
+  KMSAccessDemo,
+  SSECFlow,
+  PublicAccessWays,
+  BlockPublicAccess,
+  BucketPolicyAnatomy,
+  StaticHosting,
+  CORSDemo,
+  CRRDemo,
+} from "./visuals/S3Visuals2";
 
 const VISUAL_MAP = {
   VirtualizationDiagram,
@@ -603,6 +616,17 @@ const VISUAL_MAP = {
   IAMvsBucketPolicy,
   ObjectLock,
   S3Encryption,
+  SymmetricAsymmetric,
+  ServerVsClientEnc,
+  SSEOptions,
+  KMSAccessDemo,
+  SSECFlow,
+  PublicAccessWays,
+  BlockPublicAccess,
+  BucketPolicyAnatomy,
+  StaticHosting,
+  CORSDemo,
+  CRRDemo,
 };
 
 function renderMarkdown(text) {
