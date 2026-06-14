@@ -5377,6 +5377,81 @@ Set at **task** level (the big box) and per **container** (so one can't hog it a
 
 **Next part:** create the task role, then launch the task/service behind an Application Load Balancer and test the upload to S3.`,
       },
+      {
+        id: "project-ecs-php-3",
+        title: "Project: Scalable PHP App on ECS — Part 3 (Run Task, Service, ALB & Auto Scaling)",
+        shortDesc: "Create the task definition, run it, then a service behind an ALB with auto scaling",
+        visuals: ["TaskDefPrereqs", "CapacityProviderCalc", "ECSTaskVsServiceCtl", "DeploymentConfigOptions", "RollingVsBlueGreen", "FailureDetection", "ServiceNetworkingALB", "ClusterVsServiceScaling", "TargetTracking", "StepScaling"],
+        content: `## Project Part 3 — Run the App, Add a Load Balancer & Auto Scaling
+
+The final stretch: create the task definition, run a test task, then a production **service** behind an **ALB** with **auto scaling**.
+
+---
+
+## Step 6 — Create the Task Definition
+
+First create **two prerequisites**:
+1. **S3 bucket** — note its **name** + **region** (passed as env vars).
+2. **ECS Task Role** — IAM role (trusted by "Elastic Container Service Task") with **S3 access**, so the app can write uploads.
+
+Then build the definition: **Fargate · Linux x86_64 · awsvpc**, **1 vCPU / 2 GB**, **task role** (→ S3), **execution role** (create new → pulls image from ECR), container with the **ECR image URI** + **port 80**, and env vars **S3_BUCKET** + **AWS_REGION**.
+
+> Env var keys must **exactly match the code**. In production, scope the task role to one bucket (not full S3).
+
+---
+
+## Step 7 — Run a Task (test)
+
+**Run new task** → pick the task definition family + revision, set **desired count**, and a **capacity provider strategy** that splits tasks across **Fargate** and **Fargate Spot**:
+- **base** = minimum guaranteed to a provider (filled first).
+- **weight** = ratio for the remaining tasks.
+- Example: 10 tasks, Fargate base 2 / weight 1, Spot weight 3 → 2 guaranteed to Fargate, then the other 8 split 1:3 = 2 more Fargate + 6 Spot → **4 Fargate, 6 Spot**.
+
+For the test we run **1 plain Fargate task**, grab its **public IP**, open it (strip \`https://\` — it's HTTP), and confirm an upload lands in S3. (If it won't open, check the security group allows the app port from 0.0.0.0/0.)
+
+---
+
+## Step 8 — Create a Service
+
+A **task** runs once and is forgotten; a **service** is a **controller** that keeps tasks running — auto-restart, **desired count** (HA), **load balancer**, and **auto scaling**. Production = service.
+
+### Deployment configuration
+- **Replica** (keep N tasks) vs **Daemon** (one task per EC2 host — EC2 only).
+- **AZ rebalancing** — spreads tasks evenly across AZs; if one AZ fails, ECS runs all tasks in the survivor, then rebalances when it recovers.
+- **Health check grace period** — seconds to let a new task boot before health checks judge it.
+
+### Deployment strategy
+- **Rolling update** (default) — replace tasks in batches in place. **Min running %** (100% = never lose capacity) + **max running %** (200% = may temporarily double). Load balancer optional.
+- **Blue/Green** — stand up a whole **green** environment beside live **blue**; both run during a **bake time** (0–1440 min) for testing; then switch blue→green. Easy rollback before the switch. Needs **CodeDeploy + a load balancer** (mandatory). Production favourite.
+
+### Failure detection
+- **Circuit breaker** — detects a failing deployment (without it, a bad deploy can hang).
+- **Roll back on failure** — auto-revert to the last working version.
+- **CloudWatch alarm** — fail a deploy on business metrics (order failures, latency, CPU) even when containers look "healthy."
+
+### Networking (best practice)
+Put **tasks in private subnets** (no public IP) and a **public ALB** in front: User → ALB (public subnet) → tasks (private subnet) → S3. Use **2 AZs**, security group allowing only port 80. **Create the ALB first in EC2** (target type **IP**, internet-facing, public subnets) — the service wizard would otherwise put it in the private subnet — then attach the existing ALB/listener/target group.
+
+---
+
+## Auto Scaling
+
+Two distinct things scale:
+
+| | Cluster scaling | Service scaling |
+|---|---|---|
+| **Scales** | EC2 instances | Tasks |
+| **Applies to** | EC2 only | Fargate + EC2 |
+| **Driven by** | Capacity provider + ASG (auto) | CloudWatch metrics + policies |
+| **You set** | Min/max instances | Min/max tasks + policy |
+
+**Service auto scaling** keeps the task count **dynamic** between a min and max (desired count alone is fixed = HA only). Policies:
+
+- **Target tracking** — pick a metric + target (CPU 60%, memory %, or **ALB requests/target**); ECS adds/removes tasks to hold it. **Scale-out cooldown** is short (~60s, add fast while a task boots); **scale-in cooldown** is long (~300s, remove slowly so a traffic spike stays safe). You can **disable scale-in** if performance > cost.
+- **Step scaling** — define **ranges** so a bigger breach adds more: e.g. 60–70% → +2 (=4), 70–80% → +2 (=6), ≥80% → +4 (=10). Scale-out **only adds** — you need a **mirror scale-in** policy to remove tasks as CPU drops. The console allows **one** policy at service creation; add the second **after**. Step scaling relies on **CloudWatch alarms**.
+
+> **Project complete:** a containerized PHP app on ECS Fargate, image in ECR, behind a public ALB with private tasks, uploading to S3 via an IAM task role, and auto-scaling on CPU. 🎉`,
+      },
     ],
   },
 ];

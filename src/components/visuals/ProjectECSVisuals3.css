@@ -1,0 +1,107 @@
+/* ─── Projects theme part 3 (build orange, prefix pj3-) ────────────── */
+.pj3-title { color: #ff944d; border-bottom: 1px solid rgba(236,114,17,0.4); }
+.pj3-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.pj3-sub { font-size: 12px; color: #c9d1d9; line-height: 1.5; margin: 12px 0; }
+.pj3-intro code, .pj3-note code, .pj3-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ffb27a; font-size: 11px; }
+.pj3-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(236,114,17,0.1); border: 1px solid rgba(236,114,17,0.28); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.pj3-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.pj3-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.pj3-toggle { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.pj3-toggle button { flex: 1; min-width: 96px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.pj3-toggle button.active { border-color: #EC7211; color: #ff944d; background: rgba(236,114,17,0.12); }
+.pj3-detail { background: #161b22; border-left: 4px solid #EC7211; border-radius: 10px; padding: 13px 15px; }
+.pj3-detail b { font-size: 13px; color: #ff944d; }
+.pj3-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.pj3-btn { padding: 9px 16px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #EC7211; border: none; color: #fff; margin: 10px 0; }
+.pj3-verdict { font-size: 12px; font-weight: 700; text-align: center; padding: 12px; border-radius: 9px; margin-top: 12px; line-height: 1.45; background: #161b22; color: #c9d1d9; }
+.pj3-verdict.ok { background: rgba(63,185,80,0.12); color: #9be59b; }
+.pj3-verdict.bad { background: rgba(248,81,73,0.12); color: #ff7b72; }
+.pj3-verdict.warn { background: rgba(227,179,65,0.12); color: #e8cd8a; }
+.pj3-arch-down { text-align: center; font-size: 10px; color: #ff944d; font-weight: 700; margin: 12px 0; }
+.pj3-slider { width: 100%; accent-color: #EC7211; margin-bottom: 12px; }
+
+/* 1. prereq + def */
+.pj3-prereq { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pj3-prereq-box { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 12px; }
+.pj3-prereq-box b { font-size: 12px; color: #ff944d; }
+.pj3-prereq-box p { font-size: 11px; color: #b9c2cc; line-height: 1.45; margin: 5px 0 0; }
+.pj3-def { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pj3-def-row { background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; font-size: 11px; font-weight: 600; color: #e6edf3; }
+
+/* 2. calculator */
+.pj3-calc { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.pj3-calc label { font-size: 11.5px; color: #c9d1d9; display: flex; flex-direction: column; gap: 5px; }
+.pj3-calc label b { color: #ff944d; }
+.pj3-calc input { accent-color: #EC7211; }
+.pj3-calc-out { display: flex; gap: 12px; justify-content: center; }
+.pj3-calc-box { flex: 1; background: #161b22; border: 2px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px; text-align: center; }
+.pj3-calc-box.hot { border-color: rgba(236,114,17,0.5); }
+.pj3-calc-box b { font-size: 26px; color: #ff944d; }
+.pj3-calc-box small { display: block; font-size: 10px; color: #8b949e; margin-top: 4px; }
+
+/* 4. AZ */
+.pj3-az { display: flex; gap: 10px; }
+.pj3-az-zone { flex: 1; background: #161b22; border: 1px solid rgba(63,185,80,0.3); border-radius: 9px; padding: 12px; text-align: center; }
+.pj3-az-zone.dead { border-color: rgba(248,81,73,0.4); opacity: 0.7; }
+.pj3-az-zone b { font-size: 12px; color: #e6edf3; }
+.pj3-az-tasks { font-size: 18px; margin-top: 8px; min-height: 24px; letter-spacing: 2px; }
+
+/* 5. rolling / blue-green */
+.pj3-rolling { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; margin-top: 12px; }
+.pj3-rolling span { font-size: 12px; font-weight: 700; border-radius: 7px; padding: 10px 14px; }
+.pj3-rolling .old { background: rgba(139,148,158,0.15); color: #8b949e; }
+.pj3-rolling .new { background: rgba(63,185,80,0.15); color: #56d364; }
+.pj3-rolling small { width: 100%; text-align: center; font-size: 10px; color: #8b949e; }
+.pj3-bg { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; margin-top: 12px; }
+.pj3-bg-env { border-radius: 9px; padding: 12px 16px; text-align: center; }
+.pj3-bg-env.blue { background: rgba(31,111,235,0.15); border: 1px solid rgba(31,111,235,0.4); color: #79c0ff; }
+.pj3-bg-env.green { background: rgba(63,185,80,0.12); border: 1px solid rgba(63,185,80,0.4); color: #56d364; }
+.pj3-bg-env small { display: block; font-size: 9px; margin-top: 4px; opacity: 0.8; }
+.pj3-bg-lb { font-size: 11px; font-weight: 700; color: #ff944d; text-align: center; }
+.pj3-bg-lb small { display: block; font-size: 9px; color: #8b949e; margin-top: 3px; }
+
+/* 6. checks */
+.pj3-checks { display: flex; flex-direction: column; gap: 9px; }
+.pj3-checks label { font-size: 11.5px; color: #b9c2cc; line-height: 1.45; background: #161b22; border: 2px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 11px 13px; cursor: pointer; }
+.pj3-checks label.on { border-color: #EC7211; background: rgba(236,114,17,0.1); color: #d6dde5; }
+.pj3-checks label.disabled { opacity: 0.45; cursor: not-allowed; }
+.pj3-checks label b { color: #ff944d; }
+
+/* 7. networking */
+.pj3-net { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; }
+.pj3-net-box { font-size: 11.5px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 11px 13px; text-align: center; }
+.pj3-net-box small { display: block; font-size: 9px; color: #8b949e; font-weight: 500; margin-top: 4px; }
+.pj3-net-box.pub { border-color: rgba(63,185,80,0.4); }
+.pj3-net-box.priv { border-color: rgba(227,179,65,0.4); }
+.pj3-net-arrow { color: #8b949e; font-weight: 700; }
+
+/* 8. comparison */
+.pj3-cmp { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.pj3-cmp-head, .pj3-cmp-row { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; }
+.pj3-cmp-head > span, .pj3-cmp-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.pj3-cmp-head > span { font-weight: 800; background: #161b22; }
+.pj3-cmp-head .a, .pj3-cmp-row .a { color: #ff944d; }
+.pj3-cmp-head .b { color: #58a6ff; }
+.pj3-cmp .feat { color: #8b949e !important; font-weight: 600; }
+
+/* 9. mini */
+.pj3-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.pj3-mini span { background: #0d1117; border-radius: 7px; padding: 9px; font-size: 11px; color: #e6edf3; line-height: 1.4; }
+.pj3-mini small { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; }
+
+/* 10. step scaling */
+.pj3-step-out { text-align: center; font-size: 13px; color: #c9d1d9; margin-bottom: 10px; }
+.pj3-step-out b { color: #ff944d; }
+.pj3-step-bars { display: flex; gap: 4px; justify-content: center; margin-bottom: 12px; }
+.pj3-step-bars span { width: 24px; height: 30px; border-radius: 5px; background: #21262d; border: 1px solid rgba(255,255,255,0.08); }
+.pj3-step-bars span.on { background: linear-gradient(180deg,#ff944d,#EC7211); border-color: transparent; }
+.pj3-steps { display: flex; flex-direction: column; gap: 6px; }
+.pj3-steps div { font-size: 11.5px; color: #b9c2cc; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 7px; padding: 8px 11px; }
+.pj3-steps div.hl { border-color: #EC7211; color: #ff944d; font-weight: 700; }
+
+/* responsive */
+@media (max-width: 760px) {
+  .pj3-cmp-head, .pj3-cmp-row, .pj3-mini, .pj3-prereq, .pj3-def { grid-template-columns: 1fr; }
+  .pj3-net, .pj3-bg { flex-direction: column; }
+  .pj3-az { flex-direction: column; }
+}

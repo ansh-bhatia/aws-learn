@@ -388,6 +388,18 @@ import {
   ResourceLimits,
   ECSStorageExplorer,
 } from "./visuals/ProjectECSVisuals2";
+import {
+  TaskDefPrereqs,
+  CapacityProviderCalc,
+  ECSTaskVsServiceCtl,
+  DeploymentConfigOptions,
+  RollingVsBlueGreen,
+  FailureDetection,
+  ServiceNetworkingALB,
+  ClusterVsServiceScaling,
+  TargetTracking,
+  StepScaling,
+} from "./visuals/ProjectECSVisuals3";
 
 const VISUAL_MAP = {
   VirtualizationDiagram,
@@ -689,6 +701,16 @@ const VISUAL_MAP = {
   ContainerConfig,
   ResourceLimits,
   ECSStorageExplorer,
+  TaskDefPrereqs,
+  CapacityProviderCalc,
+  ECSTaskVsServiceCtl,
+  DeploymentConfigOptions,
+  RollingVsBlueGreen,
+  FailureDetection,
+  ServiceNetworkingALB,
+  ClusterVsServiceScaling,
+  TargetTracking,
+  StepScaling,
 };
 
 function renderMarkdown(text) {
