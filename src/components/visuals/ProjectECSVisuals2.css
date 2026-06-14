@@ -1,0 +1,79 @@
+/* ─── Projects theme part 2 (build orange, prefix pj2-) ────────────── */
+.pj2-title { color: #ff944d; border-bottom: 1px solid rgba(236,114,17,0.4); }
+.pj2-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.pj2-sub { font-size: 12px; color: #c9d1d9; line-height: 1.5; margin: 14px 0 10px; }
+.pj2-intro code, .pj2-note code, .pj2-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #ffb27a; font-size: 11px; }
+.pj2-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(236,114,17,0.1); border: 1px solid rgba(236,114,17,0.28); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.pj2-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.pj2-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.pj2-toggle, .pj2-tabs, .pj2-chiprow { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.pj2-toggle button, .pj2-tab { flex: 1; min-width: 88px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.pj2-toggle button.active, .pj2-tab.active { border-color: #EC7211; color: #ff944d; background: rgba(236,114,17,0.12); }
+.pj2-detail { background: #161b22; border-left: 4px solid #EC7211; border-radius: 10px; padding: 13px 15px; }
+.pj2-detail b { font-size: 13px; color: #ff944d; }
+.pj2-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.pj2-btn { padding: 9px 16px; border-radius: 9px; cursor: pointer; font-size: 12px; font-weight: 700; background: #EC7211; border: none; color: #fff; margin-bottom: 10px; }
+.pj2-verdict { font-size: 12px; font-weight: 700; text-align: center; padding: 12px; border-radius: 9px; }
+.pj2-verdict.ok { background: rgba(63,185,80,0.12); color: #9be59b; }
+.pj2-verdict.bad { background: rgba(248,81,73,0.12); color: #ff7b72; }
+
+/* track */
+.pj2-track { display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.pj2-dot { width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: 800; background: #21262d; border: 2px solid rgba(255,255,255,0.1); color: #8b949e; flex-shrink: 0; }
+.pj2-dot.active { border-color: #EC7211; color: #ff944d; background: rgba(236,114,17,0.15); }
+.pj2-dot.past { border-color: rgba(46,160,67,0.5); color: #56d364; }
+.pj2-line { flex: 1; height: 2px; background: rgba(255,255,255,0.1); max-width: 50px; }
+.pj2-line.on { background: rgba(46,160,67,0.5); }
+
+/* mini grid */
+.pj2-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+.pj2-mini span { background: #0d1117; border-radius: 7px; padding: 9px; font-size: 11px; color: #e6edf3; line-height: 1.4; }
+.pj2-mini small { display: block; font-size: 9px; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; }
+
+/* blueprint */
+.pj2-blueprint { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
+.pj2-bp-row { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 11px; font-size: 11.5px; font-weight: 600; color: #e6edf3; }
+.pj2-revs { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.pj2-rev { padding: 9px 14px; border-radius: 9px; cursor: pointer; font-size: 11.5px; font-weight: 600; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.pj2-rev.active { border-color: #EC7211; color: #ff944d; background: rgba(236,114,17,0.12); }
+.pj2-rev b { color: inherit; }
+
+/* chips */
+.pj2-chip { padding: 8px 13px; border-radius: 20px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.pj2-chip.active { border-color: #EC7211; color: #ff944d; background: rgba(236,114,17,0.12); }
+
+/* comparison */
+.pj2-cmp { border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; overflow: hidden; }
+.pj2-cmp-head, .pj2-cmp-row { display: grid; grid-template-columns: 1fr 1.4fr 1.4fr; }
+.pj2-cmp-head > span, .pj2-cmp-row > span { padding: 9px 11px; font-size: 11px; color: #e6edf3; border-bottom: 1px solid rgba(255,255,255,0.04); line-height: 1.4; }
+.pj2-cmp-head > span { font-weight: 800; background: #161b22; }
+.pj2-cmp-head .a, .pj2-cmp-row .a { color: #ff944d; }
+.pj2-cmp-head .b { color: #58a6ff; }
+.pj2-cmp .feat { color: #8b949e !important; font-weight: 600; }
+
+/* config rows */
+.pj2-cfg { display: flex; flex-direction: column; gap: 6px; margin-bottom: 4px; }
+.pj2-cfg-row { display: flex; gap: 10px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 9px 12px; font-size: 11px; color: #d6dde5; flex-wrap: wrap; }
+.pj2-cfg-row b { color: #ff944d; min-width: 78px; }
+.pj2-cfg-row span { word-break: break-all; }
+
+/* slider + bars */
+.pj2-slider { width: 100%; accent-color: #EC7211; margin-bottom: 12px; }
+.pj2-bar { background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; height: 22px; overflow: hidden; }
+.pj2-bar span { display: block; height: 100%; background: linear-gradient(90deg,#EC7211,#ff944d); transition: width 0.2s; }
+.pj2-bar-lbl { font-size: 11.5px; color: #c9d1d9; text-align: center; margin-top: 8px; }
+.pj2-bar-lbl b { color: #ff944d; }
+
+/* storage */
+.pj2-store { display: flex; flex-direction: column; gap: 8px; }
+.pj2-store-row { display: flex; gap: 10px; align-items: flex-start; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; }
+.pj2-store-row b { font-size: 12px; color: #e6edf3; }
+.pj2-store-row p { font-size: 10.5px; color: #b9c2cc; line-height: 1.4; margin: 3px 0 0; }
+.pj2-store-tag { flex-shrink: 0; font-size: 8.5px; font-weight: 800; text-transform: uppercase; border-radius: 5px; padding: 3px 7px; height: fit-content; }
+.pj2-store-tag.ok { background: rgba(63,185,80,0.15); color: #56d364; }
+.pj2-store-tag.warn { background: rgba(227,179,65,0.15); color: #e8cd8a; }
+
+/* responsive */
+@media (max-width: 760px) {
+  .pj2-cmp-head, .pj2-cmp-row, .pj2-mini, .pj2-blueprint { grid-template-columns: 1fr; }
+}

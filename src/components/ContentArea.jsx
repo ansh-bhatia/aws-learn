@@ -376,6 +376,18 @@ import {
   ECRvsDockerHub,
   TagMutability,
 } from "./visuals/ProjectECSVisuals";
+import {
+  PushToECR,
+  TaskDefinitionBlueprint,
+  OSArchMatch,
+  NetworkModes,
+  TaskSizeExplorer,
+  TaskRoleVsExecution,
+  PlacementConstraints,
+  ContainerConfig,
+  ResourceLimits,
+  ECSStorageExplorer,
+} from "./visuals/ProjectECSVisuals2";
 
 const VISUAL_MAP = {
   VirtualizationDiagram,
@@ -667,6 +679,16 @@ const VISUAL_MAP = {
   ECRBridge,
   ECRvsDockerHub,
   TagMutability,
+  PushToECR,
+  TaskDefinitionBlueprint,
+  OSArchMatch,
+  NetworkModes,
+  TaskSizeExplorer,
+  TaskRoleVsExecution,
+  PlacementConstraints,
+  ContainerConfig,
+  ResourceLimits,
+  ECSStorageExplorer,
 };
 
 function renderMarkdown(text) {

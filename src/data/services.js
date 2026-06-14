@@ -5303,6 +5303,80 @@ The image is on the build machine, but **ECS can't pull from there**. **ECR** is
 
 **Next part:** push the image to ECR, then create the ECS **task definition**, IAM roles, service, and load balancer.`,
       },
+      {
+        id: "project-ecs-php-2",
+        title: "Project: Scalable PHP App on ECS — Part 2 (Push to ECR + Task Definition Deep-Dive)",
+        shortDesc: "Push the image to ECR, then master every task-definition option",
+        visuals: ["PushToECR", "TaskDefinitionBlueprint", "OSArchMatch", "NetworkModes", "TaskSizeExplorer", "TaskRoleVsExecution", "PlacementConstraints", "ContainerConfig", "ResourceLimits", "ECSStorageExplorer"],
+        content: `## Project Part 2 — Push to ECR & Build the Task Definition
+
+We push the image to ECR, then go deep on the **task definition** — the blueprint ECS follows to run your app.
+
+---
+
+## Step 4 — Push the Image to ECR
+
+You can't push until you **authenticate** (twice), the best-practice way:
+1. **EC2 → AWS:** instead of hardcoding access keys on the build machine (risky), attach an **IAM role** (Amazon EC2 Container Registry full access) to the build machine.
+2. **Docker → ECR:** run the ECR login command from **"View push commands"** → get **"Login Succeeded"** (a temporary token).
+3. **Tag** the local image with the ECR repo **URI**: \`docker tag cloudfox-php-app:latest <account>.dkr.ecr.<region>.amazonaws.com/cloudfox-php-app:latest\`.
+4. **Push:** \`docker push <URI>:latest\` → the image appears in the ECR repo, ready for ECS.
+
+> Update flow later: change code → rebuild → re-tag → re-push. CI/CD can automate it all.
+
+---
+
+## Step 5 — The Task Definition (deep-dive)
+
+A **task definition** is the recipe telling ECS how to run your app: **image, CPU/RAM, ports, env vars, IAM roles, storage**. Editing it creates a new **revision** (never overwrites — easy rollback); all revisions live in one **family**. One definition can hold **multiple containers**.
+
+### Launch type
+Choose **Fargate** and/or **EC2**. This unlocks different options (e.g. Fargate forces network mode = **awsvpc**). If EC2 is greyed out, your cluster wasn't created with EC2 capacity.
+
+### OS & Architecture
+Tell ECS what the container is built for (**Linux/Windows**, **x86_64/ARM64**). ECS only runs it on a **matching host** — no form error, but the task **fails to start** if none exists. **Windows is NOT supported by Fargate** (needs a Windows EC2). ARM64 needs **Graviton** EC2 (or Fargate).
+
+### Network mode (5 options)
+
+| Mode | Launch | IP | Port config |
+|---|---|---|---|
+| **awsvpc** ⭐ | Fargate + EC2 | Own ENI + private IP per task | Container port only |
+| **bridge** | EC2 (Linux) | Shares host ENI via Docker bridge | Host ↔ container mapping |
+| **default** | EC2 (Windows) | NAT (Windows bridge) | Host ↔ container mapping |
+| **host** | EC2 (Linux) | Uses host IP directly | Container port (no mapping) |
+| **none** | EC2 | No networking | Disabled |
+
+- **awsvpc** is the default & most-used (and Fargate's only option): each task = a mini-EC2 with its own IP + security group.
+- Only **bridge** & **default** need **host↔container port mapping** (e.g. host 8080→container 80, 8081→another task).
+- **host** is fastest (no routing) but two containers can't share a port.
+
+### Task size (CPU & memory)
+- **Fargate:** pick a vCPU; memory must be a **compatible** pairing (e.g. 1 vCPU → 2–8 GB, in 1 GB steps). **Mandatory**.
+- **EC2:** any size, but it must **fit inside the host** (asking a t2.micro for a full vCPU → task fails). Optional (reserves resources).
+- Don't over-allocate "to be safe" — you pay for it. Right-size by monitoring.
+
+### Task Role vs Task Execution Role
+- **Task role** = your **app's** permissions at runtime (e.g. PHP app → write to S3).
+- **Execution role** = the **ECS agent's** permissions at launch (pull image from private ECR, push logs to CloudWatch, fetch secrets).
+- Our project uses **both**.
+
+### Placement constraints (EC2 only)
+- **memberOf** — run only on hosts matching a query (e.g. \`ecs.instance-type == t3.*\`); set in the task definition.
+- **distinctInstance** — spread tasks onto different hosts (HA); set when you run the task. If no match exists, the task stays **pending**.
+
+### Container configuration
+**Name**, **image URI**, **essential?** (if an essential container stops, the whole task fails), **port mapping** (per network mode), and **read-only root filesystem** (Linux security). Private ECR needs no password — the **execution role** handles auth. (Private non-AWS registries need credentials stored in **Secrets Manager**.)
+
+### Resource limits
+Set at **task** level (the big box) and per **container** (so one can't hog it all): **CPU cap**, **memory hard limit** (cross it → container killed), **memory soft limit** (reserved floor), and **GPU** (EC2 + GPU instance only — not Fargate).
+
+### Storage
+- **Fargate:** **ephemeral storage** (20 GB default → 200 GB, wiped on stop), **bind mount** (share within a task), **EBS** (CLI/SDK only), **EFS** (persistent + shared across tasks).
+- **EC2:** instance storage, **bind mount** (access host files / share), **Docker volumes**, plus **EBS / EFS / FSx** (external, persistent, shareable). Ephemeral 20–200 GB is **Fargate-only**.
+- All storage must be **mounted** to be used. For durable shared data → **EFS** (Linux) / **FSx** (Windows).
+
+**Next part:** create the task role, then launch the task/service behind an Application Load Balancer and test the upload to S3.`,
+      },
     ],
   },
 ];
