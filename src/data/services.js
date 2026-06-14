@@ -1335,6 +1335,86 @@ Auto-replicates objects to a destination bucket in **another region** — **one-
 - **Replica modification sync:** sync destination changes back to source (otherwise one-way).`,
       },
       {
+        id: "s3-part3",
+        title: "S3 – Part 3 (Transfer Acceleration, Logging, Pre-signed URLs, Events, Multipart, Endpoints, Access Points)",
+        shortDesc: "Acceleration, access logging vs CloudTrail, Requester Pays, pre-signed URLs, MFA Delete, events, multipart, VPC endpoint, access points",
+        visuals: ["TransferAcceleration", "LoggingVsCloudTrail", "RequesterPays", "PresignedURL", "MFADelete", "EventNotification", "MultipartUpload", "VPCEndpoint", "AccessPoints"],
+        content: `## S3 – Part 3
+
+Advanced S3 features: performance, auditing, cost-shifting, secure sharing, automation, large uploads, private connectivity, and granular access.
+
+---
+
+## Transfer Acceleration
+Speeds up **long-distance** uploads/downloads by **50–500%**. Data hops to the nearest **CloudFront edge location**, then travels the **AWS global backbone** (optimized routing, no public-internet congestion) to the bucket.
+- Enable **per bucket** → use the **accelerated endpoint** via CLI/SDK.
+- Bigger files = bigger gains. **Not free** — a transfer fee applies.
+
+---
+
+## Auditing: Server Access Logging vs CloudTrail Data Events
+Both record "who accessed what"; analyze with **Athena/Glue** (or Splunk/ELK).
+
+| | Server Access Logging | CloudTrail Data Events |
+|---|---|---|
+| **Focus** | Summary-level requests | Detailed object-level API calls |
+| **Detail** | Requester, time, action, status | + requester **ARN**, in depth |
+| **Format** | **Plain text** | **JSON** |
+| **Enable from** | S3 console (target bucket) | **CloudTrail** console (not S3) |
+| **Cost** | Low; batched (2–4 hrs) | Higher (detailed) |
+| **Use for** | Usage stats, patterns | Security/compliance, API audit |
+
+> Exam: "logs in **JSON**" / object-level audit → **CloudTrail Data Events**.
+
+---
+
+## Requester Pays
+By default the **bucket owner** pays storage + transfer + requests. Enable Requester Pays to push **data-transfer + request** costs onto whoever downloads (storage still owner-paid). Ideal for sharing large public datasets.
+- Requester needs an **AWS account** (no anonymous access), a **bucket policy** granting access, and must send the **\`x-amz-request-payer\`** header (CLI \`--request-payer requester\`). Console can't send it → use CLI/curl.
+
+---
+
+## Pre-signed URLs
+A **temporary, secure link** to a **private** object — no need to make it public. Works for **download (GET)** and **upload (PUT)**, with an expiry you set.
+- Create via **console** (download), **CLI**, **SDK**, or **AWS Toolkit for Visual Studio** (upload). Upload URLs are locked to one object key. After expiry → "Access Denied — request has expired".
+
+---
+
+## MFA Delete
+Extra protection: deleting an object **version** (or disabling versioning) needs a fresh **MFA code**.
+- Requirements: **root** credentials, an **MFA device**, **versioning enabled**, and enable via **CLI/SDK only**.
+- \`put-bucket-versioning … --mfa "arn code" --versioning-configuration MFADelete=Enabled,Status=Enabled\`.
+- While on, you **can't** permanently delete versions or empty/delete the bucket without a code — disable it first to clean up.
+
+---
+
+## Event Notifications
+Trigger an action on bucket events (**created / removed / restored**). Destinations: **Lambda, SNS, SQS**.
+- Classic exam scenario: JPEG upload → S3 event → **Lambda** adds a watermark → writes to a \`watermark/\` folder (like OLX). Enables automated workflows, real-time monitoring, efficient processing.
+
+---
+
+## Multipart Upload
+Objects can be **5 TB**, but a single PUT is capped at **5 GB** — so split big files into parts (**≥5 MB** each).
+- Flow: **create-multipart-upload** (get an **Upload ID**) → **upload-part** ×N (each returns an **ETag**) → **complete** with the ETag list.
+- Benefits: **parallel** uploads (faster), retry only failed parts (resilient on flaky networks). Use a **lifecycle rule** to auto-delete incomplete uploads.
+
+---
+
+## VPC Gateway Endpoint for S3
+By default EC2 → S3 traffic uses the **public internet** (even same-region). A **gateway endpoint** keeps it on the **AWS private network** — more secure, lower latency.
+- **Gateway endpoint** (S3 & DynamoDB): **free**, adds a **route table** entry. **Interface endpoint** (other services): hourly + data charges, uses an **ENI** (PrivateLink).
+- Verify with \`traceroute\`: internet route shows hops; private route shows none.
+
+---
+
+## Access Points
+A bucket has only **one** bucket policy — unwieldy when many apps need different access. Access points give each app its **own named endpoint + policy**.
+- Each user/app → its own access point with a tailored policy (e.g. User1 → AP1 → PUT to \`f1\`). Scales to **hundreds** per bucket.
+- Set a **network origin**: **VPC** (requires an S3 VPC endpoint) or **Internet**.
+- Setup: delegate bucket access to access points in the **bucket policy** → create an access point + policy per user → grant users **\`ListAccessPoints/GetAccessPoint\`** IAM permission to see them. Best when **many** applications share one bucket.`,
+      },
+      {
         id: "ebs",
         title: "EBS – Elastic Block Store",
         shortDesc: "Persistent block storage volumes for EC2",

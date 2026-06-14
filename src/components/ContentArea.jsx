@@ -354,6 +354,17 @@ import {
   CORSDemo,
   CRRDemo,
 } from "./visuals/S3Visuals2";
+import {
+  TransferAcceleration,
+  LoggingVsCloudTrail,
+  RequesterPays,
+  PresignedURL,
+  MFADelete,
+  EventNotification,
+  MultipartUpload,
+  VPCEndpoint,
+  AccessPoints,
+} from "./visuals/S3Visuals3";
 
 const VISUAL_MAP = {
   VirtualizationDiagram,
@@ -627,6 +638,15 @@ const VISUAL_MAP = {
   StaticHosting,
   CORSDemo,
   CRRDemo,
+  TransferAcceleration,
+  LoggingVsCloudTrail,
+  RequesterPays,
+  PresignedURL,
+  MFADelete,
+  EventNotification,
+  MultipartUpload,
+  VPCEndpoint,
+  AccessPoints,
 };
 
 function renderMarkdown(text) {
