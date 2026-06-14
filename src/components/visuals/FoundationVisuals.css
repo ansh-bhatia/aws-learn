@@ -1,0 +1,69 @@
+/* ─── Foundations theme (cloud blue, prefix fnd-) ────────────── */
+.fnd-title { color: #56b6ff; border-bottom: 1px solid rgba(31,111,235,0.4); }
+.fnd-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.fnd-intro code, .fnd-note code, .fnd-detail code { background: #0d1117; padding: 1px 5px; border-radius: 4px; color: #9ad1ff; font-size: 11px; }
+.fnd-note { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; background: rgba(31,111,235,0.1); border: 1px solid rgba(31,111,235,0.28); border-radius: 8px; padding: 11px 13px; margin-top: 14px; }
+.fnd-note.warn { background: rgba(227,179,65,0.1); border-color: rgba(227,179,65,0.28); color: #e8cd8a; }
+.fnd-note.ok { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.28); color: #9be59b; }
+.fnd-toggle, .fnd-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.fnd-toggle button, .fnd-tab { flex: 1; min-width: 90px; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 11px; font-weight: 700; background: #21262d; border: 2px solid rgba(255,255,255,0.07); color: #8b949e; }
+.fnd-toggle button.active, .fnd-tab.active { border-color: #1F6FEB; color: #56b6ff; background: rgba(31,111,235,0.12); }
+.fnd-detail { background: #161b22; border-left: 4px solid #1F6FEB; border-radius: 10px; padding: 13px 15px; }
+.fnd-detail b { font-size: 13px; color: #56b6ff; }
+.fnd-detail p { font-size: 12px; color: #d6dde5; line-height: 1.5; margin: 6px 0 0; }
+.fnd-verdict { font-size: 12px; font-weight: 700; text-align: center; padding: 12px; border-radius: 9px; margin-top: 12px; line-height: 1.45; }
+.fnd-verdict.ok { background: rgba(63,185,80,0.12); color: #9be59b; }
+.fnd-verdict.bad { background: rgba(248,81,73,0.12); color: #ff7b72; }
+
+/* 2. benefits */
+.fnd-benefits { display: flex; flex-direction: column; gap: 8px; }
+.fnd-benefit { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; cursor: pointer; }
+.fnd-benefit.open { border-color: rgba(31,111,235,0.45); }
+.fnd-benefit-h { font-size: 12.5px; font-weight: 700; color: #e6edf3; display: flex; align-items: center; gap: 8px; }
+.fnd-benefit p { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; margin: 8px 0 0; }
+
+/* 4. service-model stack */
+.fnd-stack { display: flex; flex-direction: column; gap: 4px; }
+.fnd-layer { font-size: 11.5px; font-weight: 600; border-radius: 6px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; }
+.fnd-layer small { font-size: 9px; text-transform: uppercase; opacity: 0.8; }
+.fnd-layer.you { background: rgba(236,114,17,0.15); border: 1px solid rgba(236,114,17,0.4); color: #ff944d; }
+.fnd-layer.prov { background: rgba(31,111,235,0.12); border: 1px solid rgba(31,111,235,0.35); color: #79c0ff; }
+
+/* 5. bars */
+.fnd-bars { display: flex; flex-direction: column; gap: 10px; }
+.fnd-bar-row { display: flex; align-items: center; gap: 10px; }
+.fnd-bar-name { font-size: 11px; color: #c9d1d9; width: 110px; flex-shrink: 0; }
+.fnd-bar-track { flex: 1; background: #0d1117; border-radius: 6px; height: 22px; overflow: hidden; }
+.fnd-bar-fill { height: 100%; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; font-size: 10px; font-weight: 800; color: #fff; }
+
+/* 6. free tier */
+.fnd-free { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.fnd-free-item { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 12px; text-align: center; }
+.fnd-free-item b { font-size: 13px; color: #56b6ff; display: block; }
+.fnd-free-item span { font-size: 11px; color: #b9c2cc; }
+.fnd-steps { display: flex; flex-direction: column; gap: 8px; }
+.fnd-step { display: flex; gap: 11px; align-items: flex-start; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; font-size: 11.5px; color: #d6dde5; line-height: 1.45; }
+.fnd-step > span { flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%; background: #1F6FEB; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+/* 8. latency */
+.fnd-lat { display: flex; align-items: center; gap: 10px; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 16px; }
+.fnd-lat span { font-size: 12px; font-weight: 700; color: #e6edf3; }
+.fnd-lat-track { flex: 1; height: 8px; background: #21262d; border-radius: 5px; overflow: hidden; }
+.fnd-lat-fill { height: 100%; transition: width 0.4s; }
+.fnd-lat-fill.fast { background: #2ea043; }
+.fnd-lat-fill.slow { background: #d29922; }
+
+/* 9. cdn */
+.fnd-cdn { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: #0d1117; border: 1px solid rgba(255,255,255,0.06); border-radius: 11px; padding: 18px; }
+.fnd-cdn-box { font-size: 12px; font-weight: 700; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.1); border-radius: 9px; padding: 12px 16px; }
+.fnd-cdn-box.hot { border-color: rgba(31,111,235,0.5); color: #56b6ff; }
+.fnd-cdn-arrow { font-size: 11px; font-weight: 700; }
+.fnd-cdn-arrow.ok { color: #9be59b; }
+.fnd-cdn-arrow.bad { color: #ff7b72; }
+
+/* responsive */
+@media (max-width: 760px) {
+  .fnd-free { grid-template-columns: 1fr; }
+  .fnd-cdn, .fnd-lat { flex-direction: column; }
+  .fnd-bar-name { width: 80px; }
+}

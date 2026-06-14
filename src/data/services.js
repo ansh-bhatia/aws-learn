@@ -4,6 +4,129 @@
 
 export const awsCategories = [
   {
+    id: "foundations",
+    label: "Foundations (Start Here)",
+    icon: "🚀",
+    color: "#1F6FEB",
+    topics: [
+      {
+        id: "what-is-cloud",
+        title: "What Is Cloud Computing?",
+        shortDesc: "Cloud basics, the 6 benefits, and why businesses move to the cloud",
+        visuals: ["WhatIsCloud", "CloudBenefits"],
+        content: `## What Is Cloud Computing?
+
+Every modern business runs on an **app** — Zomato, Amazon, Uber. Those apps need **servers, storage, databases & networking** to run. You have two choices for that hardware:
+
+- **On-premises:** build your own data center — huge upfront cost (₹1–2 crore+), months of setup, your staff handle power/cooling/security.
+- **Cloud:** rent those IT resources from a provider (**AWS, Azure, GCP**) over the internet, and pay only for what you use.
+
+> **Definition:** Cloud computing is the **on-demand delivery of IT resources over the internet with pay-as-you-go pricing.** The "triple-A": access **anytime, anywhere, on any device**.
+
+---
+
+## The 6 Benefits of Cloud
+1. **Trade CapEx for OpEx** — no big upfront hardware spend; pay monthly for usage.
+2. **Massive economies of scale** — AWS buys hardware at huge scale and passes savings on (prices cut many times).
+3. **Stop guessing capacity** — scale up/down with a click instead of over- or under-buying.
+4. **Speed & agility** — launch resources in minutes, not weeks.
+5. **No data-center upkeep** — forget racks, power, cooling, security.
+6. **Go global in minutes** — deploy near users worldwide without building data centers there.
+
+> **CapEx** = big upfront purchase (buying a car). **OpEx** = ongoing pay-as-you-use (fuel). Cloud turns CapEx into OpEx.`,
+      },
+      {
+        id: "cloud-types-models",
+        title: "Cloud Types & Service Models",
+        shortDesc: "Private/public/hybrid + IaaS vs PaaS vs SaaS (who manages what)",
+        visuals: ["CloudTypes", "CloudServiceModels"],
+        content: `## Types of Cloud
+
+- **Private** — used by ONE organization. Full control & security, but you build & maintain it (high cost). For security/compliance-heavy orgs (govt, banks).
+- **Public** — a provider owns everything; you rent over the internet. Almost no upfront cost & easy, but no control over the hardware.
+- **Hybrid** — a mix of both, connected. Keep sensitive data on-prem, burst to the cloud for scale. **The most popular.**
+
+> Hybrid examples: a university runs on-prem 360 days then bursts to the cloud for 5 days of results traffic; banks keep a cloud **disaster-recovery** site without paying for a second physical data center; archiving cold data cheaply in **S3**.
+
+---
+
+## Cloud Service Models (Who Manages What)
+
+A 9-layer stack runs from **Networking → Storage → Servers → Virtualization → OS → Middleware → Runtime → Data → Application**. The model decides how much **you** manage vs the **provider**:
+
+| Model | You manage | Example |
+|---|---|---|
+| **On-Premises** | Everything (all 9) | Your own data center |
+| **IaaS** | OS + up (top 5) | **EC2**, Azure VM |
+| **PaaS** | Data + App (top 2) | **RDS**, Azure DB |
+| **SaaS** | Nothing — just use it | **Office 365**, Gmail |
+
+> The further right you go, the less you manage. With **IaaS** you still pick the OS; with **PaaS** there's no OS to choose; with **SaaS** you just log in and use the app.`,
+      },
+      {
+        id: "getting-started-aws",
+        title: "Getting Started with AWS",
+        shortDesc: "Why AWS leads, the Free Tier, budget alerts & the console",
+        visuals: ["AWSMarketShare", "FreeTierBudget"],
+        content: `## Why AWS?
+
+AWS **started** cloud computing — it launched **S3** (storage) in **2006**, then **EC2** (virtual servers). Today it offers **200+ services** and has topped Gartner's Magic Quadrant for a decade.
+
+**Market share:** AWS ~33% · Microsoft Azure ~22% · Google Cloud ~11%. Learning the leader means more jobs and the widest range of services.
+
+> 🇮🇳 In India: **Mumbai** region (2016) and **Hyderabad** region (2022).
+
+---
+
+## Create a Free-Tier Account
+- Practice free for **12 months** — just stay inside the limits (e.g. **EC2** 750 hrs/mo, **S3** 5 GB, **RDS** 750 hrs/mo). Some services are always free.
+- You need an **email** + an **international Visa/Mastercard/Amex** (a ~₹2 verification, refunded — no auto-charges). Indian-rupee-only cards aren't accepted.
+- Choose **Basic support** (free) at sign-up.
+
+## Set a Budget Alert (do this first!)
+Billing → **Budgets** → **Zero-Spend Budget** template → get an email if spend exceeds **$0.01**.
+
+> ⚠️ A budget **alerts** you — it does **not** auto-delete resources. When alerted, go delete/terminate the resource yourself. **Always clean up after a lab.**
+
+---
+
+## The AWS Management Console
+- **Search bar / Services menu** — 200+ services grouped by category (Compute, Storage, Analytics…).
+- **Region selector (top-right)** — pick where resources are created. Some services (like **IAM**) are **global** (no region).
+- **Account ID** — a unique number for your account.
+- **CloudShell** — a browser-based command line (no install needed).
+- Never share your password; sign out when done.`,
+      },
+      {
+        id: "aws-global-infrastructure",
+        title: "AWS Global Infrastructure",
+        shortDesc: "Regions, AZs, Local Zones, Wavelength, Outposts, Edge & CDN",
+        visuals: ["GlobalInfraExplorer", "LatencyDistance", "CDNEdge"],
+        content: `## AWS Global Infrastructure
+
+AWS runs data centers **worldwide** so your app can be close to users. The building blocks:
+
+- **Region** — a geographic area (e.g. Mumbai \`ap-south-1\`). Choose one near your users (**low latency**) or to obey **data-residency laws**. ~35 regions worldwide.
+- **Availability Zone (AZ)** — one or more data centers inside a region, ≤100 km apart with **separate power/water**, linked by fast fiber (~1 ms). Run across multiple AZs for **high availability** — if one fails, another keeps serving.
+- **Local Zone** — a data center **outside** the region, placed in a far city (e.g. Delhi) for **low latency** to those local users.
+- **Wavelength** — run apps inside **5G/telecom** networks so mobile-only traffic never leaves the carrier network.
+- **Outposts** — AWS **hardware shipped to your own data center**, managed from the AWS console — true hybrid cloud with one toolset.
+- **Edge Location** — 350+ **CloudFront CDN** caching sites near users; cache static content (videos, images) close by instead of hitting the far origin.
+- **Regional Edge Cache** — a bigger cache layer (~13) **between** edge locations and the origin; if an edge misses, it answers before bothering the origin.
+
+---
+
+## Why Distance = Latency
+Indian users hitting a US-hosted app travel ~13,000 km → slow. Host in the **region near your users** to cut latency. (Data-residency rules may also force in-country storage.)
+
+## Edge Caching (CDN)
+Netflix/YouTube feel instant because static content is cached at **edge locations** near you — fast delivery and the origin stays free. You configure this with **CloudFront** (covered later).
+
+> Quick map: **Region** holds **AZs**. **AZ** → high availability. **Local Zone / Edge** → low latency. **Outposts** → hybrid on-prem.`,
+      },
+    ],
+  },
+  {
     id: "compute",
     label: "Compute",
     icon: "⚙️",

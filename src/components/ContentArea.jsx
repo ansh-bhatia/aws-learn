@@ -401,7 +401,28 @@ import {
   StepScaling,
 } from "./visuals/ProjectECSVisuals3";
 
+import {
+  WhatIsCloud,
+  CloudBenefits,
+  CloudTypes,
+  CloudServiceModels,
+  AWSMarketShare,
+  FreeTierBudget,
+  GlobalInfraExplorer,
+  LatencyDistance,
+  CDNEdge,
+} from "./visuals/FoundationVisuals";
+
 const VISUAL_MAP = {
+  WhatIsCloud,
+  CloudBenefits,
+  CloudTypes,
+  CloudServiceModels,
+  AWSMarketShare,
+  FreeTierBudget,
+  GlobalInfraExplorer,
+  LatencyDistance,
+  CDNEdge,
   VirtualizationDiagram,
   ServerTypesCards,
   HostGuestExplainer,
