@@ -1,0 +1,41 @@
+/* ─── AI / GenAI part-4 visuals (prefix a4-) — reuses .ai-* from AIVisuals.css ─── */
+
+.a4-proto {
+  font-family: ui-monospace, monospace; font-size: 9.5px; font-weight: 700;
+  color: #b3a4ff; background: rgba(123,104,238,0.16);
+  border: 1px solid rgba(123,104,238,0.3); border-radius: 20px;
+  padding: 1px 8px; margin-left: 6px; vertical-align: middle;
+}
+
+/* 1. feature grid */
+.a4-feat-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.a4-feat { font-size: 11.5px; color: #8b949e; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 7px; padding: 7px 11px; }
+.a4-feat.yes { color: #c9d1d9; }
+.a4-feat span { margin-right: 6px; }
+
+/* 2. AppSync sources + clients */
+.a4-sources { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.a4-source-chip { font-size: 11.5px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.07); background: #161b22; color: #8b949e; }
+.a4-source-chip.hit { color: #9be59b; border-color: rgba(63,185,80,0.4); background: rgba(63,185,80,0.1); font-weight: 700; }
+.a4-clients { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.a4-clients-label { font-size: 11px; color: #8b949e; }
+.a4-client { font-size: 11px; font-weight: 600; color: #b3a4ff; background: rgba(123,104,238,0.14); border: 1px solid rgba(123,104,238,0.3); border-radius: 20px; padding: 3px 10px; }
+
+/* 4. metric pill list */
+.a4-metric-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
+.a4-metric-pill { font-family: ui-monospace, monospace; font-size: 10.5px; color: #9ad1ff; background: #0d1117; border: 1px solid rgba(255,255,255,0.07); border-radius: 7px; padding: 5px 10px; }
+
+/* 5. dataset JSON-L sample */
+.a4-jsonl { margin-top: 12px; }
+.a4-jsonl-label { display: block; font-size: 11px; color: #8b949e; margin-bottom: 6px; }
+.a4-jsonl code { display: block; font-family: ui-monospace, monospace; font-size: 10.5px; color: #9be59b; background: #0d1117; border: 1px solid rgba(255,255,255,0.07); border-radius: 7px; padding: 10px 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+
+/* 7. adaptation ladder */
+.a4-ladder { display: flex; flex-direction: column; gap: 7px; }
+.a4-rung { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 11px 13px; cursor: pointer; }
+.a4-rung.open { border-color: rgba(123,104,238,0.45); }
+.a4-rung-h { display: flex; align-items: center; gap: 10px; font-size: 12.5px; font-weight: 700; color: #e6edf3; }
+.a4-rung-num { flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%; background: #7B68EE; color: #fff; font-size: 10.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.a4-rung-cost { margin-left: auto; font-size: 11px; color: #ffb454; letter-spacing: 1px; }
+.a4-rung-body p { font-size: 11.5px; color: #b9c2cc; line-height: 1.5; margin: 8px 0 0; }
+.a4-rung-body p:first-child { margin-top: 10px; }

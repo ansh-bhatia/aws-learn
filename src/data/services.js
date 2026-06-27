@@ -5710,6 +5710,262 @@ Your GenAI app needs a **compute / orchestration layer** to assemble prompts, ca
 
 > Quick pick: **simple, short, event-driven → Lambda** · **long-running / containers / microservices → ECS** · **train or host your own model, or need full OS control → EC2**.`,
       },
+      {
+        id: "genai-api-gateway",
+        title: "Decision #8 — API Layer: Amazon API Gateway",
+        shortDesc: "REST, HTTP, WebSocket & Private APIs — the secure entry point for prompts",
+        visuals: ["ApiLayerSelector"],
+        content: `## Decision #8: How Do Users Reach Your GenAI App?
+
+Once your orchestration logic (Lambda/EC2/ECS) is ready, something has to **securely expose** it. Three options: **API Gateway**, **AppSync**, **Application Load Balancer**. *(Exam focus: **API Gateway**.)*
+
+---
+
+## Amazon API Gateway
+
+A service to **create, publish, maintain, monitor and secure** REST, HTTP and WebSocket APIs at any scale. In a GenAI architecture it's the **secure entry point for prompts** (and for streaming responses — think of ChatGPT showing text chunk by chunk instead of all at once).
+
+Classic pattern: **Web/mobile app → API Gateway → Lambda (prompt orchestration) → Amazon Bedrock**.
+
+---
+
+## The 4 API Types
+
+| Type | Best for | Notes |
+|---|---|---|
+| **HTTP API** | Simple GenAI apps (summarization, content gen) | Low latency, cost-effective, but **limited features** |
+| **REST API** | Apps needing **API keys & quotas**, per-client **throttling**, **WAF** | Full request/response control + management capabilities |
+| **WebSocket API** | Chat apps, live dashboards, leaderboards | **Persistent connection** — server pushes updates, no refresh needed |
+| **Private API** | Internal-only services | A REST API reachable **only from within a VPC** |
+
+> **HTTP vs REST:** need just **speed + low cost**? → **HTTP**. Need **tiered access** (e.g. free vs premium with daily quotas) or **stronger security**? → **REST**.
+
+---
+
+## Two Invocation Patterns
+
+- **Synchronous** — the event-driven pattern above: client **waits** for the response (API Gateway + Lambda, HTTP or REST API).
+- **Asynchronous** — the caller does **not** wait; the response is **pushed** later (this is how AppSync's chat/dashboard pattern works — covered next).
+
+---
+
+## Hands-On
+
+> 🛠️ Console → **API Gateway → Create API** → choose a type:
+> - **HTTP API** — "build low-latency, cost-effective APIs... works with Lambda, HTTP backend."
+> - **REST API** — "complete control over request/response + API management... works with Lambda, HTTP and AWS services."
+> - **WebSocket API** — "persistent connection for real-time use cases... works with Lambda, HTTP and AWS services."
+> - **REST API Private** — "only accessible from within a VPC."`,
+      },
+      {
+        id: "genai-appsync-alb",
+        title: "API Layer — AppSync & Application Load Balancer",
+        shortDesc: "GraphQL for chat/dashboards, and ALB for long-running self-hosted inference",
+        visuals: ["AppSyncVsRest", "ALBRoutingScenarios"],
+        content: `## AWS AppSync
+
+Ideal for **GenAI chat & live-dashboard apps** — similar use case to a WebSocket API, except **AppSync manages the routes for you**.
+
+AppSync is a fully managed service for **GraphQL** — a query language (built by Facebook) where the client asks for **exactly** the data it needs, from **multiple sources in one call** (vs REST, which often **over-fetches or under-fetches** and needs one call per source).
+
+- **Protocol:** GraphQL over **HTTPS and WebSockets**.
+- **Real-time subscriptions** — once subscribed, clients get **auto-pushed** updates (great for live dashboards).
+- **Offline support** — useful for mobile/web apps without a connection.
+- Integrates with **Lambda** (orchestration) + **Bedrock** (inference).
+
+### How a chat/dashboard update flows
+User asks a question (a **"mutation"** — think: a trigger/state-change) → **AppSync** → **Lambda**, invoked **asynchronously** (it doesn't wait) → **Bedrock streams the response in chunks** → Lambda relays each chunk to AppSync → **AppSync pushes it to every subscribed client** in real time.
+
+---
+
+## Application Load Balancer (ALB)
+
+Distributes incoming traffic across compute targets — **EC2, ECS, EKS, IP addresses, or Lambda** — for **high availability, scalability and low latency**.
+
+- **Layer 7** — HTTP, HTTPS, WebSocket. *(There's also a Network Load Balancer at Layer 4 for TCP/UDP/ultra-low-latency — minor exam mention only.)*
+- ⚠️ **REST/HTTP API Gateway has a 29-second timeout** on synchronous calls. **ALB has no timeout limit** → ideal for **long-running inference**, and pairs well with **GPU-backed EC2**.
+
+### Key GenAI use cases
+- **Self-hosted open-source models** on EC2/ECS, made **highly available** across multiple AZs.
+- **High-throughput RAG** — vector DBs / chunking frameworks (e.g. LangChain) on EC2/ECS, load-balanced.
+- **Multi-model routing** — a large model on one EC2 instance, a small one on another (same family); ALB routes each request to the right target.
+
+> ALB *can* front a Lambda function, but that's uncommon — Lambda almost always pairs with **API Gateway** instead.
+
+---
+
+## Quick Decision Guide
+
+| Need | Use |
+|---|---|
+| Simple, event-driven prompt → response | **API Gateway** (HTTP/REST) |
+| Real-time chat / live dashboard, multi-source data | **AppSync** (GraphQL) |
+| Long-running inference, self-hosted model, no timeout | **ALB** (+ EC2/ECS) |`,
+      },
+      {
+        id: "genai-observability",
+        title: "Decision #9 — Observability & Monitoring",
+        shortDesc: "CloudWatch metrics, logs & log insights for your Bedrock app",
+        visuals: ["ObservabilityDashboard"],
+        content: `## Decision #9: Watching Your GenAI App in Production
+
+Monitor every aspect of a Bedrock-powered app through **Amazon CloudWatch**, three ways:
+
+---
+
+## 1) Metrics (near real-time)
+
+Track things like **token count** (cost), **latency**, and **errors** — then set **alarms** on thresholds (e.g. alert if latency exceeds 2 seconds).
+
+Key Bedrock CloudWatch metrics: **Invocations**, **InvocationLatency** (ms), **InvocationClientErrors / ServerErrors**, **InvocationThrottles**, **InputTokenCount**, **OutputTokenCount**, **OutputImageCount**. **Guardrails** publishes its own metrics too (invocation count + latency) — useful for seeing how much latency guardrails add.
+
+## 2) Logs
+
+**Model-invocation logging** captures the **full prompt, response and metadata** (timestamp, account, region, inference config, token counts, latency) for every call — sent to **S3, CloudWatch, or both**.
+
+## 3) Log Insights
+
+**Query and analyze logs** (not metrics) — e.g. find every request over a latency threshold, build a custom dashboard, or ask it to **summarize results** in plain English.
+
+---
+
+## Hands-On
+
+- Console → **Bedrock → Settings → Model invocation logging** → enable → choose destination (CloudWatch / S3 / both).
+- First create a **CloudWatch log group**: Console → **CloudWatch → Log management → Create log group** (e.g. \`demo_bedrock_monitoring\`, pick a retention period).
+- Back in Bedrock settings, enter that **log group name**, create/choose a **service role**, optionally add an S3 bucket → **Save**.
+- Test it: **Chat/Text playground** → pick a model (e.g. Nova Pro) → send a prompt → **Run**.
+- Go to **CloudWatch → Logs → your log group** → open the entry: see the input prompt, inference config (e.g. max tokens), **input token count**, the generated response, **latency** (ms), and **output/total token count**.
+- **CloudWatch → All metrics → Bedrock → By model ID** → select **Invocations**, **InvocationLatency**, **InputTokenCount**, **OutputTokenCount** → graph them on a dashboard.
+- **Log Insights** → write a query to pull matching logs → try **"Summarize results"** for a natural-language recap.`,
+      },
+      {
+        id: "genai-model-evaluation",
+        title: "Decision #10 — Model Evaluation",
+        shortDesc: "Programmatic, LLM-as-judge & human evaluation before you commit to a model",
+        visuals: ["ModelEvalApproaches"],
+        content: `## Decision #10: Is the Model Actually Good Enough?
+
+**Amazon Bedrock model evaluation** lets you evaluate, compare and select a foundation model for your use case — before (or while) building on it.
+
+---
+
+## The Process
+
+1. **Define a prompt dataset** — JSON-L file with a **prompt** + a **reference response** (what a good answer should look like) per record.
+2. **Upload it to S3.**
+3. **Pick an evaluation method** (below).
+4. Bedrock generates a **report** → a data scientist/SME reviews it.
+
+---
+
+## 3 Evaluation Approaches
+
+| Approach | How it works |
+|---|---|
+| **Programmatic** | AWS's own built-in evaluator. Choose a **task type** (text generation / summarization / Q&A / classification) + metrics: **accuracy, toxicity, robustness**. Built-in or your own dataset. |
+| **LLM-as-judge** | A **different** foundation model scores your model's responses. Pick the **evaluator model**, the **model being evaluated**, and metrics across **Quality** (helpfulness, correctness, faithfulness, completeness, coherence, tone) + **Responsible AI** (harmfulness, refusal) — plus custom metrics. |
+| **Human** | **AWS-managed work team** (you supply the dataset/metrics, AWS arranges reviewers) or **bring your own team**. Compare up to **2 models**. |
+
+> Reports normalize every metric score to **0–1**, and you can drill into any single prompt to compare the model's answer against your reference response.
+
+---
+
+## Hands-On (LLM-as-judge)
+
+- Console → **Bedrock → Evaluations → Create → LLM as a judge**. Name it.
+- **Evaluator model** — e.g. Llama 3.1. **Inference source** — the Bedrock model you're evaluating (e.g. Nova Pro), or bring your own prompt/response pairs.
+- **Select metrics** — e.g. correctness, completeness, coherence, professional tone (Quality) + harmfulness, refusal (Responsible AI).
+- **Dataset** — upload your prompt + reference-response JSON-L to an **S3 bucket** (with CORS enabled), with separate **input/output** folders; point the job at them.
+- Create the job (needs an **IAM service role**) → wait (~10 min) → review the **metric summary** (each scored 0–1) and drill into individual prompts.`,
+      },
+      {
+        id: "genai-model-customization",
+        title: "Decision #11 — Model Customization: Distillation & Fine-Tuning",
+        shortDesc: "Teacher→student distillation, labeled fine-tuning, unlabeled continued pre-training, and LoRA",
+        visuals: ["CustomizationMethodCompare"],
+        content: `## Decision #11: Customizing the Model Itself
+
+When prompt engineering and RAG aren't enough, **model customization** retrains the model for your domain/task. All of it runs as a **SageMaker training job** behind the scenes — you upload data to an **S3 bucket** in your account, create a training job in Bedrock, and get back a **fine-tuned model** in its own S3 bucket.
+
+Four approaches in Bedrock: **Model distillation**, **Fine-tuning**, **Continued pre-training**, and **Reinforcement fine-tuning** (newer, preview).
+
+---
+
+## Model Distillation
+
+Transfers knowledge from a large, accurate **teacher** model (e.g. **Nova Pro**) to a smaller, faster, cheaper **student** model (e.g. **Nova Lite**).
+
+**How:** send lots of prompts to the teacher → collect its responses → use those **prompt+response pairs** to train the student.
+
+> Use case: near-teacher-model **accuracy** at much lower **latency and cost**.
+
+### Hands-On
+Console → **Bedrock → Tune → Custom models → Create → Distillation job**. Name the job + the resulting student model. Pick a **teacher** (e.g. Nova Pro) and a **student** from the **same family** (e.g. Nova Micro/Lite — you can't mix Nova teacher with an Anthropic student). Provide training data 3 ways: **prompts only** (the job calls the teacher for you), **prompt+response pairs** you supply, or your **existing invocation logs** (reuse real production traffic!). Data format: JSON-L with \`schemaVersion\`, a \`system\` context, and \`user\`/\`assistant\` message pairs. ⚠️ Needs a **minimum of 100 records**, and training can take **2–24 hours**.
+
+---
+
+## Fine-Tuning (Supervised)
+
+Improves performance on a **specific task** (summarization, Q&A) — its **style, format or depth**. Needs **labeled data**: prompt + the **reference response** you want.
+
+> Example: a physician-notes summarizer. Base model writes a generic summary; fine-tuned on labeled clinical notes it learns the clinical shorthand (e.g. *"Dx Type 2 DM, Tx Metformin initiated"*).
+
+Best for **structured, well-defined tasks** with high-quality labeled data.
+
+---
+
+## Continued Pre-Training
+
+Further trains the model to improve its **domain knowledge**, using **unlabeled** raw text (e.g. medical journal articles) — no prompt/response pairs needed.
+
+> Example: a wind-turbine SME assistant that doesn't understand jargon like *"ER 3.84 misalignment"* — continued pre-training on turbine documentation teaches it the vocabulary.
+
+Best for **domain adaptation when labeled data is limited**.
+
+---
+
+## LoRA — *How* Fine-Tuning Is Done
+
+Two fine-tuning techniques:
+- **Full fine-tuning** — updates **every** parameter across every layer. Best results, but needs **huge compute/memory** — rarely used.
+- **PEFT (Parameter-Efficient Fine-Tuning)** — **freezes** the base model's weights and trains only a **small set of added parameters**. Much cheaper, **preserves** the model's pre-trained knowledge. The common approach — includes **LoRA** (Low-Rank Adaptation, the exam focus), adapters, prefix/prompt tuning, QLoRA.
+
+AWS's two example **LoRA** use cases: **domain adaptation** (e.g. a healthcare provider adapting to medical terminology) and **multi-language adaptation** (e.g. a global e-commerce platform adapting customer service to regional languages/culture).`,
+      },
+      {
+        id: "genai-adaptation-ladder",
+        title: "Choosing an Adaptation Strategy (Mental Model)",
+        shortDesc: "The 5-rung ladder from prompt engineering to continued pre-training — and what's next",
+        visuals: ["AdaptationDecisionLadder"],
+        content: `## The Adaptation Ladder
+
+Five ways to improve a foundation model's output, in order of **rising cost and complexity** — climb only as far as you need:
+
+| # | Strategy | Training? | Best for | Watch out for |
+|---|---|---|---|---|
+| 1 | **Prompt engineering** | None | Quick wins — e.g. *"summarize in one page"* | Can't do deep customization |
+| 2 | **RAG** | None | Enterprise answers grounded in your latest data (e.g. an HR bot reading policy PDFs) | Retrieval quality & latency on large unstructured data |
+| 3 | **Model distillation** | Trains a small model | High-volume, low-latency apps (e.g. a support chatbot) | Slight accuracy trade-off vs. the large teacher |
+| 4 | **Fine-tuning** | Trains on labeled data | Matching a specific style/format (e.g. clinical-tone notes) | Needs lots of high-quality labeled data |
+| 5 | **Continued pre-training** | Trains on unlabeled data | Deep domain understanding (e.g. niche engineering jargon) | High cost & complexity |
+
+> 🎯 **Rule of thumb:** try the **cheapest rung first** (prompt engineering), and only climb higher if the quality still isn't good enough for your use case.
+
+---
+
+## What's Left (Decisions 12–15)
+
+Three of the original 15 decisions get their **own dedicated sections** later in the course, so they're only named here for now:
+
+- **#12 Security & data protection**
+- **#13 Enterprise data management**
+- **#14 GenAI Ops & governance**
+
+**#15 Orchestration** is partly covered already (Lambda/EC2/ECS as the compute layer) — the more advanced side (LangChain/LangGraph, Bedrock Agents) comes later in the **RAG and Agentic AI** section.
+
+> That wraps the first pass through all **15 architecture decisions** — from picking a platform (Bedrock vs JumpStart) all the way to model customization. Everything from here builds on this foundation.`,
+      },
     ],
   },
   {

@@ -444,6 +444,15 @@ import {
   PromptRoutingSim,
   ComputeSelector,
 } from "./visuals/AIVisuals3";
+import {
+  ApiLayerSelector,
+  AppSyncVsRest,
+  ALBRoutingScenarios,
+  ObservabilityDashboard,
+  ModelEvalApproaches,
+  CustomizationMethodCompare,
+  AdaptationDecisionLadder,
+} from "./visuals/AIVisuals4";
 
 const VISUAL_MAP = {
   SMEAssistantScenario,
@@ -452,6 +461,13 @@ const VISUAL_MAP = {
   PromptCachingDemo,
   PromptRoutingSim,
   ComputeSelector,
+  ApiLayerSelector,
+  AppSyncVsRest,
+  ALBRoutingScenarios,
+  ObservabilityDashboard,
+  ModelEvalApproaches,
+  CustomizationMethodCompare,
+  AdaptationDecisionLadder,
   GuardrailCapabilities,
   GuardrailSimulator,
   AutomatedReasoningFlow,
