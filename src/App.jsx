@@ -31,10 +31,25 @@ export default function App() {
     const main = document.querySelector(".main-content");
     const fill = progressRef.current;
     if (!main || !fill) return;
+    const mesh = document.querySelector(".scroll-bg-mesh");
+    const conic = document.querySelector(".scroll-bg-conic");
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const update = () => {
       const max = main.scrollHeight - main.clientHeight;
       const p = max > 0 ? main.scrollTop / max : 0;
       fill.style.transform = `scaleX(${p})`;
+      // drive the scroll-reactive background directly (CSS calc(var()) inside
+      // filter isn't reliably re-resolved live, so set the values in JS)
+      if (!reduce) {
+        if (mesh) {
+          mesh.style.filter = `hue-rotate(${(p * 80).toFixed(1)}deg) saturate(${(1 + p * 0.6).toFixed(2)})`;
+          mesh.style.backgroundPosition = `${(p * -10).toFixed(1)}% ${(p * 12).toFixed(1)}%`;
+        }
+        if (conic) {
+          conic.style.transform = `rotate(${(p * 150).toFixed(1)}deg) scale(1.1)`;
+          conic.style.opacity = (0.3 + p * 0.3).toFixed(2);
+        }
+      }
     };
     update();
     main.addEventListener("scroll", update, { passive: true });
@@ -47,6 +62,10 @@ export default function App() {
 
   return (
     <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
+      <div className="scroll-bg" aria-hidden="true">
+        <span className="scroll-bg-layer scroll-bg-mesh" />
+        <span className="scroll-bg-layer scroll-bg-conic" />
+      </div>
       <div className="scroll-progress" aria-hidden="true">
         <span ref={progressRef} className="scroll-progress-fill" />
       </div>
