@@ -31,32 +31,47 @@ export default function App() {
     const main = document.querySelector(".main-content");
     const fill = progressRef.current;
     if (!main || !fill) return;
-    const mesh = document.querySelector(".scroll-bg-mesh");
+    const meshA = document.querySelector(".scroll-bg-mesh");
+    const meshB = document.querySelector(".scroll-bg-mesh-b");
     const conic = document.querySelector(".scroll-bg-conic");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const update = () => {
+    let ticking = false;
+    // Throttle to one update per frame. Only touch compositor-friendly props
+    // (transform / opacity) — NO filter or background-position (those repaint
+    // the whole layer every frame and make scrolling janky). Colour change is
+    // a crossfade between two palettes; motion is parallax + rotation.
+    const apply = () => {
+      ticking = false;
       const max = main.scrollHeight - main.clientHeight;
       const p = max > 0 ? main.scrollTop / max : 0;
       fill.style.transform = `scaleX(${p})`;
-      // drive the scroll-reactive background directly (CSS calc(var()) inside
-      // filter isn't reliably re-resolved live, so set the values in JS)
       if (!reduce) {
-        if (mesh) {
-          mesh.style.filter = `hue-rotate(${(p * 80).toFixed(1)}deg) saturate(${(1 + p * 0.6).toFixed(2)})`;
-          mesh.style.backgroundPosition = `${(p * -10).toFixed(1)}% ${(p * 12).toFixed(1)}%`;
+        if (meshA) {
+          meshA.style.transform = `translate3d(0, ${(p * -6).toFixed(2)}%, 0) scale(1.08)`;
+          meshA.style.opacity = (1 - p * 0.75).toFixed(3);
+        }
+        if (meshB) {
+          meshB.style.transform = `translate3d(0, ${(p * -11).toFixed(2)}%, 0) scale(1.1)`;
+          meshB.style.opacity = (p * 0.9).toFixed(3);
         }
         if (conic) {
-          conic.style.transform = `rotate(${(p * 150).toFixed(1)}deg) scale(1.1)`;
-          conic.style.opacity = (0.3 + p * 0.3).toFixed(2);
+          conic.style.transform = `rotate(${(p * 120).toFixed(1)}deg) scale(1.15)`;
+          conic.style.opacity = (0.4 + p * 0.3).toFixed(2);
         }
       }
     };
-    update();
-    main.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(apply);
+      }
+    };
+    apply();
+    main.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     return () => {
-      main.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
+      main.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, [selectedId]);
 
@@ -64,6 +79,7 @@ export default function App() {
     <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
       <div className="scroll-bg" aria-hidden="true">
         <span className="scroll-bg-layer scroll-bg-mesh" />
+        <span className="scroll-bg-layer scroll-bg-mesh-b" />
         <span className="scroll-bg-layer scroll-bg-conic" />
       </div>
       <div className="scroll-progress" aria-hidden="true">
