@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, X, Cloud } from "lucide-react";
 import { awsCategories, topicMap } from "../data/services";
+import CategoryIcon from "./CategoryIcon";
+import { PoweredByAws } from "./AwsBrand";
 
 export default function Sidebar({ selectedId, onSelect }) {
   const [search, setSearch] = useState("");
@@ -28,7 +30,7 @@ export default function Sidebar({ selectedId, onSelect }) {
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="logo">
-          <span className="logo-icon">☁️</span>
+          <span className="logo-icon"><Cloud size={20} strokeWidth={2.5} /></span>
           <div>
             <div className="logo-title">AWS Learn</div>
             <div className="logo-sub">Interactive Study Guide</div>
@@ -72,7 +74,9 @@ export default function Sidebar({ selectedId, onSelect }) {
                 onClick={() => toggle(cat.id)}
                 style={{ "--cat-color": cat.color }}
               >
-                <span className="cat-icon">{cat.icon}</span>
+                <span className="cat-icon" style={{ color: cat.color }}>
+                  <CategoryIcon id={cat.id} size={16} />
+                </span>
                 <span className="cat-label">{cat.label}</span>
                 <span className="cat-count">{cat.topics.length}</span>
                 {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
@@ -104,8 +108,11 @@ export default function Sidebar({ selectedId, onSelect }) {
       </nav>
 
       <div className="sidebar-footer">
-        {awsCategories.reduce((a, c) => a + c.topics.length, 0)} topics across{" "}
-        {awsCategories.length} categories
+        <div className="sidebar-footer-count">
+          {awsCategories.reduce((a, c) => a + c.topics.length, 0)} topics across{" "}
+          {awsCategories.length} categories
+        </div>
+        <PoweredByAws />
       </div>
     </aside>
   );

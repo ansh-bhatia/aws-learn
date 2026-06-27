@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { BookOpen, ChevronRight, CheckCircle, Circle } from "lucide-react";
+import { BookOpen, ChevronRight, CheckCircle, Circle, Cloud } from "lucide-react";
 import { awsCategories, topicMap } from "../data/services";
 import CloudNetworkHero from "./CloudNetworkHero";
+import CategoryIcon from "./CategoryIcon";
+import { PoweredByAws, ArchitectureBand } from "./AwsBrand";
 import {
   VirtualizationDiagram,
   ServerTypesCards,
@@ -413,8 +415,48 @@ import {
   LatencyDistance,
   CDNEdge,
 } from "./visuals/FoundationVisuals";
+import {
+  SMEAssistantScenario,
+  GenAITrilemma,
+  ArchDecisions15,
+  BedrockHowItWorks,
+  BedrockArchitecture,
+  BedrockConsoleTour,
+  BedrockVsJumpStart,
+  FMSelectionFactors,
+  InferencePlayground,
+  LengthControl,
+} from "./visuals/AIVisuals";
+import {
+  GuardrailCapabilities,
+  GuardrailSimulator,
+  AutomatedReasoningFlow,
+  PromptAnatomy,
+  ShotPrompting,
+  SystemUserPromptComposer,
+  ServiceTierSelector,
+  CrossRegionRouter,
+} from "./visuals/AIVisuals2";
 
 const VISUAL_MAP = {
+  SMEAssistantScenario,
+  GuardrailCapabilities,
+  GuardrailSimulator,
+  AutomatedReasoningFlow,
+  PromptAnatomy,
+  ShotPrompting,
+  SystemUserPromptComposer,
+  ServiceTierSelector,
+  CrossRegionRouter,
+  GenAITrilemma,
+  ArchDecisions15,
+  BedrockHowItWorks,
+  BedrockArchitecture,
+  BedrockConsoleTour,
+  BedrockVsJumpStart,
+  FMSelectionFactors,
+  InferencePlayground,
+  LengthControl,
   WhatIsCloud,
   CloudBenefits,
   CloudTypes,
@@ -918,7 +960,9 @@ function Dashboard({ onSelect, progress }) {
       <div className="dashboard-hero">
         <CloudNetworkHero />
         <div className="hero-inner">
-          <div className="hero-badge">☁️</div>
+          <div className="hero-badge hero-rise" style={{ "--d": "20ms" }}>
+            <Cloud size={36} strokeWidth={2.2} />
+          </div>
           <h1 className="hero-rise" style={{ "--d": "80ms" }}>AWS Learning Hub</h1>
           <p className="hero-rise" style={{ "--d": "160ms" }}>Master every AWS service — from compute to AI. Pick a category to start.</p>
           <div className="hero-stats hero-rise" style={{ "--d": "240ms" }}>
@@ -940,15 +984,20 @@ function Dashboard({ onSelect, progress }) {
               <div className="progress-bar" style={{ width: `${(done / total) * 100}%` }} />
             </div>
           )}
+          <div className="hero-rise" style={{ "--d": "400ms" }}>
+            <PoweredByAws />
+          </div>
         </div>
       </div>
 
+      <ArchitectureBand />
+
       <div className="cat-grid">
-        {awsCategories.map((cat) => {
+        {awsCategories.map((cat, i) => {
           const catDone = cat.topics.filter((t) => progress[t.id]).length;
           return (
             <button
-              key={cat.id}
+              key={cat.id + "-" + i}
               className="cat-card tilt"
               onClick={() => onSelect(cat.topics[0].id)}
               onMouseMove={handleTilt}
@@ -956,7 +1005,9 @@ function Dashboard({ onSelect, progress }) {
               style={{ "--cat-color": cat.color }}
             >
               <div className="cat-card-glow" />
-              <div className="cat-card-icon">{cat.icon}</div>
+              <div className="cat-card-icon" style={{ color: cat.color }}>
+                <CategoryIcon id={cat.id} size={22} />
+              </div>
               <div className="cat-card-info">
                 <div className="cat-card-label">{cat.label}</div>
                 <div className="cat-card-count">
@@ -1003,10 +1054,19 @@ export default function ContentArea({ selectedId, onSelect }) {
     const root = document.querySelector(".main-content") || document;
     const id = requestAnimationFrame(() => {
       const els = root.querySelectorAll(
-        ".sv-card, .topic-content h2, .topic-content table, .topic-content blockquote"
+        ".sv-card, .topic-content h2, .topic-content table, .topic-content blockquote, .arch-band"
       );
       if (!els.length) return;
-      els.forEach((el) => el.classList.add("reveal"));
+      // pick a reveal flavour per element type for a livelier, varied entrance
+      const variantFor = (el) => {
+        if (el.classList.contains("sv-card")) return "reveal-3d";
+        if (el.classList.contains("arch-band")) return "reveal-scale";
+        if (el.tagName === "H2") return "reveal-left";
+        if (el.tagName === "TABLE") return "reveal-scale";
+        if (el.tagName === "BLOCKQUOTE") return "reveal-right";
+        return "reveal-up";
+      };
+      els.forEach((el) => el.classList.add("reveal", variantFor(el)));
       const io = new IntersectionObserver(
         (entries, obs) => {
           entries.forEach((e) => {

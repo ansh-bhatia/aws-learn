@@ -1,0 +1,22 @@
+/* ─── AI / GenAI part-2 visuals (prefix a2-) — reuses .ai-* from AIVisuals.css ─── */
+
+/* verdict colour variants (base .ai-verdict lives in AIVisuals.css) */
+.ai-verdict.bad { background: rgba(248,81,73,0.12); color: #ff9b94; }
+.ai-verdict.warn { background: rgba(227,179,65,0.14); color: #e3b341; }
+
+/* 2. guardrail simulator */
+.a2-sim { display: flex; flex-direction: column; gap: 6px; margin-bottom: 13px; }
+.a2-sim-item { text-align: left; background: #21262d; border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 9px 12px; font-size: 11.5px; color: #c9d1d9; cursor: pointer; font-weight: 600; line-height: 1.4; }
+.a2-sim-item:hover { border-color: rgba(123,104,238,0.3); }
+.a2-sim-item.active { border-color: #7B68EE; color: #b3a4ff; background: rgba(123,104,238,0.12); }
+
+/* 4. prompt anatomy */
+.a2-checks { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+.a2-check { display: flex; align-items: flex-start; gap: 10px; background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 9px 11px; cursor: pointer; font-size: 11.5px; color: #c9d1d9; text-align: left; line-height: 1.45; }
+.a2-check.on { border-color: rgba(123,104,238,0.45); background: rgba(123,104,238,0.07); }
+.a2-check b { color: #e6edf3; }
+.a2-check-box { flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; border: 2px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #b3a4ff; }
+.a2-check.on .a2-check-box { border-color: #7B68EE; background: rgba(123,104,238,0.2); }
+.a2-meter { height: 9px; background: #21262d; border-radius: 6px; overflow: hidden; margin: 12px 0 8px; }
+.a2-meter-fill { height: 100%; border-radius: 6px; transition: width 0.3s ease, background 0.3s ease; }
+.a2-quality { text-align: center; font-size: 12.5px; font-weight: 700; }

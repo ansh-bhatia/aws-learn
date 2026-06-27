@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import ContentArea from "./components/ContentArea";
 import "./App.css";
@@ -25,8 +25,31 @@ export default function App() {
     if (isMobile()) setSidebarOpen(false);
   };
 
+  // Reading-progress bar tied to the main scroll container
+  const progressRef = useRef(null);
+  useEffect(() => {
+    const main = document.querySelector(".main-content");
+    const fill = progressRef.current;
+    if (!main || !fill) return;
+    const update = () => {
+      const max = main.scrollHeight - main.clientHeight;
+      const p = max > 0 ? main.scrollTop / max : 0;
+      fill.style.transform = `scaleX(${p})`;
+    };
+    update();
+    main.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      main.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [selectedId]);
+
   return (
     <div className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`}>
+      <div className="scroll-progress" aria-hidden="true">
+        <span ref={progressRef} className="scroll-progress-fill" />
+      </div>
       <button
         className="sidebar-toggle"
         onClick={() => setSidebarOpen((p) => !p)}
