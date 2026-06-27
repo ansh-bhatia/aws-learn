@@ -437,9 +437,21 @@ import {
   ServiceTierSelector,
   CrossRegionRouter,
 } from "./visuals/AIVisuals2";
+import {
+  PricingModels,
+  TokenCostCalculator,
+  PromptCachingDemo,
+  PromptRoutingSim,
+  ComputeSelector,
+} from "./visuals/AIVisuals3";
 
 const VISUAL_MAP = {
   SMEAssistantScenario,
+  PricingModels,
+  TokenCostCalculator,
+  PromptCachingDemo,
+  PromptRoutingSim,
+  ComputeSelector,
   GuardrailCapabilities,
   GuardrailSimulator,
   AutomatedReasoningFlow,

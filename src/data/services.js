@@ -5561,6 +5561,155 @@ Some models are tuned for **low latency**: **Amazon Nova Pro**, **Anthropic Clau
 - Console → **Lambda → Create function** (Python) → set the **timeout** to ~1 min → give its **IAM role** Bedrock access → paste the code → **Deploy** → **Test**.
 - Check the **function logs**: you'll see \`performanceConfigLatency: optimized\` and the **invocation latency** (e.g. ~3,113 ms) — lower than it would be on standard.`,
       },
+      {
+        id: "genai-cost-pricing",
+        title: "Decision #6 — Cost Optimization: Pricing Models",
+        shortDesc: "On-demand vs provisioned throughput vs batch — and how tokens drive cost",
+        visuals: ["PricingModels", "TokenCostCalculator"],
+        content: `## Decision #6: Optimize Cost
+
+After platform, model, guardrails, prompts and inference settings, the next big lever is **cost**. Start with how Bedrock charges you.
+
+---
+
+## The 3 Bedrock Pricing Models
+
+| Model | How you pay | Best for |
+|---|---|---|
+| **On-demand** | Pay per use, **no commitment** | Variable / low-volume / dev & POC |
+| **Provisioned throughput** | Buy **model units** + a **1- or 6-month** commitment → guaranteed throughput | Large, consistent **production** workloads |
+| **Batch** | Async, process many at once | Non-urgent bulk jobs — up to **~50% cheaper** |
+
+### How on-demand is charged
+- **Text models** — per **input token** processed + per **output token** generated. (1,000 tokens ≈ 750 words.)
+- **Image models** — per **image** generated.
+- **Embedding models** — per **input token**.
+
+> No requests = no charge. Make 10 requests over 3 months → you pay for 10.
+
+### Batch inference
+Upload many docs to **S3** → create a **batch job** → pick the model → results land in a target **S3** bucket as **JSON**. Great for summarizing hundreds of legal documents overnight. Up to **50% cheaper** than on-demand.
+
+---
+
+## Hands-On: Read the Pricing Page
+
+- Search **"Amazon Bedrock pricing"**. Pricing is **per 1,000 tokens**, **separate for input vs output**, and varies by **model + region**.
+- Worked example (Anthropic Claude, on-demand): 11,000 input + 4,000 output tokens → cost = (11,000 / 1,000 × input-price) + (4,000 / 1,000 × output-price).
+- Provisioned example: **1 model unit** of Claude Instant ≈ **$39.60/hour** × 24 × days, with a **1-month** minimum commitment.
+
+> Use the calculator below to feel how input/output tokens drive cost — and how batch halves it.`,
+      },
+      {
+        id: "genai-prompt-caching",
+        title: "Cost Optimization — Prompt Caching",
+        shortDesc: "Reuse the static part of a prompt to cut input-token cost & latency",
+        visuals: ["PromptCachingDemo"],
+        content: `## What Prompt Caching Does
+
+**Bedrock prompt caching** reduces **input-token cost** *and* **latency** by reusing the **static part** of your prompt across requests.
+
+---
+
+## Cache Prefix vs Suffix
+
+Split a prompt into two parts:
+- **Cache prefix** — the **static, reused** part: e.g. a big **document** + your **system prompt**.
+- **Suffix** — the part that **changes** each time: e.g. the user's **question**.
+
+Example: an SME sends the **same** turbine-log document + same system prompt, but asks "summarize for machine **X**", then "summarize for machine **Y**". Only the question changes — so Bedrock **caches the document + system prompt** and reuses them.
+
+---
+
+## Key Rules
+
+- Cached content is stored for **~5 minutes** (refreshed on reuse).
+- Each model has a **minimum token threshold** per checkpoint (e.g. **Claude 3.7 Sonnet = 1,024 tokens**) — below it, nothing caches.
+- Most effective for **long, repeated contexts** reused across many requests.
+
+| | Without caching | With caching |
+|---|---|---|
+| Input tokens | High every request | High first time, low after |
+| Latency | Slower | Faster |
+| Cost | Stays high | Drops on reuse |
+
+---
+
+## Hands-On
+
+- In a Lambda (boto3), wrap the static system prompt / document in a **cache checkpoint** (\`cachePoint\` type \`default\`); keep the dynamic bit (e.g. machine ID) outside it.
+- Run once (machine 4522) → it **writes** the prefix to cache. Change to machine 99, run again → the response shows **\`cacheReadInputTokens\`** (reused tokens) and **lower latency** (e.g. 1345 ms → 1074 ms).
+- You can also toggle **prompt caching** in the **Chat playground** (e.g. Nova Pro), though the programmatic path is more reliable.`,
+      },
+      {
+        id: "genai-prompt-routing",
+        title: "Cost Optimization — Intelligent Prompt Routing",
+        shortDesc: "Auto-route easy prompts to a cheap model, hard ones to a strong model",
+        visuals: ["PromptRoutingSim"],
+        content: `## What It Does
+
+**Bedrock Intelligent Prompt Routing** dynamically routes each request to **different models in the same family**, balancing **quality vs cost**. Supported families: **Anthropic**, **Meta Llama**, **Amazon Nova**.
+
+> Why it saves money: a small model (e.g. **Nova Lite**) is cheaper + lower latency than a big one (**Nova Pro** ≈ **4× the price**). Send easy prompts to the small model, hard ones to the big model — automatically.
+
+---
+
+## How Routing Decides
+
+You set a **quality-difference threshold**. For each prompt, the router predicts how much **better** the big (**fallback**) model's answer would be than the small model's:
+- Predicted difference **below** your threshold → route to the **cheaper** model.
+- **At or above** the threshold → route to the **fallback** (bigger) model.
+
+Example (threshold 5%): *"summarize this in one sentence"* → predicted diff **4%** → **Nova Lite**. *"analyze these logs and find the root cause of cascading failures"* → predicted diff **32%** → **Nova Pro**.
+
+---
+
+## Hands-On: Configure a Prompt Router
+
+- Console → **Bedrock → Tune → Prompt router models → Configure prompt router**. Give it a name.
+- Pick **two base models** from one family (e.g. Nova Pro + Nova Lite).
+- Choose a **fallback model** — the default, and the one quality difference is measured against (e.g. Nova Pro).
+- Set the **routing criteria** — the quality-difference **threshold** (e.g. 10%). Lower = the answers must be very similar before it'll use the cheap model.
+- Submit → open it to copy the **router ARN**. In code, pass that **ARN** as your \`modelId\`; the router decides per request.`,
+      },
+      {
+        id: "genai-compute-layer",
+        title: "Decision #7 — Compute Layer (Lambda / EC2 / ECS)",
+        shortDesc: "Where your orchestration runs — and the 15-minute rule that decides it",
+        visuals: ["ComputeSelector"],
+        content: `## Decision #7: Where Does Your Orchestration Run?
+
+Your GenAI app needs a **compute / orchestration layer** to assemble prompts, call Bedrock, run RAG, etc. Three options — **Lambda, EC2, ECS**. *(Exam focus: **Lambda**.)*
+
+> ⏱️ **The 15-minute rule decides most cases:** Lambda caps each run at **15 minutes**. Task ≤ 15 min → **Lambda**. Longer-running → **ECS** or **EC2**.
+
+---
+
+## AWS Lambda (serverless) — the default
+
+- **Fully managed**, **event-driven** (no event = no run = no cost). You bring only the code (Python / Java / …).
+- Pay per **invocation + memory + execution time**. Auto-scales (≈1,000 concurrent per region, raisable).
+- ✅ Use for: **orchestration** (the classic **API Gateway → Lambda → Bedrock**), **RAG** via Knowledge Bases (\`Retrieve\` / \`RetrieveAndGenerate\`), and as a **tool for Bedrock Agents**.
+- ❌ Can't **host foundation models** or run **> 15-min** tasks.
+
+---
+
+## Amazon EC2 (virtual machine) — full control
+
+- You manage the **guest OS, patching, security, scaling** (often with an Auto Scaling group + load balancer). Billed per hour / second; long-running.
+- ✅ Use for: orchestration, **training/hosting your own FM** (**AWS Trainium** for training, **AWS Inferentia** for inference), **fine-tuning**, and self-hosting open-source **vector DBs / frameworks** (LangChain, etc.).
+
+---
+
+## Amazon ECS (containers) — scalable & long-running
+
+- AWS-native container orchestration. **Fargate** = serverless (pay per vCPU + memory / second); **ECS-on-EC2** = you provision the instances. **No hard time limit**; containers scale **faster** than EC2.
+- ✅ Use for: orchestration, **RAG pipelines**, **microservices** architectures, and **model hosting** (GPU via ECS-on-EC2, e.g. g5 / p4d).
+
+---
+
+> Quick pick: **simple, short, event-driven → Lambda** · **long-running / containers / microservices → ECS** · **train or host your own model, or need full OS control → EC2**.`,
+      },
     ],
   },
   {

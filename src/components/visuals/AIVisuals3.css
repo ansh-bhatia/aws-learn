@@ -1,0 +1,50 @@
+/* ─── AI / GenAI part-3 visuals (prefix a3-) — reuses .ai-* from AIVisuals.css ─── */
+
+.a3-tag {
+  font-family: ui-monospace, monospace; font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.03em;
+  color: #b3a4ff; background: rgba(123,104,238,0.16);
+  border: 1px solid rgba(123,104,238,0.3); border-radius: 20px;
+  padding: 1px 8px; margin-left: 6px; vertical-align: middle;
+}
+
+/* 2. cost calculator */
+.a3-cost { display: flex; flex-direction: column; gap: 7px; margin: 6px 0 2px; }
+.a3-cost-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 9px; padding: 11px 14px;
+  font-size: 12.5px; color: #c9d1d9;
+}
+.a3-cost-row b { font-family: ui-monospace, monospace; font-size: 16px; color: #e6edf3; }
+.a3-cost-row.ok { border-color: rgba(63,185,80,0.3); background: rgba(63,185,80,0.08); }
+.a3-cost-row.ok b { color: #9be59b; }
+
+/* 3. prompt caching */
+.a3-prompt { display: flex; flex-direction: column; gap: 7px; margin-bottom: 14px; }
+.a3-prompt-part {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-radius: 9px; padding: 10px 13px; font-size: 11.5px; line-height: 1.4;
+  border: 1px solid rgba(255,255,255,0.07); background: #161b22;
+}
+.a3-prompt-part .a3-pp-tag { color: #e6edf3; font-weight: 600; }
+.a3-prompt-part .a3-pp-tag i { color: #8b949e; font-weight: 400; }
+.a3-prompt-part .a3-pp-state { font-family: ui-monospace, monospace; font-size: 10.5px; color: #8b949e; white-space: nowrap; }
+.a3-prompt-part.prefix.cached { border-color: rgba(63,185,80,0.45); background: rgba(63,185,80,0.1); }
+.a3-prompt-part.prefix.cached .a3-pp-state { color: #9be59b; }
+.a3-prompt-part.prefix.miss { border-color: rgba(227,179,65,0.4); background: rgba(227,179,65,0.08); }
+.a3-prompt-part.prefix.miss .a3-pp-state { color: #e3b341; }
+.a3-prompt-part.suffix { border-style: dashed; }
+
+.a3-bars { display: flex; flex-direction: column; gap: 9px; }
+.a3-bar { display: flex; align-items: center; gap: 10px; font-size: 11px; }
+.a3-bar-label { width: 86px; flex-shrink: 0; color: #b9c2cc; }
+.a3-bar-track { flex: 1; height: 10px; background: #21262d; border-radius: 6px; overflow: hidden; }
+.a3-bar-fill { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #7B68EE, #b3a4ff); transition: width 0.35s ease; }
+.a3-bar-val { width: 64px; flex-shrink: 0; text-align: right; font-family: ui-monospace, monospace; color: #c9d1d9; }
+
+/* 4. routing simulator */
+.a3-route-q {
+  background: #0d1117; border: 1px solid rgba(255,255,255,0.07); border-radius: 9px;
+  padding: 11px 13px; margin-bottom: 12px; font-size: 12.5px; color: #cbbcff; line-height: 1.4;
+}
