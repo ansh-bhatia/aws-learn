@@ -1,0 +1,17 @@
+/* ─── AI / GenAI RAG visuals (prefix a5-) — reuses .ai-* from AIVisuals.css ─── */
+
+/* 1. RAG docs */
+.a5-rag-docs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.a5-doc { font-size: 12px; font-weight: 600; color: #e6edf3; background: #161b22; border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 9px 12px; }
+.a5-doc small { display: block; font-size: 10.5px; font-weight: 400; color: #8b949e; margin-top: 2px; }
+
+/* 3. vector plot */
+.a5-plot-wrap { display: flex; justify-content: center; margin-bottom: 12px; }
+.a5-plot { width: 100%; max-width: 320px; height: auto; }
+.a5-axis { fill: #6e7784; font-size: 9px; font-family: ui-monospace, monospace; }
+.a5-plot-label { fill: #e6edf3; font-size: 13px; text-anchor: middle; }
+
+/* 4. chunking step buttons */
+.a5-steps { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.a5-step { flex: 1; min-width: 120px; font-size: 11px; font-weight: 600; color: #8b949e; background: #21262d; border: 2px solid rgba(255,255,255,0.07); border-radius: 9px; padding: 9px 8px; text-align: center; }
+.a5-step.active { color: #b3a4ff; border-color: #7B68EE; background: rgba(123,104,238,0.14); }

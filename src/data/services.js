@@ -5966,6 +5966,128 @@ Three of the original 15 decisions get their **own dedicated sections** later in
 
 > That wraps the first pass through all **15 architecture decisions** — from picking a platform (Bedrock vs JumpStart) all the way to model customization. Everything from here builds on this foundation.`,
       },
+      {
+        id: "rag-business-case",
+        title: "RAG — Why You Need It (eLearning Use Case)",
+        shortDesc: "The business case, plus the 2 hard limits of a pure foundation model",
+        visuals: ["RAGBeforeAfter", "LLMLimitations"],
+        content: `## The Business Case
+
+A CEO mandates that **every employee** learn generative AI. The L&D team wants an **e-learning Q&A app**: engineers chat with it to accelerate their learning, and it should answer from the org's **own training PDFs** already sitting in S3.
+
+> Example question: *"Which Bedrock model offers the lowest latency AND is approved in my organization?"* That answer needs **two** documents — a Bedrock user guide (which models are low-latency) and an internal **approved-model list** (every org whitelists only a subset of models for security/cost reasons).
+
+A plain foundation model can't answer that — it has never seen either document.
+
+---
+
+## Why a Pure LLM Falls Short
+
+- **No proprietary knowledge** — foundation models train on generic internet data; they know nothing about your organization's internal docs, policies, or architecture.
+- **Training cutoff date** — every base model has a knowledge cutoff (e.g. December 2024). Anything newer, it simply doesn't know.
+
+---
+
+## What RAG Does About It
+
+**Retrieval-Augmented Generation (RAG)** is the process of improving an LLM's output by **supplementing** it with your organization's own data sources at query time — fetched from SharePoint, S3, Confluence, etc.
+
+> This solves **both** problems at once: the answer becomes **organization-specific** AND can reflect information **newer** than the model's training cutoff (since it's pulled live from your documents).`,
+      },
+      {
+        id: "rag-core-concepts",
+        title: "RAG Core Concepts: Vectors, Embeddings & Chunking",
+        shortDesc: "What vectors are, how documents get chunked & embedded, and how similarity search retrieves answers",
+        visuals: ["VectorExplainer", "ChunkingEmbeddingFlow", "SimilaritySearchDemo"],
+        content: `## Why Vectors?
+
+A price lookup is easy — store it in a normal (relational) database and query it. But how do you search an **image** for "this watch, in blue"? Or search a 500-page PDF for the answer to *"which vector database is most cost-effective?"* That's not a keyword match — it needs **semantic search**: understanding the *meaning* of the question, not just matching words.
+
+**Vectors** make that possible — a **vector** is a mathematical representation (a list of numbers) of a word, sentence, or document. A toy example with just 2 attributes (is it a fruit? what does it cost?): *"apple"* → \`[1, 4]\`, *"banana"* → \`[1, 2]\` — plot those on a 2D chart and similar items land near each other. Real embeddings use **512–1024 dimensions**, not 2 — capturing vastly more meaning.
+
+---
+
+## Turning a Document Into Vectors
+
+A 500-page PDF is too big to embed as a single vector — so it gets **chunked** first:
+
+1. **Split** the document — by character, token, or code — e.g. page → paragraphs → ~120-character pieces. (Open-source frameworks like **LangChain** help do this split.)
+2. Pass each chunk through an **embedding model** (e.g. **Amazon Titan**, **Cohere**) → get a **vector embedding** (512–1024 dimensions).
+3. Store every chunk's vector in a **vector store / vector database** — AWS offers several (OpenSearch, S3 Vectors, Pinecone, and more — covered in depth later).
+
+---
+
+## How a Question Gets Answered
+
+1. The user's question is passed through the **same embedding model** → becomes a vector.
+2. A **similarity search** finds the closest-matching chunk vectors in the vector store.
+3. The top **5–20 chunks** are retrieved and handed to the LLM, which generates the final answer.
+
+Similarity search runs one of two algorithms — **KNN** (k-nearest neighbor — exact, but slower at scale) or **ANN** (approximate nearest neighbor — faster, used by most production vector DBs). You don't need to implement either — **AWS handles this matching behind the scenes.**`,
+      },
+      {
+        id: "rag-10-decisions",
+        title: "The 10 RAG Architecture Decisions",
+        shortDesc: "The full RAG pipeline, decision by decision — ingestion through production",
+        visuals: ["RAGPipelineDecisions"],
+        content: `## The Full RAG Pipeline
+
+Building a production-ready RAG app means making **10 architecture decisions**, in three phases:
+
+### Ingestion pipeline (before any user ever asks a question)
+1. **Data source & type** — structured (DB/warehouse) or unstructured (PDF/image/video)? Stored in S3, SharePoint, Confluence?
+2. **Chunking strategy** — none, fixed-size, semantic, or hierarchical.
+3. **Embedding model** — multimodal vs text-only, vector size, language support.
+4. **Vector database** — OpenSearch, S3 Vectors, Pinecone, Aurora PostgreSQL, Neptune Analytics...
+
+### Query time (when the user actually asks something)
+5. **Retrieval** — similarity search (KNN/ANN) returns the top 5–20 matching chunks.
+6. **Re-ranker model** — *(optional)* re-scores and reorders those chunks by relevance before they reach the LLM, instead of sending all of them as-is.
+7. **Large language model** — reads the retrieved chunks (the "context") + the user's question, and generates the final answer.
+
+### Ongoing production concerns
+8. **RAG evaluation** — Bedrock has a dedicated RAG evaluation capability (beyond plain model evaluation) to score retrieval + generation quality.
+9. **Monitoring & observability** — the same CloudWatch approach as Decision #9, applied to your RAG pipeline.
+10. **Security, guardrails & responsible AI** — the same protections as any GenAI app, now covering retrieval too.
+
+> Don't worry if some of this feels abstract right now — each decision gets its own deep-dive later in this section. This is just the map.`,
+      },
+      {
+        id: "rag-bedrock-knowledge-bases",
+        title: "Amazon Bedrock Knowledge Bases (Hands-On)",
+        shortDesc: "AWS's fully-managed RAG service — Retrieve vs Retrieve-and-Generate APIs, and building one end to end",
+        visuals: ["RetrieveVsRetrieveGenerate", "KnowledgeBaseConsoleTour"],
+        content: `## What Are Bedrock Knowledge Bases?
+
+A **fully managed RAG capability** inside Amazon Bedrock — AWS handles the hosting, scaling, monitoring and patching. You just **configure choices** (data source, chunking, embedding model, vector store, re-ranker, LLM) and the rest is handled for you. All **10 RAG decisions** from the previous topic map directly onto this one console wizard.
+
+---
+
+## Two APIs
+
+| API | What it does | Use it when |
+|---|---|---|
+| **Retrieve** | Runs the vector search and returns the matching chunks — **no LLM call** | You just want search results, not a generated answer (covers decision steps 1–4) |
+| **Retrieve and Generate** | Retrieves chunks **and** sends them + your question to a foundation model for a full answer | You want a complete, conversational response (covers decision steps 1–5) |
+
+---
+
+## Hands-On: Build a Knowledge Base
+
+> 🛠️ **Note:** Knowledge Bases can't be created by the **root user** — create an **IAM user** with admin access first.
+
+1. **S3 bucket** — create one, upload your source PDF(s) (e.g. the Bedrock User Guide, ~200 pages).
+2. Console → **Bedrock → Knowledge Bases → Create** → choose **"Knowledge base with vector store"** (for unstructured data like PDFs) → name it → let Bedrock **auto-create the service role**.
+3. **Data source** — pick **Amazon S3** (other options: web crawler, Confluence, Salesforce, SharePoint) → browse to your bucket.
+4. **Parsing strategy** — **Default parser** (text/Word/Excel/HTML) · **Bedrock Data Automation** (images/audio/video) · **Foundation model as parser** (PDFs with tables/forms/visually rich layouts).
+5. **Chunking strategy** — pick one (default works for most cases).
+6. **Embedding model** — choose a provider (**Amazon** or **Cohere**) and model, e.g. **Titan Text Embeddings v2** (text-only) or **Nova multimodal embeddings** (text + images).
+7. **Vector store** — quick-create **OpenSearch Serverless**, **Amazon S3 Vectors**, **Aurora PostgreSQL**, or **Neptune Analytics**. ⚠️ **OpenSearch bills ~50¢/hour even when idle** — **S3 Vectors is much cheaper**. **Delete the knowledge base when you're done testing.**
+8. **Create** → wait a few minutes → click the data source → **Sync** (this generates the embeddings — nothing is searchable until you sync).
+9. **Test knowledge base** → choose **Retrieve only** or **Retrieve and generate** (pick a model, e.g. **Nova Pro**) → ask a question → get an answer with **citations** you can click to see the source, plus a **details** view showing every retrieved chunk.
+
+> Other config you'll see in the test panel: **Guardrails** (apply one of yours), **Re-ranking model** (e.g. Cohere Rerank 3.5 — re-scores the retrieved chunks), and prompt/generation settings.`,
+      },
     ],
   },
   {

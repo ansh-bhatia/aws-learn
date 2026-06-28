@@ -453,6 +453,16 @@ import {
   CustomizationMethodCompare,
   AdaptationDecisionLadder,
 } from "./visuals/AIVisuals4";
+import {
+  RAGBeforeAfter,
+  LLMLimitations,
+  VectorExplainer,
+  ChunkingEmbeddingFlow,
+  SimilaritySearchDemo,
+  RAGPipelineDecisions,
+  RetrieveVsRetrieveGenerate,
+  KnowledgeBaseConsoleTour,
+} from "./visuals/AIVisuals5";
 
 const VISUAL_MAP = {
   SMEAssistantScenario,
@@ -468,6 +478,14 @@ const VISUAL_MAP = {
   ModelEvalApproaches,
   CustomizationMethodCompare,
   AdaptationDecisionLadder,
+  RAGBeforeAfter,
+  LLMLimitations,
+  VectorExplainer,
+  ChunkingEmbeddingFlow,
+  SimilaritySearchDemo,
+  RAGPipelineDecisions,
+  RetrieveVsRetrieveGenerate,
+  KnowledgeBaseConsoleTour,
   GuardrailCapabilities,
   GuardrailSimulator,
   AutomatedReasoningFlow,
