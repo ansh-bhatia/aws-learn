@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Course transcripts — local source material for writing topic content.
+# Third-party course content; not distributed with the app.
+Topmost AWS Certified Solutions Architect Associate SAA-C03/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

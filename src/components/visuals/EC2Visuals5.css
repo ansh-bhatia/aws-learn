@@ -1,0 +1,95 @@
+/* ─── EC2 security-group visuals ─────────────────────────
+   .viz-card / .viz-title from EC2Visuals.css
+   .ifam-intro / .ifam-note / .ntr-btn from EC2Visuals4.css */
+
+/* ─── 1. PORTS ─────────────────────────────────────── */
+.p5-list { display: flex; flex-direction: column; gap: 9px; }
+
+.p5-range { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 9px; padding: 12px 14px; }
+.p5-range-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 5px; }
+.p5-band {
+  font-size: 12px; font-weight: 800; color: #ffb84d;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.p5-range-name { font-size: 12.5px; font-weight: 700; color: #e6edf3; }
+.p5-range-fixed { font-size: 11px; color: #6e7784; margin-bottom: 5px; }
+.p5-range-ex {
+  font-size: 11px; color: #b9c2cc; line-height: 1.55;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.p5-svc {
+  display: grid; grid-template-columns: 1.1fr 1.4fr auto; gap: 10px; align-items: center;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px; padding: 10px 13px;
+}
+.p5-svc-name { font-size: 12px; font-weight: 700; color: #e6edf3; }
+.p5-svc-proto { font-size: 11.5px; color: #b9c2cc; }
+.p5-svc-port {
+  font-size: 11.5px; font-weight: 800; color: #ffb84d;
+  background: rgba(255,153,0,0.13); border-radius: 5px; padding: 3px 9px;
+  font-family: var(--font-mono, ui-monospace, monospace); white-space: nowrap;
+}
+
+.p5-flow { display: flex; flex-direction: column; gap: 4px; }
+.p5-packet { border-radius: 9px; padding: 12px 14px; }
+.p5-packet.req { background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.32); }
+.p5-packet.rep { background: rgba(63,185,80,0.09); border: 1px solid rgba(63,185,80,0.3); }
+.p5-packet-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.4px; margin-bottom: 8px; }
+.p5-packet.req .p5-packet-tag { color: #79c0ff; }
+.p5-packet.rep .p5-packet-tag { color: #5fc943; }
+.p5-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; }
+.p5-fields span {
+  font-size: 11px; color: #b9c2cc;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.p5-fields b { color: #e6edf3; }
+.p5-fields small { color: #6e7784; }
+.p5-swap { text-align: center; font-size: 10.5px; font-weight: 700; color: #6e7784; padding: 5px 0; }
+
+/* ─── 2. SG AS SOURCE ──────────────────────────────── */
+.sg5-stage {
+  display: grid; grid-template-columns: 1.2fr auto 1fr; gap: 10px; align-items: center;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 14px; margin-bottom: 12px;
+}
+.sg5-group, .sg5-app {
+  border: 1px dashed rgba(46,115,184,0.5); border-radius: 10px; padding: 11px;
+  background: rgba(46,115,184,0.05);
+}
+.sg5-app { border-color: rgba(255,153,0,0.45); background: rgba(255,153,0,0.05); }
+.sg5-group-tag {
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.4px; color: #79c0ff;
+  margin-bottom: 8px; font-family: var(--font-mono, ui-monospace, monospace);
+}
+.sg5-group-tag.app { color: #ffb84d; }
+.sg5-members { display: flex; flex-direction: column; gap: 5px; }
+.sg5-member {
+  font-size: 11px; font-weight: 700; color: #e6edf3;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 8px 10px;
+}
+.sg5-member.new { border-color: rgba(63,185,80,0.6); background: rgba(63,185,80,0.14); color: #9be59b; }
+.sg5-member.app { text-align: center; }
+.sg5-member small, .sg5-rule-txt small { font-size: 9px; color: #6e7784; font-weight: 600; }
+.sg5-rule { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.sg5-rule-arrow { font-size: 16px; color: #FF9900; }
+.sg5-rule-txt {
+  font-size: 10px; font-weight: 800; color: #ffb84d; text-align: center; line-height: 1.4;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.sg5-verdict {
+  font-size: 12px; color: #b9c2cc; line-height: 1.6;
+  background: rgba(46,115,184,0.09); border: 1px solid rgba(46,115,184,0.26);
+  border-radius: 8px; padding: 11px 13px; margin-top: 12px;
+}
+.sg5-verdict.on { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.3); color: #cdebc9; }
+
+@media (max-width: 680px) {
+  .sg5-stage { grid-template-columns: 1fr; }
+  .sg5-rule-arrow { transform: rotate(90deg); }
+  .p5-fields { grid-template-columns: 1fr; }
+  .p5-svc { grid-template-columns: 1fr auto; }
+  .p5-svc-proto { grid-column: 1 / -1; }
+}

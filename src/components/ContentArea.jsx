@@ -25,6 +25,25 @@ import {
   TenancyComparison,
 } from "./visuals/EC2Visuals3";
 import {
+  InstanceFamilyDecoder,
+  NitroVsHypervisor,
+  PublicVsPrivateIP,
+  BastionHostFlow,
+} from "./visuals/EC2Visuals4";
+import {
+  PortNumberExplorer,
+  SGAsSourcePattern,
+  SecurityGroupLab,
+} from "./visuals/EC2Visuals5";
+import {
+  PurchaseOptionsMatrix,
+  HotelAnalogy,
+  WindowsInstanceLab,
+  LinuxInstanceLab,
+  CustomAMILab,
+  AWSCLILab,
+} from "./visuals/EC2Visuals6";
+import {
   StorageTypesMap,
   StorageCompareTable,
   InstanceStoreVsEBS,
@@ -37,6 +56,23 @@ import {
   SnapshotWorkflow,
   DLMPolicyVisual,
 } from "./visuals/StorageVisuals2";
+import {
+  PhysicalHostReassignment,
+  VolumeTypeFullMatrix,
+} from "./visuals/StorageVisuals3";
+import {
+  EBSVolumeLab,
+  SnapshotBackupLab,
+  SnapshotUseCaseFlow,
+} from "./visuals/StorageVisuals4";
+import {
+  RestaurantAnalogy,
+  EFSLab,
+} from "./visuals/StorageVisuals5";
+import {
+  FSxAllFourMatrix,
+  LustreProfile,
+} from "./visuals/StorageVisuals6";
 import {
   EFSvsEBSShared,
   EFSUseCases,
@@ -165,6 +201,10 @@ import {
   ReadReplicaVsStandby,
   RDSAdvanced,
 } from "./visuals/RDSVisuals2";
+import {
+  BlueGreenFlow,
+  BlueGreenUseCases,
+} from "./visuals/RDSVisuals4";
 import {
   CacheFlow,
   RedisVsMemcached,
@@ -416,6 +456,19 @@ import {
   CDNEdge,
 } from "./visuals/FoundationVisuals";
 import {
+  ScalingUpInfrastructure,
+  CapExVsOpEx,
+  HybridCloudCases,
+  ResponsibilityStack,
+} from "./visuals/FoundationVisuals2";
+import {
+  FreeTierAccountLab,
+  BudgetSetupLab,
+  ConsoleTour,
+  RegionAZLocalZone,
+  EdgeCacheHierarchy,
+} from "./visuals/FoundationVisuals3";
+import {
   SMEAssistantScenario,
   GenAITrilemma,
   ArchDecisions15,
@@ -512,6 +565,15 @@ const VISUAL_MAP = {
   GlobalInfraExplorer,
   LatencyDistance,
   CDNEdge,
+  ScalingUpInfrastructure,
+  CapExVsOpEx,
+  HybridCloudCases,
+  ResponsibilityStack,
+  FreeTierAccountLab,
+  BudgetSetupLab,
+  ConsoleTour,
+  RegionAZLocalZone,
+  EdgeCacheHierarchy,
   VirtualizationDiagram,
   ServerTypesCards,
   HostGuestExplainer,
@@ -526,6 +588,19 @@ const VISUAL_MAP = {
   InstanceProtectionDemo,
   PlacementGroupVisual,
   TenancyComparison,
+  InstanceFamilyDecoder,
+  NitroVsHypervisor,
+  PublicVsPrivateIP,
+  BastionHostFlow,
+  PortNumberExplorer,
+  SGAsSourcePattern,
+  SecurityGroupLab,
+  PurchaseOptionsMatrix,
+  HotelAnalogy,
+  WindowsInstanceLab,
+  LinuxInstanceLab,
+  CustomAMILab,
+  AWSCLILab,
   StorageTypesMap,
   StorageCompareTable,
   InstanceStoreVsEBS,
@@ -535,6 +610,15 @@ const VISUAL_MAP = {
   GP2vsGP3Calculator,
   SnapshotWorkflow,
   DLMPolicyVisual,
+  PhysicalHostReassignment,
+  VolumeTypeFullMatrix,
+  EBSVolumeLab,
+  SnapshotBackupLab,
+  SnapshotUseCaseFlow,
+  RestaurantAnalogy,
+  EFSLab,
+  FSxAllFourMatrix,
+  LustreProfile,
   EFSvsEBSShared,
   EFSUseCases,
   EFSConfigExplorer,
@@ -631,6 +715,8 @@ const VISUAL_MAP = {
   RDSEncryption,
   ReadReplicaVsStandby,
   RDSAdvanced,
+  BlueGreenFlow,
+  BlueGreenUseCases,
   CacheFlow,
   RedisVsMemcached,
   CacheDeployment,

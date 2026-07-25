@@ -1,0 +1,61 @@
+/* ─── Shared lab-walkthrough stepper (prefix lab-) ───────
+   Used by hands-on console topics across every section.
+   Host file supplies the .sv-card / .sv-title / accent classes. */
+
+.lab-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.lab-tab {
+  font-size: 10.5px; font-weight: 700; color: #b9c2cc;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px; padding: 6px 10px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.lab-tab:hover { color: #e6edf3; border-color: rgba(255,255,255,0.22); }
+.lab-tab.done { color: #5fc943; border-color: rgba(63,185,80,0.3); }
+.lab-tab.active { color: #ffb84d; border-color: rgba(255,153,0,0.6); background: rgba(255,153,0,0.13); }
+
+.lab-progress { height: 3px; background: #0d1117; border-radius: 2px; overflow: hidden; margin-bottom: 14px; }
+.lab-progress-fill { display: block; height: 100%; background: linear-gradient(90deg, #FF9900, #ffb84d); transition: width 0.3s ease; }
+
+.lab-screen { background: #0d1117; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; }
+.lab-screen-bar {
+  display: flex; align-items: center; gap: 6px;
+  background: #161b22; border-bottom: 1px solid rgba(255,255,255,0.07);
+  padding: 8px 12px;
+}
+.lab-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.lab-dot.r { background: #f85149; }
+.lab-dot.y { background: #e3b341; }
+.lab-dot.g { background: #3fb950; }
+.lab-screen-caption {
+  margin-left: 7px; font-size: 11px; font-weight: 700; color: #9aa4b2;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.lab-detail { margin: 0; padding: 14px 16px 14px 32px; }
+.lab-detail li { font-size: 12.5px; color: #d6dde5; line-height: 1.7; padding-left: 3px; }
+.lab-detail li::marker { color: #FF9900; font-weight: 800; }
+.lab-detail strong { color: #ffb84d; }
+.lab-detail code {
+  background: #161b22; padding: 1px 5px; border-radius: 4px;
+  color: #ffcb7d; font-size: 11.5px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.lab-note {
+  font-size: 11.5px; color: #b9c2cc; line-height: 1.6;
+  background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22);
+  border-radius: 8px; padding: 11px 13px; margin-top: 12px;
+}
+.lab-note.warn { background: rgba(227,179,65,0.11); border-color: rgba(227,179,65,0.3); color: #e8cd8a; }
+
+.lab-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+.lab-btn {
+  font-size: 11.5px; font-weight: 700; color: #e6edf3;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px; padding: 8px 14px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+.lab-btn:hover:not(:disabled) { color: #ffb84d; border-color: rgba(255,153,0,0.5); }
+.lab-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.lab-count { font-size: 10.5px; font-weight: 700; color: #6e7784; white-space: nowrap; }

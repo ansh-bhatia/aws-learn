@@ -1,0 +1,136 @@
+/* ─── EC2 deep-dive visuals part 4 ───────────────────────
+   .viz-card / .viz-title come from EC2Visuals.css */
+
+.ifam-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.ifam-note {
+  font-size: 11.5px; color: #b9c2cc; line-height: 1.6;
+  background: rgba(255,153,0,0.08); border: 1px solid rgba(255,153,0,0.22);
+  border-radius: 8px; padding: 11px 13px; margin-top: 14px;
+}
+.ifam-note code, .ifam-gen-title code {
+  background: #0d1117; padding: 1px 5px; border-radius: 4px;
+  color: #ffcb7d; font-size: 11px; margin: 0 2px;
+}
+
+/* ─── 1. FAMILY DECODER ────────────────────────────── */
+.ifam-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.ifam-key {
+  width: 38px; height: 38px; font-size: 15px; font-weight: 800;
+  color: #b9c2cc; background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.ifam-key:hover { color: #e6edf3; border-color: rgba(255,255,255,0.25); transform: translateY(-1px); }
+.ifam-key.active { color: #ffb84d; border-color: rgba(255,153,0,0.65); background: rgba(255,153,0,0.15); }
+
+.ifam-detail { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.ifam-detail-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 7px; }
+.ifam-detail-letter { font-size: 22px; font-weight: 800; color: #ffb84d; line-height: 1; }
+.ifam-detail-name { font-size: 14px; font-weight: 700; color: #e6edf3; }
+.ifam-detail-why { font-size: 12px; color: #b9c2cc; line-height: 1.65; margin: 0; }
+
+.ifam-gen { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; margin-top: 12px; }
+.ifam-gen-title { font-size: 12px; font-weight: 700; color: #e6edf3; margin-bottom: 10px; }
+.ifam-gen-row, .ifam-chip-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+.ifam-chip {
+  font-size: 11px; font-weight: 800; color: #ffb84d;
+  background: rgba(255,153,0,0.14); border: 1px solid rgba(255,153,0,0.3);
+  border-radius: 5px; padding: 3px 8px; flex-shrink: 0;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.ifam-gen-txt { font-size: 11.5px; color: #b9c2cc; line-height: 1.6; }
+.ifam-gen-txt strong { color: #e8cd8a; }
+
+/* ─── 2. NITRO ─────────────────────────────────────── */
+.ntr-toggle { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.ntr-btn {
+  font-size: 11px; font-weight: 700; color: #b9c2cc;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 7px 12px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.ntr-btn:hover { color: #e6edf3; border-color: rgba(255,255,255,0.24); }
+.ntr-btn.active { color: #ffb84d; border-color: rgba(255,153,0,0.6); background: rgba(255,153,0,0.14); }
+
+.ntr-stack { background: #161b22; border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 14px; }
+.ntr-layer {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  border-radius: 9px; padding: 12px; font-size: 13px; font-weight: 700; color: #e6edf3;
+  transition: opacity 0.25s, background 0.25s, border-color 0.25s;
+}
+.ntr-layer small { font-size: 10px; font-weight: 600; color: #6e7784; }
+.ntr-layer.inst { background: rgba(255,153,0,0.1); border: 1px solid rgba(255,153,0,0.3); }
+.ntr-layer.hyp { background: #21262d; border: 1px solid rgba(255,255,255,0.1); }
+.ntr-layer.hyp.bypassed { opacity: 0.32; border-style: dashed; }
+.ntr-layer.hw { background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.32); }
+
+.ntr-arrows { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; }
+.ntr-arrow { font-size: 11px; font-weight: 700; transition: opacity 0.25s, color 0.25s; }
+.ntr-arrow.on { color: #ffb84d; opacity: 1; }
+.ntr-arrow.dim { color: #6e7784; opacity: 0.3; }
+.ntr-arrow.bypass.on { color: #5fc943; }
+
+.ntr-verdict {
+  font-size: 12px; color: #b9c2cc; line-height: 1.65;
+  background: rgba(46,115,184,0.09); border: 1px solid rgba(46,115,184,0.26);
+  border-radius: 8px; padding: 12px 14px; margin-top: 12px;
+}
+.ntr-verdict.fast { background: rgba(63,185,80,0.09); border-color: rgba(63,185,80,0.28); }
+
+/* ─── 3. PUBLIC vs PRIVATE IP ──────────────────────── */
+.ipk-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ipk-box { border-radius: 10px; padding: 14px; transition: background 0.2s, border-color 0.2s; }
+.ipk-box.ok { background: rgba(63,185,80,0.07); border: 1px solid rgba(63,185,80,0.28); }
+.ipk-box.no { background: rgba(248,81,73,0.06); border: 1px solid rgba(248,81,73,0.26); }
+.ipk-name { font-size: 13px; font-weight: 700; color: #e6edf3; margin-bottom: 8px; }
+.ipk-ips { display: flex; flex-direction: column; gap: 4px; margin-bottom: 9px; }
+.ipk-ip {
+  font-size: 10.5px; font-weight: 700; border-radius: 5px; padding: 4px 8px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.ipk-ip.pub { color: #79c0ff; background: rgba(46,115,184,0.16); }
+.ipk-ip.priv { color: #b9c2cc; background: #21262d; }
+.ipk-ip.none { color: #6e7784; background: #1b2027; }
+.ipk-verdict { font-size: 11.5px; font-weight: 800; margin-bottom: 6px; }
+.ipk-verdict.ok { color: #5fc943; }
+.ipk-verdict.no { color: #f0867f; }
+.ipk-why { font-size: 11.5px; color: #b9c2cc; line-height: 1.55; margin: 0; }
+
+/* ─── 4. BASTION HOST ──────────────────────────────── */
+.bh-flow {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 14px; margin-bottom: 12px;
+}
+.bh-node {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border-radius: 9px; padding: 11px 12px; min-width: 92px;
+  background: #1b2027; border: 1px solid rgba(255,255,255,0.07);
+  opacity: 0.4; transition: opacity 0.25s, background 0.25s, border-color 0.25s;
+}
+.bh-node.on { opacity: 1; }
+.bh-node.bastion.on { background: rgba(255,153,0,0.12); border-color: rgba(255,153,0,0.4); }
+.bh-node.srv.on { background: rgba(46,115,184,0.1); border-color: rgba(46,115,184,0.35); }
+.bh-icon { font-size: 17px; }
+.bh-name { font-size: 11.5px; font-weight: 700; color: #e6edf3; }
+.bh-node small { font-size: 9px; color: #6e7784; font-weight: 600; text-align: center; }
+.bh-servers { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 110px; }
+.bh-arrow {
+  display: flex; flex-direction: column; align-items: center;
+  font-size: 15px; color: #30363d; transition: color 0.25s;
+}
+.bh-arrow small { font-size: 8.5px; font-weight: 700; }
+.bh-arrow.on { color: #ffb84d; }
+
+.bh-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.bh-blurb {
+  font-size: 12px; color: #b9c2cc; line-height: 1.65;
+  background: rgba(46,115,184,0.09); border: 1px solid rgba(46,115,184,0.26);
+  border-radius: 8px; padding: 12px 14px;
+}
+
+@media (max-width: 640px) {
+  .ipk-grid { grid-template-columns: 1fr; }
+  .bh-flow { flex-direction: column; align-items: stretch; }
+  .bh-arrow { transform: rotate(90deg); }
+}

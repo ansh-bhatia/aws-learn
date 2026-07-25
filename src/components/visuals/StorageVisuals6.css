@@ -1,0 +1,41 @@
+/* ─── FSx visuals (prefix st6-) ──────────────────────────
+   .sv-card / .sv-title from StorageVisuals.css
+   .st3-* from StorageVisuals3.css */
+
+.st6-matrix {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 12px;
+}
+.st6-cell {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  border-radius: 8px; padding: 12px 8px; min-height: 92px;
+  background: #1b2027; border: 1px solid rgba(255,255,255,0.07);
+}
+.st6-cell.yes { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.35); }
+.st6-cell.no { background: rgba(248,81,73,0.07); border-color: rgba(248,81,73,0.26); }
+.st6-cell-name {
+  font-size: 10.5px; font-weight: 800; color: #e6edf3; text-align: center; line-height: 1.35;
+}
+.st6-cell-val {
+  font-size: 11px; font-weight: 700; color: #f0a35e; text-align: center;
+  margin-top: auto; line-height: 1.4;
+}
+.st6-cell.yes .st6-cell-val, .st6-cell.no .st6-cell-val { font-size: 16px; }
+
+.st6-list { display: flex; flex-direction: column; gap: 8px; }
+.st6-row {
+  display: flex; gap: 11px; align-items: flex-start;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 9px; padding: 11px 13px;
+}
+.st6-row-icon {
+  font-size: 15px; line-height: 1.3; flex-shrink: 0; min-width: 34px;
+  font-weight: 800; color: #f0a35e;
+}
+.st6-row-title { font-size: 12.5px; font-weight: 700; color: #e6edf3; margin-bottom: 3px; }
+.st6-row-desc { font-size: 11.5px; color: #b9c2cc; line-height: 1.6; }
+
+@media (max-width: 700px) {
+  .st6-matrix { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

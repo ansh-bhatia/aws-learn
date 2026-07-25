@@ -1,0 +1,2094 @@
+// Storage
+export default {
+  id: "storage",
+  label: "Storage",
+  icon: "🗄️",
+  color: "#3F8624",
+  topics: [
+    {
+      id: "storage-fundamentals",
+      title: "Storage Fundamentals – DAS, File & Object",
+      shortDesc: "The three storage families and how each maps onto an AWS service",
+      visuals: ["StorageTypesMap", "StorageCompareTable"],
+      content: `## Three Kinds of Storage
+
+There are three storage options in total. Two of them you already know from ordinary computing; **the third only exists in the cloud**.
+
+- **DAS — Direct Attached Storage**, also called **block storage**
+- **File storage**
+- **Object storage** — **not available on-premises at all**
+
+---
+
+## DAS / Block Storage
+
+Storage **connected directly to your computer**. Your laptop's hard disk or SSD is DAS. So is a pen drive.
+
+**It is the fastest of the three.** And it has one significant limitation:
+
+> **DAS is not shared.** You cannot connect one SSD to several computers and use it from all of them simultaneously.
+
+**DAS must be formatted.** Buy a new SSD and it arrives **raw**, because the manufacturer has no idea which operating system you will use it with. You format it yourself — **NTFS** for Windows, **ext** for Linux.
+
+Formatting is literally **creating blocks of storage** on the disk — which is why the other name for DAS is **block storage**.
+
+**In AWS there are two DAS options:** **instance store** and **EBS** (Elastic Block Store).
+
+---
+
+## File Storage — Solving the Sharing Problem
+
+Picture a company with **50 computers**. Store data locally on each and you are now responsible for **50 separate disks**.
+
+Far better: build **one storage server**. All 50 computers keep their data there, and you look after **one** system instead of fifty.
+
+> **Any enterprise with multiple computers needs shared storage.** File storage is how that is done.
+
+The protocol depends on the operating system:
+
+| Environment | Protocol |
+|---|---|
+| **Linux** | **NFS** — Network File System |
+| **Windows** | **CIFS / SMB** — Common Internet File System |
+
+**In AWS:** **EFS** for Linux-style shared storage, **FSx** for Windows-style — and neither requires you to build and manage a server.
+
+---
+
+## Object Storage — Cloud Only
+
+For **huge volumes of data**, particularly **static data** you are not frequently editing, there is a third option that has no on-premises equivalent: **object storage**.
+
+**In AWS this is S3.**
+
+---
+
+## The Mapping to Remember
+
+| Traditional | What it is | AWS equivalent |
+|---|---|---|
+| **DAS / block** | Directly attached, fastest, **not shared**, must be formatted | **Instance Store** and **EBS** |
+| **File storage (NFS)** | Shared, Linux | **EFS** |
+| **File storage (CIFS/SMB)** | Shared, Windows | **FSx** |
+| **Object storage** | Massive static data — **cloud only** | **S3** |
+
+> Everything in this section builds on this table. Next: the two DAS options, and why one of them loses your data.
+`,
+    },
+    {
+      id: "ebs-instance-store",
+      title: "EBS – Instance Store & Why It Is Temporary",
+      shortDesc: "How host reassignment destroys instance store data, and how EBS avoids it",
+      visuals: ["PhysicalHostReassignment", "EBSLifecycleVisual"],
+      content: `## Two Directly-Attached Options
+
+AWS gives you two block storage options you can attach straight to an EC2 instance: **instance store** and **EBS** (Elastic Block Store). Both are block storage; the differences between them are substantial.
+
+To understand why, you first need one fact about how EC2 works.
+
+---
+
+## Your Instance Does Not Live on a Fixed Machine
+
+An EC2 instance is a virtual machine, so it runs on a **physical host** — and multiple virtual machines share each host. AWS runs **50,000 to 60,000 hosts inside a single availability zone**.
+
+> **AWS decides which physical host runs your instance — and it decides again every time you start it.**
+
+Stop your instance and start it later, and an algorithm picks a host based on where resources are free at that moment. It may be a completely different machine.
+
+---
+
+## Instance Store
+
+**Instance store is directly attached to a specific physical host.** It physically resides inside that host.
+
+While your instance runs on that host, it reaches the instance store directly — and because both are the same machine, you get **low latency and the highest performance available**.
+
+Now follow what happens when you stop the instance:
+
+1. The instance stops. It is on no host.
+2. You start it again, and AWS places it on **a different host**.
+3. The instance store is still sitting in **the original host**.
+
+**The instance can no longer reach its own storage.**
+
+Because of this, AWS's design is simple: **if you stop the instance, the instance store data is deleted automatically.**
+
+> This is why instance store is **temporary storage**, and why **you cannot stop an instance that relies on it** without losing the data.
+
+---
+
+## EBS Solves It by Being External
+
+**EBS is external storage**, connected to and reachable from **multiple physical hosts**.
+
+Now the same sequence has a very different ending. Stop the instance, start it on Host B, and it **still reaches the EBS volume** — because the volume was never tied to Host A in the first place.
+
+> **EBS is persistent storage.** Even if you **delete the instance**, the volume survives, and you can attach that same volume to a different instance later.
+
+---
+
+## The Trade-Off
+
+| | Instance Store | EBS |
+|---|---|---|
+| **Attached to** | One specific physical host | External, reachable from many hosts |
+| **Survives a stop?** | ❌ Data deleted | ✅ Persists |
+| **Survives termination?** | ❌ | ✅ Volume remains, re-attachable |
+| **Performance** | **Best** — directly attached | Very good, but not directly attached |
+
+You give up some performance with EBS. In exchange you get storage that does not vanish.
+
+> That is the concept. The next topic puts every difference side by side — it is one of the most commonly asked interview questions in this whole area.
+`,
+    },
+    {
+      id: "ebs-vs-instance-store",
+      title: "EBS – Instance Store vs EBS Compared",
+      shortDesc: "The full comparison: lifecycle, size, performance, cost and mounting",
+      visuals: ["InstanceStoreVsEBS"],
+      content: `## The Interview Table
+
+> This is one of the **hottest interview questions** in the storage area. Learn the table and you can answer any phrasing of it.
+
+---
+
+## Lifecycle
+
+**Instance store is temporary** — its lifespan is **tied to your instance lifecycle**. Stop or terminate the instance and the data is gone.
+
+**EBS is persistent** and **independent of the instance lifecycle**. Terminate the instance and the volume remains. Create a new instance, attach that volume, and your data is there. You delete the volume when *you* decide to.
+
+---
+
+## Size
+
+**Instance store size is fixed by the instance type.** You do not choose it. And **not every instance type offers one** — **t2.micro does not**, so you must deliberately pick a type that includes it. Choose a type that gives 50 GB and 50 GB is what you get.
+
+**EBS goes up to 16 TB per volume** and works with **any instance type**, at whatever size you specify.
+
+---
+
+## Performance
+
+**Instance store wins** — higher IOPS and throughput, because it is directly attached to the physical host.
+
+> That does **not** mean EBS performs badly. EBS also delivers high IOPS, as the volume-types topic shows. The point is simply that instance store, being directly attached, has the edge.
+
+---
+
+## Use Cases
+
+| Instance Store | EBS |
+|---|---|
+| Temporary **cached data** | **Mission-critical databases** |
+| **Scratch space** | **File systems** |
+| **Buffers** | Anything that must survive |
+
+> Never put mission-critical data on instance store.
+
+---
+
+## Cost
+
+**Instance store costs nothing extra.** It comes with the instance type — fixed size, price already included in the instance rate.
+
+**EBS is billed separately.** A t2.micro with a 100 GB EBS volume means paying for the instance **and** for 100 GB of storage.
+
+> **A question that comes up constantly:** *"If I stop my EC2 instance, do I pay anything?"* You pay nothing for the **instance** — but **you keep paying for the attached EBS volume**, the entire time.
+
+---
+
+## Mounting
+
+**Instance store mounts automatically** with the instance. Fixed type, fixed size, nothing to do.
+
+**EBS is manual**: create the instance, create the volume, **attach** the volume, then **mount it from the operating system**.
+
+That extra work buys flexibility — you can **detach a volume from one instance and attach it to another** whenever you like.
+
+---
+
+## Full Comparison
+
+| | 💾 Instance Store | 🗄️ EBS |
+|---|---|---|
+| **Persistence** | Temporary — tied to instance lifecycle | **Persistent** — independent |
+| **Survives stop / terminate** | ❌ Data lost | ✅ Volume remains |
+| **Size** | Fixed by instance type | Up to **16 TB**, your choice |
+| **Instance type support** | **Only specific types** (not t2.micro) | **Any** instance type |
+| **Performance** | **Highest** IOPS / throughput | High, but not directly attached |
+| **Use for** | Cache, scratch, buffers | Databases, file systems, critical data |
+| **Cost** | Included in instance price | **Billed separately — even while stopped** |
+| **Mounting** | Automatic | Attach, then mount manually |
+`,
+    },
+    {
+      id: "ebs-storage-scenarios",
+      title: "EBS – The 6 Root & Data Volume Scenarios",
+      shortDesc: "Every combination of instance store and EBS as root or data volume",
+      visuals: ["StorageScenariosExplorer"],
+      content: `## Root Volume vs Data Volume
+
+Before the scenarios, one distinction. Open **This PC** on a Windows machine and you might see C:, D:, E: and F:. The **C: drive carries the Windows logo** because the **operating system is installed on it** — that is the **root volume**. D:, E: and F: hold your files — those are **data volumes**.
+
+Same idea here. There are **six** possible configurations.
+
+---
+
+## 1 · Instance Store as Root Volume ✅
+
+Possible, but with conditions.
+
+**Launch instance → Browse more AMIs → Community AMIs**, then **filter root device type to instance store**. You now see only AMIs that support it.
+
+> ⚠️ **Filter to Windows as well and you get nothing.** **No Windows AMI supports instance store as a root volume** — Linux only.
+
+Two further constraints:
+
+- **Not every instance type supports it.** **t2.micro cannot** be used this way.
+- **The size is fixed by the instance type.** Select one and you might be given a 1,920 GB ephemeral volume — and you cannot change that number.
+- **"Delete on termination" is not applicable**, because the volume is ephemeral by definition.
+
+---
+
+## 2 · EBS as Root Volume ✅
+
+The straightforward case. Browse AMIs and the default listing is **root device type EBS** — pick one and you are done.
+
+**Every instance type supports EBS as root.** Sizes are the familiar defaults: **30 GB for Windows, 8 GB for Linux**.
+
+Under **Advanced**, note **Delete on termination**:
+
+- **Yes** — terminating the instance deletes the root volume too.
+- **No** — the volume **survives termination**, and you can attach it to another instance later.
+
+---
+
+## 3 · Instance Store as Data Volume ✅
+
+Here is the catch: **there is no "add volume" button for instance store.** Click Add new volume and you get an **EBS** volume every time.
+
+The only way to get an instance store data volume is to **choose an instance type that includes more than one instance store volume**.
+
+Open **Compare instance types** and pick something like **x1.32xlarge**. Scroll down and you will see **two instance store volumes** — the first becomes your root, the second your data volume.
+
+> You cannot add them, and you cannot size them. The instance type decides both.
+
+---
+
+## 4 · EBS as Data Volume ✅
+
+The easiest of the six. Click **Add new volume**, specify any size you want — 80 GB, whatever — and you are finished.
+
+**It does not depend on the instance type at all.**
+
+---
+
+## 5 · Instance Store Root + EBS Data ✅
+
+Combine 1 and 4. Select an instance-store-root AMI, choose an instance type such as **x1.16xlarge** (giving, say, a 192 GB instance store as root), then click **Add new volume** and add an 80 GB EBS data volume.
+
+---
+
+## 6 · EBS Root + Instance Store Data ✅
+
+Combine 2 and 3, and remember the constraint from scenario 3.
+
+Start with an EBS-root AMI. You **cannot add an instance store from the storage section** — clicking Add volume only ever offers EBS.
+
+So go to **Compare instance types** and look for types listing **storage in GB**. Any type showing that gives you instance store. Select one and you end up with:
+
+- an **8 GB EBS root volume**, and
+- **instance store data volumes** — perhaps two at 900 GB each, **fixed in size**.
+
+> Power off the instance and **everything on those instance store volumes is lost**.
+
+---
+
+## Summary
+
+| Scenario | Root | Data | Key constraint |
+|---|---|---|---|
+| **1** | Instance store | — | Linux AMIs only · specific instance types · fixed size |
+| **2** | EBS | — | Any instance type · 30 GB Win / 8 GB Linux |
+| **3** | — | Instance store | Cannot be added — instance type must include 2+ volumes |
+| **4** | — | EBS | Any size, any instance type |
+| **5** | Instance store | EBS | Combination of 1 and 4 |
+| **6** | EBS | Instance store | Instance type must provide the instance store |
+`,
+    },
+    {
+      id: "ebs-volume-types-ssd",
+      title: "EBS – SSD Volume Types (gp2, gp3, io1, io2)",
+      shortDesc: "IOPS vs throughput, the gp2 sizing trap, and why gp3 and io2 always win",
+      visuals: ["EBSVolumeTypesExplorer", "GP2vsGP3Calculator"],
+      content: `## Why Volume Type Matters
+
+There are **seven EBS volume types**. Choosing correctly matters because **cost is tied to volume type** — pick the wrong one and **you pay more money for less performance**.
+
+Find them under **EC2 dashboard → Volumes → Create volume**: **four SSD types**, **two HDD types**, and **one magnetic**. This topic covers the four SSD types.
+
+---
+
+## First: How Performance Is Measured
+
+Two numbers, and you need both.
+
+**IOPS — input/output operations per second.** A disk rated 1,000 IOPS handles 1,000 requests per second; one rated 2,000 handles twice as many. **More IOPS, better performance.**
+
+**Throughput — how much data moves per second**, measured in MiB/s. This is the more accurate picture, because IOPS counts *requests* without saying how much data each carries.
+
+> Judge a volume on **both**.
+
+*(A note on units: AWS sizes are in **TiB** — tebibytes, based on 1,024 — not TB based on 1,000.)*
+
+---
+
+## gp2 vs gp3 — General Purpose
+
+**Use cases are identical for both:** transactional workloads, virtual desktops, single instances, small databases, low-latency applications, development and testing. **Moderate performance, general purpose.**
+
+**Size:** 1 GiB to 16 TiB.
+
+**The critical difference is how you get IOPS.**
+
+**gp2 gives you 3 IOPS per GB**, with a minimum of 100. So the **volume size decides your performance**. A 100 GB gp2 volume gives 300 IOPS.
+
+**Here is the trap.** Your manager needs **900 IOPS** and says you will store **50 GB** of data.
+
+- A 50 GB gp2 volume gives you **150 IOPS**. Not enough — and applications like Oracle or SAP will refuse to run under their required IOPS.
+- To reach 900 IOPS you must create a **300 GB** volume (300 × 3 = 900).
+- You now **pay for 300 GB to store 50 GB**. The extra **250 GB is pure waste**, bought only to unlock IOPS.
+
+**gp3 fixes exactly this.** You get **3,000 IOPS flat**, regardless of size. A 50 GB gp3 volume gets 3,000 IOPS. A 10 GB gp3 volume gets 3,000 IOPS. And if you need more, you can **pay to provision additional IOPS or throughput** on top.
+
+> **gp3 costs LESS than gp2** — $81 vs $102 per TB per month — **and performs better**. There is no reason to choose gp2.
+
+---
+
+## io1 vs io2 — Provisioned IOPS
+
+**Use these when** you have demanding applications, **IO-intensive database workloads**, or need **sustained IOPS**.
+
+**Size:** 4 GiB to 16 TiB.
+
+Here **you choose the IOPS you need**, up to **64,000** — and pay extra for what you provision.
+
+**gp2 and gp3 max out at 16,000 IOPS.** Need 30,000? You have no choice but io1 or io2.
+
+**io1 and io2 look nearly identical**: same 64,000 max IOPS, same max throughput, **same price ($128 per TB per month)**. So what separates them?
+
+> **Durability.** io1 offers **99.9%**. io2 offers **99.999%** — five nines — **at the same price**. If you store critical data, io2 is strictly better. There is no reason to pick io1.
+
+---
+
+## Block Express
+
+**io2 alone** supports **Block Express**, which delivers **sub-millisecond latency**, up to **256,000 IOPS** and **4,000 MiB/s** throughput.
+
+Two conditions:
+
+- **Only available on specific instance types.** Launch an ordinary type and the option will not appear.
+- **No extra charge** — Block Express costs the same as io2. You are effectively paying through the instance type.
+
+---
+
+## Burst Capacity
+
+**gp2 has it; gp3, io1 and io2 do not.**
+
+With gp2, IOPS are allocated by size — so during seconds when you are **not** using them, **unused IOPS accumulate as credit**. Later you can briefly exceed your baseline by spending that credit.
+
+gp3, io1 and io2 do not need this, because you **provision** the IOPS you want directly.
+
+---
+
+## Multi-Attach
+
+Can one volume attach to multiple EC2 instances?
+
+- **gp2 and gp3: no.** Block storage is fundamentally not shared.
+- **io1 and io2: yes** — but **only with Nitro-based instances**.
+
+---
+
+## SSD Summary
+
+| | gp2 | gp3 | io1 | io2 |
+|---|---|---|---|---|
+| **Size** | 1 GiB–16 TiB | 1 GiB–16 TiB | 4 GiB–16 TiB | 4 GiB–16 TiB |
+| **Base IOPS** | **3 per GB** | **3,000 flat** | provisioned | provisioned |
+| **Max IOPS** | 16,000 | 16,000 | 64,000 | 64,000 (**256,000** Block Express) |
+| **Max throughput** | 250 MiB/s | 1,000 MiB/s | 1,000 MiB/s | **4,000** MiB/s Block Express |
+| **Cost / TB / month** | $102 | **$81** | $128 | $128 |
+| **Durability** | 99.9% | 99.9% | 99.9% | **99.999%** |
+| **Burst** | ✅ | ❌ | ❌ | ❌ |
+| **Multi-attach** | ❌ | ❌ | ✅ Nitro | ✅ Nitro |
+| **Configurable IOPS** | ❌ | ✅ | ✅ | ✅ |
+| **Boot volume** | ✅ | ✅ | ✅ | ✅ |
+
+> **The two rules worth memorising: always choose gp3 over gp2, and always choose io2 over io1.** Both are cheaper or better at the same price.
+`,
+    },
+    {
+      id: "ebs-volume-types-hdd",
+      title: "EBS – HDD & Magnetic Volume Types (st1, sc1)",
+      shortDesc: "Cheap storage for big data and cold data — and why magnetic is being priced out",
+      visuals: ["VolumeTypeFullMatrix"],
+      content: `## Why HDD Exists
+
+SSD is **expensive**. Store a massive amount of data on it and you pay heavily for speed you may not need.
+
+That is what the remaining three types are for: **two HDD types** and **one magnetic**.
+
+---
+
+## Throughput Optimized HDD (st1)
+
+**For big data and log files** — large volumes of data where you **do not need SSD-level speed**.
+
+- **Size:** 125 GiB – 16 TiB
+- **Base and max IOPS: 500** (they are the same)
+- **Max throughput: 500 MiB/s**
+- **Cost: $46 per TB per month**
+
+---
+
+## Cold HDD (sc1)
+
+**For less frequently accessed data.** If you rarely touch it, storing it here **saves a great deal of money**.
+
+- **Size:** 125 GiB – 16 TiB
+- **Base and max IOPS: 250** — half of st1
+- **Max throughput: 250 MiB/s** — again half
+- **Cost: $15 per TB per month**
+
+> Compare $46 against $15. **Choosing your volume type carefully saves your company real money.**
+
+---
+
+## Magnetic (standard) ⚠️
+
+The **previous generation** — a **sequential** storage device, and very old. AWS may **remove it at any time**.
+
+- **Size:** 1 GiB – **1 TiB** only
+- **Performance:** variable, around **100 IOPS**, **40–90 MiB/s** throughput — **the worst of all seven types**
+- **Cost: $51 per TB per month**
+
+Look at that cost again against st1 ($46) and sc1 ($15).
+
+> **Magnetic is the slowest type and costs more than both HDD types.** That is not an accident — **AWS is raising the price deliberately** so that people move to cold HDD instead. Once nobody is using it, they will remove it. **The pricing is the signal.**
+
+Its nominal use case is **archive or backup data** you might access if needed — but **cold HDD is the better answer** in practice.
+
+---
+
+## Two Curiosities
+
+**Burst capacity:** st1 and sc1 have none — but **magnetic does**, alongside gp2. If you get a sudden spike, magnetic can absorb it.
+
+**Boot volume support:** st1 and sc1 **cannot** be boot volumes. **Magnetic can** — which makes little practical sense, since booting an operating system from a sequential device would be extremely slow. AWS documents it as supported, so it is listed.
+
+---
+
+## HDD & Magnetic Summary
+
+| | st1 (Throughput HDD) | sc1 (Cold HDD) | Magnetic ⚠️ |
+|---|---|---|---|
+| **Use for** | Big data, log files | Infrequently accessed data | Archive / backup (legacy) |
+| **Size** | 125 GiB – 16 TiB | 125 GiB – 16 TiB | 1 GiB – **1 TiB** |
+| **IOPS** | 500 | 250 | ~100, variable |
+| **Throughput** | 500 MiB/s | 250 MiB/s | 40–90 MiB/s |
+| **Cost / TB / month** | $46 | **$15** | **$51** ⚠️ |
+| **Durability** | 99.9% | 99.9% | 99.9% |
+| **Burst** | ❌ | ❌ | ✅ |
+| **Multi-attach** | ❌ | ❌ | ❌ |
+| **Configurable IOPS** | ❌ | ❌ | ❌ |
+| **Boot volume** | ❌ | ❌ | ✅ (oddly) |
+
+> That completes all **seven** EBS volume types. Next comes the practical side — creating volumes, attaching them, and backing them up with snapshots.
+`,
+    },
+    {
+      id: "ebs-volume-lab",
+      title: "Lab – Attach, Format & Resize an EBS Volume",
+      shortDesc: "Create a volume, the AZ rule, the encryption-only-at-creation trap, and resizing live",
+      visuals: ["EBSVolumeLab", "EBSLifecycleVisual"],
+      content: `## Setup
+
+This lab uses a **Windows** instance deliberately: the drive is **visible in a graphical interface**, which makes the concepts far easier to follow than Linux commands would.
+
+Launch **Windows Server 2019**, **t2.micro**, in **ap-south-1a**. The **30 GB root volume** becomes the **C: drive**.
+
+> You **can** add extra volumes during launch under **Configure storage** — choosing size, volume type and encryption. This lab adds one afterwards instead, to show that path as well.
+
+---
+
+## Confirming What You Start With
+
+Connect over RDP and open **This PC**. There is only **C:**, at 30 GB — the default root volume.
+
+You can also inspect it properly through **Server Manager → Tools → Computer Management → Disk Management**.
+
+> **Shortcut:** press **Windows+R** and run **diskmgmt.msc** — it opens the same window directly.
+
+---
+
+## Creating the Volume
+
+**EC2 dashboard → Volumes → Create volume.** Choose **General Purpose SSD**, size **15 GB**, then pick the availability zone.
+
+> ⚠️ **The volume and the instance must be in the SAME availability zone.** Create it in **ap-south-1b** while the instance is in **ap-south-1a** and **you simply cannot attach it**. Check your instance's AZ before creating the volume. (There *is* a workaround via snapshots — covered two topics from here.)
+
+---
+
+## ⚠️ The Encryption Decision Is Permanent
+
+Decide **now** whether this volume should be encrypted. Ticking **Encrypt** uses **KMS**; the default **aws/ebs** key is fine.
+
+> **If you do not encrypt at creation, you cannot encrypt it later.** Go to **Actions → Modify volume** afterwards and there is **no encryption option** — it does not appear, ever.
+>
+> The only route after the fact is to **snapshot the volume and create a new encrypted volume from that snapshot**. In many environments encrypting from the start is simply good practice.
+
+---
+
+## Attaching It
+
+Give the volume a **Name** tag so it is identifiable. Refresh the list and its state reads **available** — **not in-use** — because it is attached to nothing yet.
+
+Select it → **Actions → Attach volume**. **Only instances in the same availability zone are offered.** Pick yours, accept the default device name, and attach. The state becomes **in-use** and shows the instance ID.
+
+---
+
+## Formatting
+
+Back inside the instance, the new drive is **not in Explorer**. That is expected — **it is a raw block device** and must be formatted first.
+
+Open **Disk Management** and the 15 GB disk appears:
+
+1. Right-click → **Online**
+2. Right-click → **Initialize Disk**
+3. Right-click the unallocated space → **New Simple Volume** → Next through the wizard → **Finish**
+
+**D:** now appears in **This PC**, empty and ready.
+
+---
+
+## Resizing — While Running
+
+Select the volume → **Actions → Modify volume** → change **15 GB to 30 GB** → **Modify**.
+
+> **You can do this while the instance is running.** No power-off required.
+
+Windows will still show 15 GB. Go back to **Disk Management** and choose **Action → Rescan Disks**, then right-click **D: → Extend Volume** and accept the new space. D: now reads 30 GB.
+
+> **You can increase a volume's size. You can never decrease it.**
+
+---
+
+## Detaching and Deleting
+
+**Actions → Detach volume** releases it, and you can then attach it to a **different instance**.
+
+To delete a volume it must be **detached first** — the delete option is unavailable while it is **in-use**, and also while the volume is still **Optimizing** after a resize. Wait for **available**, then **Actions → Delete volume**.
+
+> ⚠️ **Deleting is irreversible.**
+
+---
+
+## Two Limits Worth Remembering
+
+- **A volume cannot be copied to another availability zone or another region directly.** Snapshots are the only mechanism.
+- **A volume attaches to only ONE instance** — unless you are using **io1/io2 multi-attach on Nitro instances**.
+
+> Terminate the instance when you finish. Next: protecting this data with **snapshots**.
+`,
+    },
+    {
+      id: "ebs-snapshot-lab",
+      title: "Lab – Back Up & Restore with a Snapshot",
+      shortDesc: "Create files, snapshot the volume, delete the data, and restore it",
+      visuals: ["SnapshotBackupLab", "SnapshotWorkflow"],
+      content: `## Setup
+
+Launch **Windows Server 2019**, **t2.micro**, in **ap-south-1a**, named **learning-snapshot**. This time **add the 15 GB EBS volume during launch**, under **Configure storage → Add new volume**.
+
+Its advanced options include **Encryption** and **Delete on termination**.
+
+> **Delete on termination defaults to YES for the root volume, but NO for any volume you add.** So an added volume **survives** instance termination unless you change that — which matters at clean-up time.
+
+---
+
+## Put Real Data On It
+
+Connect over RDP, open **diskmgmt.msc**, and bring the 15 GB disk **Online → Initialize → New Simple Volume → Finish**.
+
+Open **D:** and create several text files with some content in them.
+
+---
+
+## Taking the Snapshot
+
+Give the volume a clear **Name** tag first — it makes selecting the right one far easier.
+
+Then **select the volume → Actions → Create snapshot**, add a description, and click **Create snapshot**.
+
+> You can also start from **Snapshots → Create snapshot** and pick the volume there — but without good name tags, choosing correctly from a list is awkward.
+
+Status begins as **pending**; wait for **completed**.
+
+> **Snapshots are stored in Amazon S3**, and you are billed at **S3 rates** for their size. An **unencrypted volume produces an unencrypted snapshot**.
+
+---
+
+## Lose the Data
+
+Back in the instance, select all the files on **D:** and **delete them**. The drive is now empty — exactly the disaster you are protecting against.
+
+---
+
+## Restoring
+
+**EC2 → Snapshots**, select your snapshot → **Actions → Create volume from snapshot**.
+
+It offers **15 GB**, the original size. Then:
+
+- **Choose the availability zone.** Picking a **different** one here is how you effectively move a volume across AZs.
+- **You may enable encryption** at this point — the workaround for a volume you forgot to encrypt.
+
+Click **Create volume**.
+
+---
+
+## Reattaching
+
+The restored volume appears as **available**. Select it → **Actions → Attach volume** → choose your instance. The instance now has **two 15 GB volumes** attached.
+
+In **Disk Management** the new disk appears. Right-click → **Online**, then **Initialize**.
+
+> **You do not need to format it.** The file system and the data are already on it — formatting would erase exactly what you are restoring.
+
+Open the drive: **your files are back**.
+
+---
+
+## Clean Up
+
+1. **Detach and delete** the now-empty original volume — wait for it to leave the **in-use** state first.
+2. **Terminate the instance.** This deletes the **30 GB root volume** automatically.
+3. **The added 15 GB volume is not deleted with it** — delete that yourself.
+4. Go to **Snapshots** and **delete the snapshot**.
+
+> ⚠️ **Snapshots keep costing money until you delete them.** Terminating the instance does not remove them.
+`,
+    },
+    {
+      id: "ebs-snapshot-use-cases",
+      title: "EBS – What Snapshots Unlock",
+      shortDesc: "Changing availability zone, adding encryption, and copying a volume across regions",
+      visuals: ["SnapshotUseCaseFlow"],
+      content: `## Beyond Backup
+
+Backup is the primary use of a snapshot. But snapshots are also the **only** way around three hard limits on EBS volumes — and the pattern is identical in all three cases.
+
+> **Snapshot the volume, then create a NEW volume from that snapshot** with whatever property you could not change directly.
+
+---
+
+## Use Case 1 — Change the Availability Zone
+
+**The limit:** your volume is in **ap-south-1a** but your instance is in **ap-south-1b**. They must match, and **nowhere in the console is there an option to change a volume's availability zone**.
+
+**The fix:**
+
+1. Select the volume → **Actions → Create snapshot**
+2. **Snapshots → Actions → Create volume from snapshot**
+3. Choose **ap-south-1b** as the availability zone
+4. Attach the new volume, and delete the old one
+
+Your data comes across intact.
+
+---
+
+## Use Case 2 — Add Encryption After the Fact
+
+**The limit:** you forgot to encrypt at creation. **Actions → Modify volume** shows no encryption option, and never will.
+
+**The fix:**
+
+1. Select the volume → **Actions → Create snapshot**
+2. **Snapshots → Actions → Create volume from snapshot**
+3. **Tick Encrypt** and choose a **KMS** key
+4. Attach the new encrypted volume, and delete the old one
+
+> Encrypting your volumes is always worth doing — it gives you better security for essentially no operational cost.
+
+---
+
+## Use Case 3 — Copy to Another Region
+
+**The limit:** everything is in **Mumbai** but you need this volume in **N. Virginia**. **Volumes cannot be copied across regions.**
+
+**The fix** — note this one has an extra step:
+
+1. Select the volume → **Actions → Create snapshot**
+2. Select the **snapshot** → **Actions → Copy snapshot**
+3. Set the **destination region** to **us-east-1**
+4. **Switch to that region**, then create a volume from the copied snapshot
+
+The volume now exists in N. Virginia with all your data, ready to attach to any instance there.
+
+---
+
+## Summary
+
+| You want to change | Directly possible? | Via snapshot |
+|---|---|---|
+| **Availability zone** | ❌ | ✅ Create volume from snapshot in the target AZ |
+| **Encryption** | ❌ | ✅ Tick Encrypt while creating the volume |
+| **Region** | ❌ | ✅ **Copy snapshot** to the region first |
+| **Size (increase)** | ✅ Modify volume | — |
+| **Size (decrease)** | ❌ | ❌ Not possible at all |
+
+> Remember to clean up in **both** regions when experimenting — a copied snapshot in another region is easy to forget, and it keeps billing.
+`,
+    },
+    {
+      id: "ebs-fast-snapshot-restore",
+      title: "EBS – Fast Snapshot Restore",
+      shortDesc: "When restoring a terabyte-scale snapshot is too slow — and why you usually skip this",
+      visuals: [],
+      content: `## The Problem It Solves
+
+Creating a volume from a snapshot feels instant in a lab — but only because **the snapshot is small**.
+
+In the real world EBS volumes run to **terabytes**, so their snapshots are correspondingly large. Restoring one of those takes **considerable time** before the volume is usable.
+
+If **mission-critical data** is sitting in that snapshot and you need the volume **immediately**, that delay is a genuine problem.
+
+---
+
+## What Fast Snapshot Restore Does
+
+**Fast Snapshot Restore (FSR)** speeds up that restoration so the new volume can be used **straight away**.
+
+**To enable it:** EC2 → **Snapshots** → select the snapshot → **Actions → Manage fast snapshot restore** → enable it for the availability zones you need.
+
+---
+
+## Why You Should Usually Leave It Off
+
+> ⚠️ **FSR is a paid feature**, and AWS makes the terms explicit when you enable it: it is **billed per minute, with a one-hour minimum, for EACH availability zone in which it is enabled.**
+
+So the cost multiplies by availability zone, and starts accruing the moment you switch it on.
+
+**If your volumes are small, you do not need this at all** — the restore is already fast enough.
+
+---
+
+## When to Reach for It
+
+Enable FSR only when **all** of these are true:
+
+- The snapshot is **large** — terabyte-scale.
+- The data is **mission critical**.
+- You need the restored volume **usable immediately**, not after a wait.
+
+In that situation, paying extra to remove the delay is worth it.
+
+> **The exam-relevant summary:** fast snapshot restore trades money for restore speed, is enabled **per snapshot per availability zone**, and is unnecessary for small volumes.
+`,
+    },
+    {
+      id: "ebs-dlm",
+      title: "EBS – Data Lifecycle Manager (Automated Snapshots)",
+      shortDesc: "Scheduling snapshots by tag, with retention rules so backups do not pile up",
+      visuals: ["DLMPolicyVisual"],
+      content: `## Why Automate
+
+Taking snapshots of critical volumes is good practice — but taking them **manually** means **you might forget**.
+
+**Data Lifecycle Manager (DLM)** is the automation for exactly that: **scheduled, automatic volume snapshots**.
+
+---
+
+## Step 1 — Tag the Volume
+
+DLM targets resources **by tag**, so the volume needs one.
+
+Create a volume (10 GB is plenty for a test) and under **Tags** click **Add tag** — for example a tag named **learning-DLM**.
+
+> You can verify the tag on the volume's detail page afterwards.
+
+---
+
+## Step 2 — Create the Policy
+
+Go to **EC2 → Lifecycle Manager**. Three policy types are offered:
+
+| Policy type | Purpose |
+|---|---|
+| **EBS snapshot policy** | Scheduled snapshots of volumes — **what we want** |
+| **EBS-backed AMI policy** | Scheduled AMIs |
+| **Cross-account copy event policy** | Copying to other accounts (disaster-recovery territory) |
+
+Choose **EBS snapshot policy** and click **Next**.
+
+---
+
+## Step 3 — Choose the Target
+
+**Target resource type** can be:
+
+- **Volume** — snapshots that volume.
+- **Instance** — snapshots **all volumes attached to that instance**.
+
+Choose **Volume**.
+
+Then set the **target resource tag** to **learning-DLM**.
+
+> ⚠️ **If you specify no tag, the policy applies to ALL your EBS volumes.** Tagging is what scopes it to the one volume you intend.
+
+Add a description, leave the default **IAM role**, set **Policy status** to **Enabled**, and continue.
+
+---
+
+## Step 4 — Set the Schedule
+
+Name the schedule (for example **SC1**) and choose a **frequency** — daily, weekly, monthly, yearly, or a **custom cron expression**.
+
+For example: **every 24 hours, starting at 09:00 UTC**. From then on, a snapshot is taken every morning at that time.
+
+> **You can add multiple schedules** to one policy — say a daily one and another every 12 hours.
+
+---
+
+## Step 5 — Retention — the Part That Matters
+
+Take a snapshot every day and after a month you have **30 snapshots**, all costing money. Older ones are largely pointless once newer ones exist.
+
+Two retention types:
+
+- **Count** — keep the last **N** snapshots. Set it to **2**, and once Wednesday's snapshot completes, **Monday's is deleted automatically**, leaving Tuesday and Wednesday.
+- **Age** — keep snapshots for **N days**, deleting anything older. Set 15 days and a snapshot is removed once it passes that age.
+
+Review the policy and click **Create policy**. The summary shows your schedule.
+
+---
+
+## Pausing and Deleting
+
+To stop it running without deleting it: **Modify lifecycle policy** → set the status to **Disabled**. That **pauses** the policy; re-enable it whenever you want.
+
+To remove it entirely: select it → **Actions → Delete lifecycle policy**.
+
+> ⚠️ **Clean up when you are learning.** Leave a DLM policy running and it keeps producing snapshots — and you keep paying for them. Delete the policy **and** the test volume.
+`,
+    },
+    {
+      id: "efs-intro",
+      title: "EFS – Why Shared Storage Changes Everything",
+      shortDesc: "The problem EBS cannot solve, and the three real use cases for EFS",
+      visuals: ["EFSvsEBSShared", "EFSUseCases"],
+      content: `## Start With a Website
+
+You want to host a website on AWS and you want **high availability** — the site must stay up 24/7, even if an availability zone fails.
+
+So you run **two EC2 instances in separate availability zones**: one in **ap-south-1a**, one in **ap-south-1b**. A user can be served by either, and both must show an **identical** site.
+
+---
+
+## What Happens If You Use EBS
+
+**EBS is not shared storage** — it is directly attached, and it cannot be shared across instances.
+
+So you need **two EBS volumes**, one per instance, each holding **its own copy of the website**.
+
+With two instances that is merely annoying. Now scale it:
+
+> **Ten instances means ten EBS volumes, each with its own copy of the site.**
+
+And websites get updated. Every update means **updating the site on all ten volumes**, one at a time — and every one of them is a chance to miss one and serve inconsistent content.
+
+---
+
+## What Happens If You Use EFS
+
+**EFS is shared storage.** One file system, accessible from **any number of EC2 instances**.
+
+Put the website on the EFS volume **once**. Both instances read it from there.
+
+> Run **100** instances and update the site **once** on EFS — **every instance serves the change immediately.**
+
+That is the entire value proposition.
+
+---
+
+## The One Big Limitation
+
+> ⚠️ **EFS is Linux only.** It is built on **NFS**, so it works with **Linux instances** and not Windows.
+
+Wanting the same thing for Windows instances is exactly what **FSx** is for — covered later in this section.
+
+---
+
+## Three Use Cases
+
+**1 · Centrally hosted website.** The scenario above — one copy of the site, served by many instances.
+
+**2 · File server.** Ten instances acting as workstations, all producing data. Instead of managing **ten EBS volumes**, store everything **centrally on EFS**. One thing to look after rather than ten.
+
+**3 · Cloud storage for on-premises workstations.** You have ten workstations in your office and you do not want data sitting **locally** on each of them. Have every workstation write into EFS instead.
+
+> How do on-premises machines reach a cloud file system? Through a **VPN**, or via **Direct Connect** — both covered in the networking section.
+
+---
+
+## EFS vs EBS at a Glance
+
+| | EBS | EFS |
+|---|---|---|
+| **Shared?** | ❌ One instance at a time | ✅ Many instances at once |
+| **Update once, seen everywhere?** | ❌ Update each volume | ✅ Update one file system |
+| **OS support** | Linux and Windows | **Linux only** |
+| **Spans availability zones?** | ❌ Tied to one AZ | ✅ Reachable from multiple AZs |
+| **Size** | You provision it | **Grows automatically** |
+`,
+    },
+    {
+      id: "efs-config-options",
+      title: "EFS – Configuration Options Explained",
+      shortDesc: "Storage classes, lifecycle management, throughput mode and performance mode",
+      visuals: ["EFSConfigExplorer", "EFSThroughputPerformance", "RestaurantAnalogy"],
+      content: `## Why These Options Matter
+
+Creating a file system is two clicks if you accept the defaults. **Click Customize instead** — understanding these options is how you **save your company real money**.
+
+---
+
+## Storage Class — Standard vs One Zone
+
+**Standard** — AWS **replicates your data across multiple availability zones** automatically. Use it for **critical data** you must have in any circumstance.
+
+**One Zone** — data lives in **a single availability zone**, and costs **less**.
+
+> ⚠️ The trade-off is exactly what it sounds like: **if that availability zone is unavailable, you cannot reach your data.**
+
+Use One Zone for **non-critical data** — for example, data you already back up on-premises and are merely copying to the cloud.
+
+---
+
+## Automatic Backups
+
+The same logic applies. **Critical data → enable automatic backup.** Non-critical data → you can turn it off and save the cost.
+
+---
+
+## Lifecycle Management — Hot and Cold Data
+
+Two kinds of data live on any file system:
+
+- **Hot data** — accessed frequently.
+- **Cold data** — stored, rarely touched.
+
+**A concrete example.** You and your team are working on a client project for the next three months, opening those files daily — that is **hot** data. Three months later the project ends, you move to something new, but the files stay on EFS for reference. Nobody opens them any more — now it is **cold** data.
+
+AWS pricing follows that distinction: **Standard** for hot data, **Infrequent Access** for cold data, which costs **less**.
+
+**Lifecycle management does the sorting for you.** Set a rule such as:
+
+- **Not accessed for 30 days** → move automatically to **Infrequent Access**.
+- **Transition out:** if a file **is** accessed again, move it **back** to Standard.
+
+> In a corporate environment with **terabytes** of data, this one setting saves enormous amounts of money — and it is entirely automatic.
+
+---
+
+## Encryption
+
+Government and compliance standards generally require **data at rest to be encrypted**. Enable it and AWS handles it — anyone who somehow reached the data could not read it.
+
+Encryption uses **KMS (Key Management Service)**, which has its own dedicated section later.
+
+---
+
+## Throughput Mode vs Performance Mode
+
+Two different numbers, and this is where people get confused. Both matter.
+
+> **Throughput mode = how much DATA can be processed per second.**
+> **Performance mode = how many REQUESTS can be handled per second.**
+
+**The restaurant analogy.** Your kitchen can cook **50 dishes per second** — that is your **throughput**. But those dishes must reach the tables, and that takes **waiters** — that is your **performance mode**. Cook 50 per second with too few waiters and the dishes never arrive. **You need both.**
+
+---
+
+## Throughput Mode — Bursting vs Enhanced
+
+**Bursting** ties throughput to **how much data you have stored**. Roughly: **1 GB stored ≈ 50 KB/s** baseline. Store 2 GB and the baseline doubles.
+
+Like gp2 volumes, unused capacity accumulates as **credit**, so during a spike you can **burst to roughly double** the baseline — around 100 KB/s on that 1 GB example.
+
+> The catch is the same as gp2: **your speed depends on how much you happen to be storing**, not on what you need.
+
+**Enhanced** breaks that link, and offers two choices:
+
+- **Elastic** — you get whatever throughput you need, **regardless of how much data is stored**. No limit. ⚠️ Because there is no limit, a burst of heavy requests can produce **a large bill**.
+- **Provisioned** — you **specify** the throughput, for example **1,024 MiB/s**, and get that **consistently** whether you store 1 GB or 100 GB.
+
+> **Critical application needing dependable speed → Enhanced.** Non-critical where the baseline is fine → **Bursting**.
+
+---
+
+## Performance Mode — General Purpose vs Max I/O
+
+- **General Purpose** — moderate IOPS. The default, and right for most workloads.
+- **Max I/O** — **higher IOPS**. In restaurant terms: you can cook 50 dishes *and* you have 50 waiters to deliver them.
+
+---
+
+## Summary
+
+| Setting | Options | Choose based on |
+|---|---|---|
+| **Storage class** | Standard · One Zone | Critical vs non-critical data |
+| **Automatic backup** | On · Off | Critical vs non-critical data |
+| **Lifecycle management** | Transition after N days · transition out | Hot vs cold data — big cost saver |
+| **Encryption** | On · Off (KMS) | Compliance requirements |
+| **Throughput mode** | Bursting · Enhanced (Elastic / Provisioned) | How much **data** per second |
+| **Performance mode** | General Purpose · Max I/O | How many **requests** per second |
+`,
+    },
+    {
+      id: "efs-lab",
+      title: "Lab – Shared EFS Across Two Availability Zones",
+      shortDesc: "Two Linux instances, two AZs, one file system — with best-practice security groups",
+      visuals: ["EFSLab", "EFSLabSteps"],
+      content: `## What You Are Building
+
+Everything happens in the **Mumbai** region:
+
+- **Two Linux EC2 instances** — one in **ap-south-1a**, one in **ap-south-1b**. Linux, because **EFS supports Linux only**.
+- **web-SG** — protects the instances. Inbound **TCP 22 (SSH)** from anywhere so you can reach them; outbound all traffic.
+- **One EFS file system**, shared by both instances.
+- **efs-SG** — protects the file system. Inbound **TCP 2049 (NFS)**.
+
+> Labs here follow **AWS best practices**, which sometimes makes them longer than you expect. Understanding *why* each step exists is what makes exam questions easy later.
+
+---
+
+## The Security Group Best Practice
+
+This is the part worth internalising.
+
+When creating **efs-SG**, the inbound NFS rule's **source is not 0.0.0.0/0**. The source is **web-SG** — the security group itself.
+
+> **Only instances that are members of web-SG can reach the file system.** Nothing else can, and you never maintain a list of IP addresses.
+
+Add a third or fourth instance to web-SG later and it gains access automatically.
+
+---
+
+## Step 1 — Create Both Security Groups
+
+**web-SG:** inbound **SSH, port 22, from anywhere (0.0.0.0/0)**. Outbound default.
+
+**efs-SG:** inbound type **NFS** — the console fills in **TCP 2049** automatically — with **source = web-SG**. Outbound default.
+
+---
+
+## Step 2 — Launch Two Instances in Different AZs
+
+**efs-vm1:** Amazon Linux, t2.micro, your key pair. Under **Network settings → Edit**, set the subnet to **ap-south-1a**, and choose **Select existing security group → web-SG**.
+
+**efs-vm2:** identical, but subnet **ap-south-1b**, and the **same web-SG**.
+
+> ⚠️ **Do not set "Number of instances" to 2 on one launch.** Both would land in the **same subnet**. Launching them separately is what puts them in different availability zones — which is the entire point of the high-availability design.
+
+---
+
+## Step 3 — Create the File System
+
+**EFS → Create file system.** Name it **shared-storage**, then click **Customize** rather than Create, so you actually see the options.
+
+- **Storage class:** Standard
+- **Automatic backup:** off for this lab
+- **Encryption:** off for this lab
+- **Throughput mode:** Enhanced → **Elastic**
+- **Performance mode:** General Purpose
+
+> Notice there is **no size to specify**. You never say "create a 100 GB file system" — EFS grows automatically and **you pay for what you actually store**. Store 5 GB, pay for 5 GB.
+
+---
+
+## Step 4 — Mount Targets (The Critical Screen)
+
+The network screen lists each availability zone with a **mount target**.
+
+Keep **ap-south-1a** and **ap-south-1b** — the AZs where your instances live. For **each one**, **remove the default security group and select efs-SG** instead.
+
+> ⚠️ **An instance can only reach EFS from an availability zone that has a mount target.** Leave **ap-south-1c** without one and any future instance there **cannot access the file system**. You can always add a mount target later, but it must exist before access works.
+
+Click through **Next → Next → Create**.
+
+---
+
+## Step 5 — Prepare Both Instances
+
+SSH into each instance:
+
+**ssh -i cloud-fox-key.pem ec2-user@public-ip**
+
+Then on **each** one:
+
+1. Become root: **sudo -i**
+2. Install the helper: **yum install amazon-efs-utils**
+
+> ⚠️ **Install this on both servers.** Without **amazon-efs-utils** the mount command will not work.
+
+---
+
+## Step 6 — Mount It
+
+On each instance create the mount point: **mkdir efs**
+
+Then in the EFS console select your file system and click **Attach**. Copy the mount command it displays, and **run it on both instances**.
+
+---
+
+## Step 7 — Prove That It Is Shared
+
+On **instance one**: change into the **efs** directory and create a file with some text in it. Run **ls** and it is there.
+
+Switch to **instance two**: change into **efs** and run **ls** — **the same file appears**. Use **cat** and the contents are identical.
+
+Now create a **different** file on instance two, and look for it from instance one. **It is there too.**
+
+> Two instances, two availability zones, one file system. This is exactly the website scenario: update once, and every instance serves the change.
+
+---
+
+## Step 8 — Clean Up
+
+1. **Terminate both EC2 instances.**
+2. **EFS → select the file system → Delete**, pasting the file system ID to confirm. Deleting the mount targets takes a moment.
+3. Delete the two **security groups** if you no longer need them.
+
+> ⚠️ **Delete every lab resource.** Forget, and a bill arrives later for something you are not using.
+
+> Shared storage solves a genuine problem — but it is **Linux only**. The Windows answer is **FSx**, which comes next.
+`,
+    },
+    {
+      id: "fsx-intro",
+      title: "FSx – Fully Managed File Systems",
+      shortDesc: "Why FSx exists beyond EFS, the four file systems, and the five benefits",
+      visuals: ["FSxFileSystemSelector", "FSxBenefits"],
+      content: `## What FSx Is
+
+**FSx is a file storage service from AWS**, and two words in that description carry the weight: **fully managed** and **file storage**.
+
+We already have **EBS** (directly attached) and **EFS** (shared). So why another shared file service?
+
+> **Because EFS has one hard limitation: you cannot use Windows instances with it.**
+
+Corporate environments run **many different storage systems**, and FSx provides **four** of them under a single service — which is why it is considerably more capable than EFS.
+
+---
+
+## What "Fully Managed" Means
+
+You do not set up:
+
+- a **server**
+- a **physical environment**
+- any **networking components**
+- an **operating system**
+- any **software**
+- **updates**
+
+> **You get your disk ready to use.** That is the entire proposition.
+
+---
+
+## Highly Optimised Third-Party File Systems
+
+This is the distinctive part. FSx does not offer an AWS-invented file system — it offers **established third-party ones**, so companies already running them on-premises get the **same experience** in the cloud.
+
+Open **FSx → Create file system** and you are offered **four**:
+
+| File system | Built for |
+|---|---|
+| **FSx for NetApp ONTAP** | NetApp's storage platform, used on-premises since the late 1990s |
+| **FSx for OpenZFS** | The open source ZFS-derived file system |
+| **FSx for Windows File Server** | Native Windows **SMB** file serving |
+| **FSx for Lustre** | **HPC** — high performance computing and parallel data access |
+
+---
+
+## What Can Connect to It
+
+- **EC2 instances** — and, like EFS, from **multiple** instances at once
+- **ECS** — Elastic Container Service
+- **EKS** — Elastic Kubernetes Service
+- **On-premises infrastructure**
+
+> ECS and EKS are container services covered later in the course. For now, just note that FSx supports both.
+
+---
+
+## Five Benefits
+
+**1 · Fully managed** — no server, no workstation, no networking equipment, no hard drives, no operating system to run.
+
+**2 · Scalable** — scaling storage is genuinely hard on-premises. Fill a 10 TB array and you must physically add more. FSx starts at a **minimum of 1 TB** and scales to **petabytes**.
+
+**3 · Performance** — low latency and high speed access.
+
+**4 · Secure** — **one-click encryption**, exactly as with EFS.
+
+**5 · Cost effective** — buying storage and wiring it to many virtual machines is an expensive project. Here it is on demand: **stand it up in about 30 minutes**, and delete it just as easily.
+
+---
+
+## Use Cases
+
+- **Lift and shift of Windows-based applications** — you have SMB storage on-premises and want the same thing in the cloud, so migration is straightforward.
+- **File sharing and collaboration** — shared storage across many instances or virtual machines.
+- **High performance computing** — via **Lustre**.
+- **Backup and disaster recovery** — keep backup or DR storage in the cloud rather than buying a second set of hardware.
+
+> Each of the four file systems gets its own topic, because as a solutions architect **you** are the one deciding which fits your organisation.
+`,
+    },
+    {
+      id: "fsx-ontap",
+      title: "FSx – NetApp ONTAP",
+      shortDesc: "What NetApp and ONTAP are, the deployment forms, and ONTAP's features in FSx",
+      visuals: ["ONTAPDeploymentExplorer"],
+      content: `## First: Who Is NetApp?
+
+**NetApp is a multinational technology company for data management.** Originally called **Network Appliances**, later shortened to NetApp.
+
+It is particularly known for **NAS** products, with a reputation for **reliability and service quality**.
+
+> A useful contrast: **EMC** is best known for **SAN** — storage area network, a form of **block** storage. **NetApp** is best known for **NAS** — network attached storage, which is **file** storage.
+
+NetApp provides hardware and software for **data storage, protection, management and sharing**.
+
+---
+
+## What Is ONTAP?
+
+**ONTAP is NetApp's flagship storage operating system.**
+
+That word matters: it is **a full operating system**, not a piece of software running on top of one. It is not based on Linux or Windows. It exists purely to **manage storage**.
+
+> Your computer has Windows or Linux. A NetApp NAS has **ONTAP**.
+
+---
+
+## The Three Deployment Forms
+
+NetApp adapted ONTAP across three eras — on-premises, virtualization, and cloud:
+
+| Form | What it is |
+|---|---|
+| **ONTAP 9** | The operating system that ships **with NetApp hardware**. Buy a NetApp array and this is what runs on it. |
+| **ONTAP Select** | **Software-defined storage** deployed as a **virtual appliance** on your existing hardware. Turns an ordinary virtual machine into ONTAP storage — all the ONTAP advantages, no NetApp hardware purchase. |
+| **Cloud Volumes ONTAP (CVO)** | Built **specifically for cloud**, and available in the cloud only. Used by **AWS, Google Cloud and Azure**. |
+
+**Cloud Volumes ONTAP is what FSx gives you** — the same ONTAP experience, delivered as a **managed service**.
+
+---
+
+## ONTAP's Features in FSx
+
+| Feature | Detail |
+|---|---|
+| **Latency** | **Under 1 ms** |
+| **Max throughput** | **4–6 GB/s** per file system |
+| **Max file system size** | **Virtually unlimited** — no provisioning of drives |
+| **Client compatibility** | **Windows, Linux and macOS** |
+| **Protocols** | **SMB**, **NFS** and **iSCSI** |
+| **AWS compute** | **EC2**, **ECS**, **EKS** |
+| **Active Directory** | ✅ Supported |
+| **Antivirus integration** | ✅ Supported |
+| **Deployment** | **Single-AZ** and **Multi-AZ** |
+| **SLA** | **99.9%** Single-AZ · **99.99%** Multi-AZ |
+
+> **The protocol row is ONTAP's biggest advantage.** Supporting SMB *and* NFS *and* iSCSI means one file system serves Windows clients, Linux clients and block-level access simultaneously — which is exactly what a mixed corporate estate needs.
+
+Deploy across **Multi-AZ** when you need high availability; the SLA rises to **four nines**, the best available.
+`,
+    },
+    {
+      id: "fsx-ontap-lab",
+      title: "Lab – FSx for NetApp ONTAP as Shared Storage",
+      shortDesc: "Two Linux instances across AZs sharing an ONTAP volume over NFS",
+      visuals: ["FSxONTAPLab"],
+      content: `## What You Are Building
+
+Two **Linux** servers in **different availability zones**, both using a shared **FSx for NetApp ONTAP** file system over **NFS**.
+
+> Because ONTAP supports SMB and iSCSI too, the same file system could serve Windows clients — but this lab uses NFS.
+
+---
+
+## Step 1 — Two Security Groups
+
+**server-SG** — protects both instances. Inbound **SSH (22)** from anywhere; outbound all traffic.
+
+**ontap-SG** — protects the file system. Inbound **TCP 111** and **TCP 2049**, both sourced from **server-SG**.
+
+> ⚠️ **Port 2049 appears in the type dropdown as NFS, but 111 does not.** For 111 you must choose **Custom TCP** and type the port number yourself. Miss it and the mount will fail.
+
+---
+
+## Step 2 — Two Linux Instances
+
+**server1** — Amazon Linux, t2.micro, subnet **ap-south-1a**, security group **server-SG**, public IP enabled.
+
+**server2** — identical, but subnet **ap-south-1b**.
+
+---
+
+## Step 3 — Create the File System
+
+**FSx → Create file system → Amazon FSx for NetApp ONTAP → Next.**
+
+Choose **Standard create** rather than **Quick create**, so you see every option.
+
+- **Name:** new-ontap
+- **Deployment type:** **Single-AZ** (Multi-AZ gives more redundancy but takes longer to create)
+- **Storage capacity:** minimum **1024 GB (1 TB)**
+- **Provisioned IOPS:** **Automatic** gives **3 IOPS per GB** — the same rule as gp2. Choosing **User-provisioned** lets you set your own, up to **80,000 IOPS**, at extra cost.
+- **Throughput capacity:** default **128 MB/s**, configurable up to **2048 MB/s** at extra cost.
+- **VPC:** default. **Security group:** **ontap-SG**.
+- **Preferred subnet:** the AZ to place it in.
+- **Encryption:** enabled by default — leave it.
+
+---
+
+## Step 4 — Storage Virtual Machine and Volume
+
+FSx creates a **storage virtual machine (SVM)** for ONTAP. Name it, and optionally set a password so you can log in later and run **ONTAP operating system commands** directly.
+
+> You can also join the SVM to **Active Directory** here, which is what unlocks **SMB** for Windows clients. This lab skips it.
+
+Then create a **volume**:
+
+- **Name:** volume_1, **size:** e.g. 500 MB (minimum 20 MB, within your 1 TB)
+- **Access:** read-write
+- **Storage efficiency** — ONTAP's **deduplication and compression**. Disabled for this lab.
+- **Snapshot policy:** none. **Backup:** disabled for this lab.
+
+---
+
+## Step 5 — Read the Confirmation Screen Properly
+
+The review screen colour-codes every setting, and this confuses people:
+
+> **Red entries are not errors.** They mark settings you **cannot change after creation** — most importantly, **a Single-AZ file system cannot later be converted to Multi-AZ**. **Green entries can be edited afterwards**, such as growing that 500 MB volume to 700 MB.
+
+Click **Create file system**. **Expect 15–30 minutes.**
+
+---
+
+## Step 6 — Mount It on Both Servers
+
+SSH into both instances and become root with **sudo -i**.
+
+In the console open your file system → **Volumes** → select the volume. FSx displays **mount commands for both Linux and Windows**.
+
+1. Run the command that **creates the mount directory** — it makes an **fsx** folder. Confirm with **ls**.
+2. Run the **mount command** on both servers. **No error means success.**
+
+---
+
+## Step 7 — Prove It Is Shared
+
+Change into **/fsx** on server1 and run **ls**. Create a file with some text.
+
+Switch to server2, change into **/fsx**, run **ls** — **the same file is there**, and **cat** shows the same contents. Create a directory from server2 and it appears on server1.
+
+> One ONTAP volume, two servers, two availability zones.
+
+---
+
+## Step 8 — Delete in the Right Order ⚠️
+
+Try to delete the file system first and **AWS refuses**: *"the file system has a storage virtual machine."*
+
+**The order is:**
+
+1. **Delete the volume**
+2. **Delete the storage virtual machine**
+3. **Delete the file system**
+4. **Terminate both EC2 instances**
+
+Each step takes time — wait for one to finish before starting the next.
+
+> ⚠️ **Do not forget this cleanup.** ONTAP provisions a minimum of 1 TB, so leaving it running is expensive.
+`,
+    },
+    {
+      id: "fsx-openzfs",
+      title: "FSx – OpenZFS",
+      shortDesc: "From Sun's ZFS to the community fork, and the data-integrity features that define it",
+      visuals: ["OpenZFSTimeline"],
+      content: `## Where ZFS Came From
+
+In **2001**, **Sun Microsystems** set out to build a file system that could store **huge amounts of data** while solving **data corruption**. The result was **ZFS**.
+
+- **2005** — Sun ships ZFS with the **Solaris** operating system.
+- **2008** — Sun **open-sources** it, so the community can contribute.
+- **2010** — **Oracle acquires Sun**, and Oracle prefers closed source. ZFS development is closed.
+
+But by then the open source project had a substantial community. Those contributors **continued the work under a new name: OpenZFS**.
+
+> **OpenZFS is not a single company's product.** It is developed by community members — which is the **first big difference** from **NetApp ONTAP**, a closed-source proprietary product.
+
+The same story repeats almost exactly with **Lustre** later in this section.
+
+---
+
+## Data Integrity Features
+
+Being open source does not mean fewer features. These are what ZFS is known for:
+
+**Data health.** It **detects and corrects data corruption** — the file system itself can tell whether data is intact.
+
+**Copy on write.** Rather than overwriting original data, it **writes copies**. The original stays intact, so if something goes wrong the data can be restored from it. This is the core defence against corruption.
+
+**Checksums.** When data is copied or transferred, checksums **verify integrity**.
+
+**RAID-Z.** ZFS's own take on RAID — preventing data loss when a **drive fails**, the same purpose as RAID 0/1/5/10.
+
+**Atomic transactions.** An operation **completes fully or not at all**, reducing the risk of a half-written state.
+
+**Snapshots and cloning.** Point-in-time copies you can restore from.
+
+---
+
+## Scalability
+
+ZFS handles **terabyte-scale** data through **storage pools**: group multiple storage devices together into a pool, and **add more devices to grow it**. Effectively a clustered storage approach.
+
+---
+
+## Compatibility — the Key Structural Difference
+
+> ⚠️ **OpenZFS is not an operating system.** It is software that **requires a host operating system** — specifically **Linux** (any distribution, or FreeBSD).
+>
+> **ONTAP is a full operating system**, installable directly on bare metal or a virtual machine with nothing underneath it.
+
+That single distinction explains most of the differences between the two.
+
+---
+
+## Advanced Features
+
+- **Compression** — reduce data size and save space.
+- **Deduplication** — store three identical 100 MB files and, without dedup, they occupy **300 MB**. With dedup, the data is stored **once** at 100 MB and the rest reference it.
+- **Tiered storage** — separate **hot** and **cold** data by access pattern.
+
+---
+
+## Community Development
+
+Open source means **thousands of contributors** rather than one company's programmers, which in practice means **regular updates and improvements**.
+
+> No licence fee, either — the next topic compares OpenZFS and ONTAP directly so you can choose between them.
+`,
+    },
+    {
+      id: "fsx-openzfs-vs-ontap",
+      title: "FSx – OpenZFS vs NetApp ONTAP",
+      shortDesc: "The ten-point comparison that decides which file system fits your organisation",
+      visuals: ["OpenZFSvsONTAP", "FSxAllFourMatrix"],
+      content: `## Why This Comparison Matters
+
+FSx offers four file systems and **you** are the decision maker. This comparison is what makes that decision defensible.
+
+---
+
+## The Technologies Themselves
+
+| | OpenZFS | NetApp ONTAP |
+|---|---|---|
+| **Nature** | **Open source**, community developed | **Proprietary** operating system from NetApp |
+| **Licensing** | **No licence fees** | **Licence fees apply** |
+| **Operating system** | **Not** an OS — needs a **host OS** (Linux) | **Is** a full OS — needs nothing underneath |
+| **Purpose** | General file system with strong data protection | **Purpose-built** for storage and data management |
+
+---
+
+## Typical Use Cases
+
+**OpenZFS suits:**
+
+- **Small to medium** enterprise storage
+- **Personal cloud** storage
+- **Archival and backup** storage
+
+**ONTAP suits:**
+
+- **Large enterprise** data management
+- **Hybrid cloud** — on-premises plus AWS together
+- **Virtualized storage** environments
+
+---
+
+## The Ten-Point Comparison in FSx
+
+| # | | ONTAP | OpenZFS | Winner |
+|---|---|---|---|---|
+| 1 | **Latency** | < 1 ms | **0.5 ms** | OpenZFS |
+| 2 | **Max throughput** | 4–6 GB/s | **10–21 GB/s** | OpenZFS |
+| 3 | **Max file system size** | **Virtually unlimited** | 512 TB cap | ONTAP |
+| 4 | **Client compatibility** | Windows, Linux, macOS | Windows, Linux, macOS | Tie |
+| 5 | **Protocols** | **SMB, NFS, iSCSI** | NFS only | ONTAP |
+| 6 | **AWS compute** | EC2, ECS, EKS | EC2, ECS, EKS | Tie |
+| 7 | **Active Directory** | ✅ Supported | ❌ Not supported | ONTAP |
+| 8 | **Antivirus integration** | ✅ Supported | ❌ Not supported | ONTAP |
+| 9 | **Deployment** | Single-AZ, Multi-AZ | Single-AZ, Multi-AZ | Tie |
+| 10 | **SLA** | 99.9% / **99.99%** Multi-AZ | 99.5% | ONTAP |
+
+---
+
+## How to Read That
+
+**OpenZFS wins on raw speed** — lower latency and substantially higher throughput.
+
+**ONTAP wins on everything organisational:**
+
+- **Protocols** — SMB and iSCSI alongside NFS means Windows clients and block access, not just Linux.
+- **Active Directory** — most companies already centralise identity there. OpenZFS cannot join it at all.
+- **Antivirus integration** — often a compliance requirement.
+- **Capacity and SLA** — unlimited size and four nines.
+
+> **The rule of thumb:** need speed for a Linux-only workload with no Active Directory requirement, and OpenZFS is excellent and free. Need a **mixed Windows/Linux corporate environment** with identity, antivirus and unlimited growth, and **ONTAP** is worth its licence fee.
+`,
+    },
+    {
+      id: "fsx-windows-file-server",
+      title: "FSx – Windows File Server",
+      shortDesc: "Native SMB file serving, and the on-premises problems it removes",
+      visuals: ["WindowsFileServerScenario"],
+      content: `## The Problem
+
+You have four Windows machines producing data. Store it **locally on each** and you face two problems immediately:
+
+- **You must look after four hard drives.** If any one fails, that data is gone.
+- **You must back up four systems.**
+
+Four is manageable. **Now imagine 40** — backing up forty machines every day is a genuine burden for a system administrator.
+
+---
+
+## The Traditional Answer — a File Server
+
+Build one server (physical or a VM), install **Windows**, and configure **SMB — Server Message Block**, Microsoft's native storage protocol. Once configured, we call it a **file server**.
+
+Now all four machines store data **centrally** over SMB. This arrangement is extremely common.
+
+---
+
+## But On-Premises It Brings Its Own Problems
+
+**Challenge 1 — availability and maintenance.** All your data now sits in one place, so if the server is down for even 10 or 20 minutes, **everyone's work stops**. You are responsible for:
+
+- **High availability** of the file server
+- **Operating system updates**
+- **Antivirus updates**
+- **Setting up and configuring SMB**
+
+**Challenge 2 — scalability.** Four machines becomes forty. Now you must:
+
+- **Increase storage capacity** — perhaps from 1 TB to 16 TB
+- **Increase network bandwidth**, because many machines are writing at once
+
+Managing that on-premises is genuinely difficult.
+
+---
+
+## What FSx for Windows File Server Changes
+
+You get the **same native Windows SMB storage**, as a **managed service**:
+
+| On-premises | FSx for Windows File Server |
+|---|---|
+| Create and maintain a VM | ❌ Not your concern |
+| Manage the Windows OS and updates | ❌ Not your concern |
+| Manage antivirus | ❌ Not your concern |
+| Ensure high availability | ❌ Not your concern |
+| **Configure SMB** | ✅ **This is all you do** |
+| Manually add storage and bandwidth | ✅ Scale to **terabytes** on demand |
+
+---
+
+## What Can Connect
+
+- **EC2 instances**
+- **ECS** containers
+- **EKS** containers
+- **On-premises servers**
+
+---
+
+## The Prerequisite You Cannot Skip
+
+> ⚠️ **Windows environments depend heavily on Active Directory.** Attempting to set up FSx for Windows File Server without understanding Active Directory will not go well.
+
+That is why **Active Directory is the next topic** — it is both a prerequisite here and a recurring requirement across AWS services, notably **IAM** later in the course.
+`,
+    },
+    {
+      id: "fsx-active-directory",
+      title: "FSx – Active Directory (Prerequisite)",
+      shortDesc: "Why centralised identity exists, and how it authorises every file access",
+      visuals: ["ActiveDirectoryFlow"],
+      content: `## Why Learn This in an AWS Course
+
+**Active Directory is one of the most useful identity and access management services there is**, and it comes up repeatedly:
+
+- **FSx for Windows File Server** requires it.
+- **AWS IAM** is much easier to understand once you know it.
+
+---
+
+## How We Got Here — the 1990s Problem
+
+Networking arrives, and one of its best uses is **storing data centrally**. Five computers, one **file server**, no more looking after five separate disks.
+
+But early on there was **no user authentication**. User A stores data; user B can read, change or delete it. There was nothing to stop them.
+
+---
+
+## Step One — Local User Accounts
+
+So user authentication appears: log in with a **username and password**. Now if B tries to delete A's file, the system knows who B is and refuses.
+
+**But the accounts are local to each machine.** A can log in only to the computer where A's account exists.
+
+To let anyone log in anywhere, you must **create every user's account on every computer**. With **100 computers and 100 users**, that is **100 accounts per machine**. And then:
+
+- Someone **leaves** → delete their account on **every** system.
+- Someone **joins** → create their account on **every** system.
+- Someone **changes their password** → change it on **100 systems**.
+
+This is **decentralised authentication**, and it does not scale.
+
+---
+
+## Step Two — Centralised Directory Services
+
+**1995–96:** Microsoft ships **Windows NT Server** with **NTDS**, the first directory service. It centralised authentication but had shortcomings.
+
+**Windows Server 2000:** Microsoft releases **Active Directory** — still one of its flagship products today.
+
+> **The idea: centralise user management and access management.**
+
+---
+
+## How It Works
+
+Install **Active Directory** on a server and it becomes the **domain controller**, controlling a **domain** with a name such as **xyz.local**.
+
+Then:
+
+1. **Join each workstation to the domain** — a **one-time** process per machine.
+2. **Create user accounts once**, in Active Directory.
+
+Now **any user can log in from any workstation**, and you can equally **deny** a specific user access to a specific machine — because **all access management runs through the domain controller**.
+
+---
+
+## How It Authorises File Access
+
+Add a file server — SMB on-premises, **or FSx for Windows File Server** — and join it to the domain. Every access becomes a conversation:
+
+1. **User A logs in** at workstation 1. The workstation asks the domain controller: *"A is trying to log in — allowed?"* → **yes**.
+2. **A creates a file** on the file server. The file server asks: *"A is creating a file — allowed?"* → **yes**.
+3. **User B tries to open A's file.** The file server asks the domain controller. It **checks the file's ACL** and answers **allow** or **deny**.
+
+> Who may reach the file server, who may store data, who may read it, who may delete it — **every one of those decisions is made by the Active Directory domain controller**.
+
+And that is precisely why Active Directory is a **prerequisite** for FSx for Windows File Server.
+`,
+    },
+    {
+      id: "fsx-lustre",
+      title: "FSx – Lustre (High Performance Computing)",
+      shortDesc: "The HPC file system: 1,000 GB/s throughput, S3 integration, and the exam keyword",
+      visuals: ["LustreProfile"],
+      content: `## The Exam Keyword
+
+> **If a question mentions HPC or "high performance computing", the answer is almost always Lustre.**
+
+---
+
+## What Lustre Is
+
+**A high performance distributed file system designed for large-scale clusters and supercomputer environments.**
+
+**The name is a clue:** **Lustre = Linux + Cluster**. It is a **clustered file system** built on Linux.
+
+**Distributed** means many **nodes** join together to form one file system. Run a process on one machine and that machine is your bottleneck; spread it across ten and you have a **cluster**. Add nodes to add both capacity and processing power.
+
+**It is open source** — the code is openly available, developed by a global community.
+
+---
+
+## The History (Which Rhymes With OpenZFS)
+
+- **1990s** — **Peter Braam** develops the technology, founding **Cluster File Systems** in **2001**.
+- **2007** — **Sun Microsystems** acquires Cluster File Systems.
+- **2010** — **Oracle** acquires Sun. Oracle does not favour open source.
+- **Then** — communities in the **US and Europe** continue Lustre as an **open source project**.
+
+> Exactly the pattern that produced **OpenZFS** from ZFS. Its popularity as an open project is what led AWS to bring it into FSx.
+
+---
+
+## Use Cases
+
+- **Supercomputing** and **scientific research**
+- **Big data analysis**
+- **Media and entertainment** — live rendering. Cricket and football matches rendered **as they happen** need enormous parallel storage throughput.
+- **Machine learning** — training requires processing vast amounts of data
+- **Video processing** and **financial modelling**
+
+---
+
+## Six Advantages in FSx
+
+**1 · Performance** — the reason it exists.
+
+**2 · S3 integration** — pull **unprocessed** data from **S3**, let Lustre process it, and write the **processed** results back to S3. Since S3 is virtually unlimited, this pairing is one of Lustre's most important characteristics.
+
+**3 · Fully managed** — no hardware, no software, no networking to run. Pay as you go.
+
+**4 · Scalability** — **millions of IOPS**.
+
+**5 · Two data repository types** — **Persistent** keeps your data; **Scratch** discards it once processing finishes.
+
+**6 · Deployment speed** — building a Lustre cluster on-premises realistically takes **6–8 months**: hardware, software, networking, space. In FSx it is ready in about **30 minutes**.
+
+---
+
+## Features
+
+| Feature | Lustre |
+|---|---|
+| **Latency** | Under 1 ms |
+| **Max throughput** | **1,000 GB/s** |
+| **Max file system size** | **Multiple petabytes** |
+| **Client compatibility** | ⚠️ **Linux only** |
+| **Protocols** | **Custom POSIX-compliant** — no NFS, no SMB, no iSCSI |
+| **AWS compute** | EC2, ECS, EKS |
+| **Deployment** | ⚠️ **Single-AZ only** |
+| **SLA** | 99.5% |
+
+---
+
+## Two Limits Worth Understanding
+
+**Linux only.** The protocol is **POSIX-compliant**, and **Linux is a POSIX operating system** — so Windows and macOS clients are out. Every other FSx file system supports all three.
+
+**Single-AZ only.** Every other FSx option offers Multi-AZ. Lustre does not, because a Lustre deployment is an **enormous infrastructure** — duplicating it across availability zones would be prohibitively expensive.
+
+---
+
+## Put the Throughput in Context
+
+| File system | Max throughput |
+|---|---|
+| **NetApp ONTAP** | 4–6 GB/s |
+| **OpenZFS** | 10–21 GB/s |
+| **Lustre** | **1,000 GB/s** |
+
+> Two orders of magnitude beyond the others. That gap **is** the definition of high performance computing here — and it is why the HPC keyword maps straight to Lustre.
+`,
+    },
+    {
+      id: "s3",
+      title: "S3 – Simple Storage Service (Part 1)",
+      shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
+      visuals: ["ObjectVsBlock", "S3Features", "StorageClasses", "ExpressOneZone", "Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
+      content: `## S3 – Simple Storage Service (Part 1)
+
+**Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
+
+### Object vs Block storage
+- **Object (S3):** each file = one whole **object** with a unique ID + metadata, in a flat namespace; each has its own **URL** (access over HTTP, no mounting). Scalable, cheap, best for **static/unstructured data** (photos, videos, backups). Higher latency; not for frequent edits or tiny-file-heavy workloads.
+- **Block (EBS):** file split into blocks, must be mounted to a server; low latency, for OS disks/databases.
+
+### Features
+- **11 9s durability** (99.999999999%), **99.99% availability**, objects **0 bytes–5 TB**, virtually unlimited.
+- **Versioning, lifecycle rules, storage classes, encryption (default), event notifications.**
+- **Consistency:** read-after-write for NEW objects; eventual consistency for overwrites/deletes.
+- **Bucket naming:** globally unique, 3–63 chars, lowercase + numbers + dots/hyphens, not an IP. Pay for **storage + requests + data transfer**.
+
+---
+
+## Storage Classes (match cost to access pattern)
+
+| Class | Access | AZs | Retrieval | Min |
+|---|---|---|---|---|
+| **Standard** | Frequent | ≥3 | ms | — |
+| **Standard-IA** | Infrequent | ≥3 | ms (+retrieval fee) | 30 days |
+| **One Zone-IA** | Infrequent, recreatable | **1** | ms | 30 days |
+| **Intelligent-Tiering** | Unknown/changing | ≥3 | ms (monitoring fee) | — |
+| **Express One Zone** | Ultra-low latency | 1 (you pick) | single-digit ms | — |
+| **Glacier Instant** | Archive ~1/qtr | ≥3 | ms | 90 days |
+| **Glacier Flexible** | Archive 1–2/yr | ≥3 | mins–hours | 90 days |
+| **Glacier Deep Archive** | Very rare | ≥3 | 12–48 h | 180 days |
+
+> IA/One-Zone/Glacier add a **retrieval fee** — storing hot data there costs more. **Express One Zone** uses a **directory bucket** in an AZ you choose, co-located with compute for ~10× faster access.
+
+---
+
+## Versioning
+Keeps multiple versions so you can recover overwritten/deleted objects. Delete just adds a **delete marker** (remove it to restore); permanent delete = delete the specific version. Once enabled, can only be **suspended**. You pay per version.
+
+## Lifecycle Rules
+Auto-transition objects to cheaper classes and expire them over time (e.g. Standard → Standard-IA at 30d → One Zone-IA at 90d → Glacier → Deep Archive → expire). Filter by **prefix, tag, or size**; apply to current/non-current versions. (Standard → Standard-IA needs ≥30 days.)
+
+---
+
+## Controlling Access (3 layers)
+- **IAM policy** (identity-based, attach to user/role), **Bucket policy** (resource-based, needs a \`Principal\`, supports cross-account & public), **ACL** (legacy, basic).
+- Rule: **any explicit DENY wins; otherwise one ALLOW grants access** (default deny). Console browsing also needs \`s3:ListAllMyBuckets\`.
+
+## Object Lock (WORM)
+Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance** mode = privileged users can override; **Compliance** mode = no one (even root) can delete until retention ends. **Legal hold** = lock with no expiry, toggled manually.
+
+## Encryption
+- **At rest:** default ON — **SSE-S3** (AWS key), **SSE-KMS** (your key, auditable), **SSE-C** (you supply key).
+- **In transit:** **HTTPS (TLS)** protects data moving to/from S3.`,
+    },
+    {
+      id: "s3-part2",
+      title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
+      shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
+      visuals: ["SymmetricAsymmetric", "ServerVsClientEnc", "SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "BucketPolicyAnatomy", "StaticHosting", "CORSDemo", "CRRDemo"],
+      content: `## S3 – Part 2
+
+Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
+
+---
+
+## Encryption foundations
+
+### Symmetric vs Asymmetric
+- **Symmetric — one shared key** encrypts and decrypts. Fast and efficient for large data, so it's what **S3 uses**. Standards: **AES** (128/192/**256-bit**) and 3DES; **AES-256 is the default**. Weakness: securely transporting that one key.
+- **Asymmetric — two keys:** a **public key** encrypts, a separate **private key** decrypts (RSA, ECC, Diffie-Hellman). Stronger but slower; used by **EC2 key pairs (.pem)**, not S3.
+
+> Exam: **S3 uses symmetric AES-256.**
+
+### Server-Side vs Client-Side
+- **SSE (server-side):** you send plaintext, **S3 encrypts** before storing. Since data travels in plaintext, **use HTTPS**. Keys can be AWS-managed or customer-provided.
+- **CSE (client-side):** **you encrypt before sending**; S3's role is nil. Data is safe even over HTTP, but you manage everything (SDK/OpenSSL/GnuPG + keys). Best for strict/regulatory compliance.
+
+---
+
+## The 4 Server-Side Encryption options
+
+| Option | Keys | Control | Cost |
+|---|---|---|---|
+| **SSE-S3** (default) | AWS-managed, AES-256 | None (no rotate/audit) | Free |
+| **SSE-KMS** | KMS (AWS or your CMK) | Full control + rotation + **CloudTrail audit** | Extra (KMS) |
+| **DSSE-KMS** | SSE-S3 **then** SSE-KMS (two layers) | KMS control, dual encryption | Extra (KMS) |
+| **SSE-C** | **You provide** on every request | Total — AWS never stores the key | S3 storage only |
+
+- **SSE-S3** is the default; encryption is mandatory on all objects. Transparent, free, but no key control/audit.
+- **SSE-KMS**: needs **both** S3 permission **and** KMS key permission. (Demo: Amit has the key → access; Ravi has S3 read-only but no key → \`kms:Decrypt\` denied.)
+- **DSSE-KMS** added for US gov multi-layer requirement (FIPS / CNSSP-15). Lab is identical to SSE-KMS, just pick the 3rd option.
+- **SSE-C** is **CLI/SDK only** (hidden from console): \`openssl rand 32\` → base64 + MD5 → pass \`--sse-customer-key\` on upload **and** download. Lose the key = lose the data.
+
+---
+
+## Public Access
+
+By default **every object is private**. Two ways to grant public access:
+- **ACL** — older, per-object, **disabled by default**, **not recommended** by AWS.
+- **Bucket Policy** — JSON, **recommended**, centralized, supports cross-account. Use the **Policy Generator**.
+
+> Both fail while **Block Public Access** is ON.
+
+### Block Public Access (master switch)
+Set at **account level** (takes precedence) or **bucket level**; **ON by default**. Four sub-settings: block via **new ACLs**, **any ACL (new+existing)**, **new bucket policies**, and **any policy + cross-account**.
+
+### Bucket policy anatomy (public-read)
+\`Version\` → \`Statement[]\` → \`Sid\`, \`Effect: Allow\`, \`Principal: "*"\` (everyone), \`Action: s3:GetObject\`, \`Resource: arn:aws:s3:::bucket/*\` (every object).
+
+---
+
+## Static Website Hosting
+- **Static** = fixed content (HTML/CSS/JS), no server-side processing — ~80-90% of business sites. **Dynamic** (PHP/Node.js) needs servers.
+- Steps: create bucket (**name = domain**, e.g. \`web.cloudfox.in\` when using GoDaddy) → upload files → disable Block Public Access + bucket policy → enable **Static website hosting** (set \`index.html\`) → point domain (**Route 53 Alias/A record** or **GoDaddy CNAME**).
+- Benefits: scalable, cheap (pay storage + outbound), 11 9s durable, simple, secure; add **CloudFront** for global speed.
+- ⚠️ **Exam: S3 hosting is HTTP only — use CloudFront for HTTPS.** Route 53 alias record name **must match** the bucket name.
+
+---
+
+## CORS (Cross-Origin Resource Sharing)
+A page in **bucket A** fetching from **bucket B** (different origin) is **blocked by the browser** by default. Fix: add a **CORS JSON rule on the resource bucket (B)** with \`AllowedOrigins\`, \`AllowedMethods\`, \`AllowedHeaders\`. Test in **incognito** to avoid cached results.
+
+---
+
+## Cross-Region Replication (CRR)
+Auto-replicates objects to a destination bucket in **another region** — **one-way**. Requires **versioning on both buckets** + an **IAM role**.
+- **Benefits:** disaster recovery, compliance (off-site), low-latency for distant users; can **change storage class** at destination to save money.
+- **RTC** (Replication Time Control): 99.99% within **15 min** (SLA) + metrics, extra cost.
+- **Delete-marker replication:** OFF = destination keeps object even if source deleted; ON = deletes propagate.
+- **Replicate existing objects:** OFF by default (only new/modified); opt in to backfill.
+- **Replica modification sync:** sync destination changes back to source (otherwise one-way).`,
+    },
+    {
+      id: "s3-part3",
+      title: "S3 – Part 3 (Transfer Acceleration, Logging, Pre-signed URLs, Events, Multipart, Endpoints, Access Points)",
+      shortDesc: "Acceleration, access logging vs CloudTrail, Requester Pays, pre-signed URLs, MFA Delete, events, multipart, VPC endpoint, access points",
+      visuals: ["TransferAcceleration", "LoggingVsCloudTrail", "RequesterPays", "PresignedURL", "MFADelete", "EventNotification", "MultipartUpload", "VPCEndpoint", "AccessPoints"],
+      content: `## S3 – Part 3
+
+Advanced S3 features: performance, auditing, cost-shifting, secure sharing, automation, large uploads, private connectivity, and granular access.
+
+---
+
+## Transfer Acceleration
+Speeds up **long-distance** uploads/downloads by **50–500%**. Data hops to the nearest **CloudFront edge location**, then travels the **AWS global backbone** (optimized routing, no public-internet congestion) to the bucket.
+- Enable **per bucket** → use the **accelerated endpoint** via CLI/SDK.
+- Bigger files = bigger gains. **Not free** — a transfer fee applies.
+
+---
+
+## Auditing: Server Access Logging vs CloudTrail Data Events
+Both record "who accessed what"; analyze with **Athena/Glue** (or Splunk/ELK).
+
+| | Server Access Logging | CloudTrail Data Events |
+|---|---|---|
+| **Focus** | Summary-level requests | Detailed object-level API calls |
+| **Detail** | Requester, time, action, status | + requester **ARN**, in depth |
+| **Format** | **Plain text** | **JSON** |
+| **Enable from** | S3 console (target bucket) | **CloudTrail** console (not S3) |
+| **Cost** | Low; batched (2–4 hrs) | Higher (detailed) |
+| **Use for** | Usage stats, patterns | Security/compliance, API audit |
+
+> Exam: "logs in **JSON**" / object-level audit → **CloudTrail Data Events**.
+
+---
+
+## Requester Pays
+By default the **bucket owner** pays storage + transfer + requests. Enable Requester Pays to push **data-transfer + request** costs onto whoever downloads (storage still owner-paid). Ideal for sharing large public datasets.
+- Requester needs an **AWS account** (no anonymous access), a **bucket policy** granting access, and must send the **\`x-amz-request-payer\`** header (CLI \`--request-payer requester\`). Console can't send it → use CLI/curl.
+
+---
+
+## Pre-signed URLs
+A **temporary, secure link** to a **private** object — no need to make it public. Works for **download (GET)** and **upload (PUT)**, with an expiry you set.
+- Create via **console** (download), **CLI**, **SDK**, or **AWS Toolkit for Visual Studio** (upload). Upload URLs are locked to one object key. After expiry → "Access Denied — request has expired".
+
+---
+
+## MFA Delete
+Extra protection: deleting an object **version** (or disabling versioning) needs a fresh **MFA code**.
+- Requirements: **root** credentials, an **MFA device**, **versioning enabled**, and enable via **CLI/SDK only**.
+- \`put-bucket-versioning … --mfa "arn code" --versioning-configuration MFADelete=Enabled,Status=Enabled\`.
+- While on, you **can't** permanently delete versions or empty/delete the bucket without a code — disable it first to clean up.
+
+---
+
+## Event Notifications
+Trigger an action on bucket events (**created / removed / restored**). Destinations: **Lambda, SNS, SQS**.
+- Classic exam scenario: JPEG upload → S3 event → **Lambda** adds a watermark → writes to a \`watermark/\` folder (like OLX). Enables automated workflows, real-time monitoring, efficient processing.
+
+---
+
+## Multipart Upload
+Objects can be **5 TB**, but a single PUT is capped at **5 GB** — so split big files into parts (**≥5 MB** each).
+- Flow: **create-multipart-upload** (get an **Upload ID**) → **upload-part** ×N (each returns an **ETag**) → **complete** with the ETag list.
+- Benefits: **parallel** uploads (faster), retry only failed parts (resilient on flaky networks). Use a **lifecycle rule** to auto-delete incomplete uploads.
+
+---
+
+## VPC Gateway Endpoint for S3
+By default EC2 → S3 traffic uses the **public internet** (even same-region). A **gateway endpoint** keeps it on the **AWS private network** — more secure, lower latency.
+- **Gateway endpoint** (S3 & DynamoDB): **free**, adds a **route table** entry. **Interface endpoint** (other services): hourly + data charges, uses an **ENI** (PrivateLink).
+- Verify with \`traceroute\`: internet route shows hops; private route shows none.
+
+---
+
+## Access Points
+A bucket has only **one** bucket policy — unwieldy when many apps need different access. Access points give each app its **own named endpoint + policy**.
+- Each user/app → its own access point with a tailored policy (e.g. User1 → AP1 → PUT to \`f1\`). Scales to **hundreds** per bucket.
+- Set a **network origin**: **VPC** (requires an S3 VPC endpoint) or **Internet**.
+- Setup: delegate bucket access to access points in the **bucket policy** → create an access point + policy per user → grant users **\`ListAccessPoints/GetAccessPoint\`** IAM permission to see them. Best when **many** applications share one bucket.`,
+    },
+    {
+      id: "glacier",
+      title: "S3 Glacier",
+      shortDesc: "Low-cost archival storage",
+      content: `## S3 Glacier
+
+**S3 Glacier** is low-cost **archival** storage for data you rarely access but must retain. It's a set of S3 storage classes:
+
+- **Glacier Instant Retrieval** — archive with **millisecond** access; for data accessed ~once a quarter.
+- **Glacier Flexible Retrieval** — retrieval in minutes–hours (Expedited / Standard / Bulk); backups, DR.
+- **Glacier Deep Archive** — **cheapest** AWS storage; retrieval in **12 hours**; for 7–10-year compliance/regulatory retention.
+
+> Use **lifecycle rules** to auto-move S3 objects to Glacier over time. Choose the tier by how fast you need data back. **Vault Lock** enforces WORM/compliance.`,
+    },
+    {
+      id: "datasync",
+      title: "DataSync",
+      shortDesc: "Online data transfer service",
+      visuals: ["DataSyncFlow"],
+      content: `## AWS DataSync
+
+**DataSync** is an online data-transfer service that **copies/moves** large amounts of data — automated, accelerated, and scheduled. It requires **existing storage**; it just transfers from it (it's a tool, not storage).
+
+Two use cases:
+- **On-prem → AWS** — install a **DataSync agent** (a VM on-prem) that reads your NFS/SMB/object storage and syncs to **S3, EFS, FSx, or Snowcone** (over internet or Direct Connect). For migrations, daily copies, cloud backup.
+- **AWS ↔ AWS** — copy between AWS storage services (S3 ↔ EFS, EFS ↔ FSx). No agent needed.
+
+> 📌 DataSync = transfer tool. You must already have a storage system; DataSync moves data to/from/between them.`,
+    },
+    {
+      id: "storage-gateway",
+      title: "Storage Gateway",
+      shortDesc: "Hybrid cloud storage integration",
+      visuals: ["GatewayConcept", "GatewayTypes", "DataSyncVsGateway"],
+      content: `## AWS Storage Gateway
+
+**Storage Gateway** is a **VM appliance** (VMware/Hyper-V/KVM on-prem, or EC2) that gives on-prem apps a **local storage interface** backed by AWS cloud storage. It **caches** recent data locally and forwards everything to S3/EBS/Glacier — so you get cloud-backed storage **without buying a storage array**.
+
+> Setup: download the gateway VM → install on-prem (or launch on EC2) → activate with your AWS account → choose a gateway type → attach a local **cache disk** (AWS recommends ≥150 GB). A hybrid-cloud favorite — heavily tested.
+
+---
+
+## Gateway Types
+
+- **📁 File Gateway** — NFS/SMB file share, stored as objects in **S3** (local cache). Supports Windows ACLs, S3 Object Lock. You get a shared folder — can't install software on it.
+- **💽 Volume Gateway** — iSCSI **block** storage you can format & install software on (like a SAN). Modes: **Cached** (primary in S3, hot data local) and **Stored** (primary on-prem, backed up to S3). Backed up as **EBS snapshots**; integrates with AWS Backup.
+- **📼 Tape Gateway (VTL)** — virtual tape library replacing physical tapes; works with backup software (Veeam). Active tapes → **S3**; archived tapes → **S3 Glacier / Deep Archive**.
+
+---
+
+## DataSync vs Storage Gateway
+
+| Aspect | DataSync | Storage Gateway |
+|---|---|---|
+| What it is | Data transfer service | Hybrid storage appliance |
+| Needs existing storage? | Yes (it copies) | No (it IS the storage) |
+| On-prem component | Agent (reads & syncs) | Gateway (caches & serves) |
+| Direction | One-time/scheduled copy | Continuous local access + cloud backing |
+| Protocols | NFS, SMB, S3 API | NFS, SMB, iSCSI, VTL |
+
+> Key question: already have storage? → **DataSync**. Need storage? → **Storage Gateway**. They also combine: Gateway centralizes data with low-latency access; DataSync automates bulk transfers.`,
+    },
+  ],
+};
