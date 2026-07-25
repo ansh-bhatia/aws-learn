@@ -72,6 +72,8 @@ import {
 import {
   FSxAllFourMatrix,
   LustreProfile,
+  ActiveDirectoryLab,
+  FSxWindowsLab,
 } from "./visuals/StorageVisuals6";
 import {
   EFSvsEBSShared,
@@ -619,6 +621,8 @@ const VISUAL_MAP = {
   EFSLab,
   FSxAllFourMatrix,
   LustreProfile,
+  ActiveDirectoryLab,
+  FSxWindowsLab,
   EFSvsEBSShared,
   EFSUseCases,
   EFSConfigExplorer,

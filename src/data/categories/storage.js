@@ -1720,6 +1720,253 @@ And that is precisely why Active Directory is a **prerequisite** for FSx for Win
 `,
     },
     {
+      id: "fsx-windows-ad-lab",
+      title: "Lab – Build the Active Directory Infrastructure (Part 1)",
+      shortDesc: "Three Windows instances, a domain controller, and two joined clients",
+      visuals: ["ActiveDirectoryLab"],
+      content: `## Why This Comes First
+
+FSx for Windows **depends on Active Directory**, so the domain has to exist before the file system can be created. This part builds the Windows infrastructure; **Part 2** creates the FSx file system on top of it.
+
+> The concept is the same as EFS — shared storage — but the process is **noticeably more involved**, and Active Directory is the reason.
+
+---
+
+## What You Are Building
+
+- **VM-SG** — one security group protecting all three instances
+- **ad-server** — the domain controller, in **ap-south-1a**
+- **server1** — a client, in **ap-south-1a**
+- **server2** — a client, in **ap-south-1b**
+
+All three are **Windows**.
+
+> In a real deployment you would run **multiple domain controllers across availability zones**. One is used here to keep an already-long lab manageable.
+
+---
+
+## Step 1 — Security Group
+
+Create **VM-SG** allowing **all traffic inbound** from anywhere, with the default outbound rule.
+
+> ⚠️ **This is not AWS best practice.** It is done only so that port-by-port rules do not make a long lab longer. Do not carry this into production.
+>
+> *"Why not just use the default security group, which already allows everything?"* Because creating your own is the habit worth building.
+
+---
+
+## Step 2 — Three Instances
+
+Launch **two at once** in **ap-south-1a** and a **third separately** in **ap-south-1b** — all **Windows Server 2016 Base**, **t2.micro**, your key pair, **VM-SG**.
+
+Name them **ad-server**, **server1** (both 1a) and **server2** (1b).
+
+> **Why 2016 rather than 2019 or 2022?** Speed. t2.micro is modest hardware and newer Windows versions carry more overhead. The steps are identical on any version.
+
+---
+
+## Step 3 — Set the Administrator Password
+
+RDP into **ad-server**, decrypting the password with your key as usual. Then:
+
+**Server Manager → Tools → Computer Management → Local Users and Groups → Users → Administrator → Set Password.**
+
+Use something complex you will reuse throughout — for example **Indian@123** (capital, lowercase, numbers, symbol).
+
+---
+
+## Step 4 — Give It a Static IP ⚠️
+
+The server must not change IP on restart, so pin the address it already has.
+
+1. Open **Command Prompt** and run **ipconfig /all**. Note the **Ethernet adapter's** IPv4 address, subnet mask and default gateway.
+2. Press **Windows+R** and run **ncpa.cpl**.
+3. Right-click the adapter → **Properties** → **Internet Protocol Version 4** → **Properties**.
+4. Choose **Use the following IP address** and enter **exactly** the values you noted.
+5. Set **Preferred DNS server** to **127.0.0.1** — this machine will be its own DNS.
+6. **Save that IP somewhere** on your own computer. You need it twice more.
+
+> ⚠️ **Get the IP wrong here and you lose the instance permanently.** There is no recovery — you terminate and rebuild. Entered correctly, the RDP session drops for a couple of seconds and reconnects.
+
+---
+
+## Step 5 — Rename the Server
+
+**Server Manager → Local Server** → click the randomly-generated computer name → change it to **ad-server**.
+
+A rename **requires a restart**. While it restarts, connect to **server1** and **server2** over RDP.
+
+---
+
+## Step 6 — Install Active Directory Domain Services
+
+Back on ad-server: **Server Manager → Add Roles and Features** → Next through to the roles list → tick **Active Directory Domain Services** → add the features it requests → Next → **Install**.
+
+> Installing is only half. **Configuring** — promoting the server to a domain controller — is a separate step.
+
+---
+
+## Step 7 — Point the Clients at the Domain Controller
+
+While AD installs, do this on **both** clients:
+
+**Windows+R → ncpa.cpl** → adapter **Properties** → **IPv4 → Properties** → under **Use the following DNS server addresses**, enter **ad-server's IP**.
+
+> ⚠️ **Skip this and the domain join in step 9 will not even prompt you for credentials.** Wrong DNS is by far the most common cause of that failure.
+
+---
+
+## Step 8 — Promote to Domain Controller
+
+A **yellow notification flag** appears on ad-server. Click it → **Promote this server to a domain controller**.
+
+- Select **Add a new forest**
+- **Root domain name: clf.local**
+- Set the **Directory Services Restore Mode** password
+- Click through the checks and **Install**. The server restarts automatically.
+
+> ⚠️ **Use a .local domain, not .com** or any real top-level domain. This is an internal domain and must not collide with public DNS.
+
+---
+
+## Step 9 — Join the Clients to the Domain
+
+Reconnect to ad-server — but now click **More choices → Use a different account** and log in as **administrator@clf.local**. The first login after promotion is slow.
+
+Then on **server1**:
+
+**Server Manager → Local Server → Workgroup → Change** → set the computer name to **server1**, select **Domain**, and enter **clf.local**.
+
+When prompted, enter the **full username administrator@clf.local** and your password.
+
+> ⚠️ **You must use the full user principal name (UPN)** — **administrator@clf.local**, not just "administrator". This is where most people get stuck.
+
+**"Welcome to the clf.local domain"** confirms success. Restart, then repeat on **server2**.
+
+---
+
+## Step 10 — Verify
+
+On ad-server: **Server Manager → Tools → Active Directory Users and Computers → clf.local → Computers**.
+
+**Both server1 and server2 should be listed.**
+
+> ⚠️ **Do not delete anything.** Part 2 uses all of these resources — leave the instances running and stay logged in.
+`,
+    },
+    {
+      id: "fsx-windows-lab",
+      title: "Lab – FSx for Windows File Server (Part 2)",
+      shortDesc: "Create the file system, join it to your domain, and map it as a shared Z: drive",
+      visuals: ["FSxWindowsLab"],
+      content: `## Picking Up From Part 1
+
+Your Active Directory server and both clients are running and domain-joined. Now you add the **shared storage**.
+
+---
+
+## Step 1 — Security Group for FSx
+
+Create **fsx-SG** with an inbound rule for **All traffic**, with the **source set to VM-SG**.
+
+> Same best practice as the EFS lab: **only the instances in VM-SG can reach the file system.** Nothing else can, and you maintain no IP list.
+
+---
+
+## Step 2 — Log In With the Domain Account ⚠️
+
+Connect to **ad-server**, **server1** and **server2** — and on **every one**, log in as:
+
+**administrator@clf.local**
+
+> ⚠️ **If you are already logged in with a local account, log off and back in with the domain account.** Using local credentials here produces failures later that are genuinely hard to diagnose.
+
+---
+
+## Step 3 — Create the File System
+
+**FSx → Create file system → Amazon FSx for Windows File Server → Next.**
+
+- **Name** it
+- **Deployment type:** Single-AZ
+- **Storage capacity:** the minimum, **32 GB**
+- **VPC:** default
+- **Security group:** remove the default and select **fsx-SG**
+
+---
+
+## Step 4 — Join It to Active Directory
+
+This is the step that makes Part 1 necessary.
+
+- **Directory type:** **Self-managed Microsoft Active Directory** — you built your own domain rather than using **AWS Managed Microsoft AD**
+- **Fully qualified domain name:** **clf.local**
+- **DNS server IP addresses:** **ad-server's static IP** from Part 1
+- **Service account username:** **administrator@clf.local**
+- **Password:** your domain password
+
+> Lost the IP? RDP into ad-server, open **Command Prompt** and run **ipconfig**. Confirm you are on ad-server before copying it.
+>
+> **AWS Managed Microsoft AD** is the alternative here — AWS runs the directory for you. Self-managed is used so you can see how the join actually works.
+
+---
+
+## Step 5 — Create and Wait
+
+**Encryption is applied automatically** — for Windows file systems it is **compulsory**, using **KMS**.
+
+The review screen marks which settings **can** and **cannot** be changed after creation. Click **Create file system**.
+
+> **Expect around 20 minutes** before the status reads **Available**.
+
+---
+
+## Step 6 — Attach It
+
+Select the file system and click **Attach**. Copy the **Windows** mapping command it displays.
+
+Open **Command Prompt** on **server1**, paste it, press Enter. **"The command completed successfully"** confirms it worked.
+
+Run the **same command on server2**.
+
+Both servers now show a **Z: drive** in **This PC**.
+
+---
+
+## Step 7 — Prove That It Is Shared
+
+- On **server1**, open **Z:** and create a file. Open **Z:** on **server2** — **the same file is there.**
+- Create a second file **from server2**; it appears on server1.
+- **Edit** a file created on server2 from server1 and save — both see the change.
+- **Delete** a file from one server and it disappears from the other.
+
+> This is the Windows counterpart to the EFS lab: native **SMB** shared storage across instances. **EFS for Linux, FSx for Windows.**
+
+---
+
+## Step 8 — Clean Up
+
+1. **FSx → select the file system → Delete file system.** Decline the final backup, tick the confirmation, paste the **file system ID**, and delete.
+2. **EC2 → select all three instances → Instance state → Terminate.**
+3. Optionally delete **VM-SG** and **fsx-SG**.
+
+> ⚠️ **Confirm the FSx file system actually finishes deleting** — it is the expensive resource here. Security groups still referenced by other resources will refuse to delete, which is fine; **security groups cost nothing.**
+
+---
+
+## Where This Leaves You
+
+You now have both shared-storage stories complete:
+
+| | Linux | Windows |
+|---|---|---|
+| **Service** | **EFS** | **FSx for Windows File Server** |
+| **Protocol** | NFS | **SMB** |
+| **Identity** | Security groups | **Active Directory** |
+| **Mounted as** | a directory | a **drive letter** |
+`,
+    },
+    {
       id: "fsx-lustre",
       title: "FSx – Lustre (High Performance Computing)",
       shortDesc: "The HPC file system: 1,000 GB/s throughput, S3 integration, and the exam keyword",
