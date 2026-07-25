@@ -1,0 +1,101 @@
+/* ─── VPC build visuals (prefix vpc4-) ───────────────────
+   .viz-card / .viz-title come from VPCVisuals.css */
+
+.vpc4-intro { font-size: 12.5px; color: #b9c2cc; line-height: 1.6; margin: 0 0 16px; }
+.vpc4-note {
+  font-size: 11.5px; color: #b9c2cc; line-height: 1.6;
+  background: rgba(46,115,184,0.1); border: 1px solid rgba(46,115,184,0.28);
+  border-radius: 8px; padding: 11px 13px; margin-top: 14px;
+}
+
+.vpc4-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.vpc4-tab {
+  font-size: 11px; font-weight: 700; color: #b9c2cc;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 7px 11px; cursor: pointer;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.vpc4-tab:hover { color: #e6edf3; border-color: rgba(255,255,255,0.24); }
+.vpc4-tab.active { color: #79c0ff; border-color: rgba(46,115,184,0.65); background: rgba(46,115,184,0.16); }
+
+/* ─── 1. RESERVED IPs ──────────────────────────────── */
+.vpc4-reserved {
+  display: flex; flex-direction: column; gap: 5px;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 12px;
+}
+.vpc4-res-row {
+  display: grid; grid-template-columns: minmax(120px, 1fr) 1.1fr 1.3fr; gap: 10px; align-items: center;
+  border-radius: 7px; padding: 9px 11px;
+}
+.vpc4-res-row.std { background: #1b2027; border: 1px solid rgba(255,255,255,0.07); }
+.vpc4-res-row.aws { background: rgba(255,153,0,0.09); border: 1px solid rgba(255,153,0,0.28); }
+.vpc4-res-addr {
+  font-size: 11.5px; font-weight: 800; color: #e6edf3;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vpc4-res-why { font-size: 11.5px; font-weight: 700; color: #b9c2cc; }
+.vpc4-res-who { font-size: 10.5px; color: #6e7784; }
+.vpc4-res-row.aws .vpc4-res-who { color: #e8cd8a; }
+
+.vpc4-math {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 12px 14px; margin-top: 12px;
+}
+.vpc4-math-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 11.5px; color: #b9c2cc; padding: 4px 0;
+}
+.vpc4-math-row b { font-family: var(--font-mono, ui-monospace, monospace); color: #e6edf3; font-size: 12px; }
+.vpc4-math-row.total {
+  border-top: 1px solid rgba(255,255,255,0.1); margin-top: 6px; padding-top: 8px;
+}
+.vpc4-math-row.total span { font-weight: 700; color: #e6edf3; }
+.vpc4-math-row.total b { color: #5fc943; font-size: 15px; font-weight: 800; }
+
+/* ─── 2. IGW CHAIN ─────────────────────────────────── */
+.vpc4-toggles { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.vpc4-toggle {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; color: #6e7784;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 7px 11px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.vpc4-toggle.on { color: #5fc943; border-color: rgba(63,185,80,0.5); background: rgba(63,185,80,0.1); }
+.vpc4-toggle-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  background: #30363d; transition: background 0.2s;
+}
+.vpc4-toggle.on .vpc4-toggle-dot { background: #3fb950; }
+
+.vpc4-chain {
+  display: flex; flex-wrap: wrap; align-items: stretch; gap: 5px;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 14px;
+}
+.vpc4-hop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  flex: 1; min-width: 92px; border-radius: 9px; padding: 11px 8px;
+  font-size: 11.5px; font-weight: 700; color: #e6edf3; text-align: center;
+  background: #1b2027; border: 1px solid rgba(255,255,255,0.07);
+  transition: opacity 0.25s, background 0.25s, border-color 0.25s;
+}
+.vpc4-hop small { font-size: 9px; font-weight: 600; color: #6e7784; line-height: 1.3; }
+.vpc4-hop.on { background: rgba(63,185,80,0.1); border-color: rgba(63,185,80,0.35); }
+.vpc4-hop.off { opacity: 0.42; }
+.vpc4-arr { display: flex; align-items: center; font-size: 15px; color: #30363d; transition: color 0.25s; }
+.vpc4-arr.on { color: #3fb950; }
+
+.vpc4-verdict {
+  font-size: 12px; line-height: 1.65; border-radius: 8px; padding: 12px 14px; margin-top: 12px;
+}
+.vpc4-verdict.ok { color: #cdebc9; background: rgba(63,185,80,0.1); border: 1px solid rgba(63,185,80,0.3); }
+.vpc4-verdict.bad { color: #f5b5b0; background: rgba(248,81,73,0.08); border: 1px solid rgba(248,81,73,0.3); }
+
+@media (max-width: 700px) {
+  .vpc4-res-row { grid-template-columns: 1fr; gap: 3px; }
+  .vpc4-chain { flex-direction: column; }
+  .vpc4-arr { transform: rotate(90deg); justify-content: center; }
+}

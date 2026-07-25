@@ -110,6 +110,10 @@ import {
   VPCEndpointExplorer,
 } from "./visuals/VPCVisuals2";
 import {
+  ReservedIPExplainer,
+  IGWRouteFlow,
+} from "./visuals/VPCVisuals4";
+import {
   DHCPOptionSetDemo,
   VPCFlowLogExplorer,
   ManagedPrefixListDemo,
@@ -652,6 +656,8 @@ const VISUAL_MAP = {
   DHCPOptionSetDemo,
   VPCFlowLogExplorer,
   ManagedPrefixListDemo,
+  ReservedIPExplainer,
+  IGWRouteFlow,
   DNSResolutionFlow,
   FQDNAnatomy,
   DNSRecordTypes,

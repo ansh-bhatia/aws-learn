@@ -6,153 +6,341 @@ export default {
   color: "#8C4FFF",
   topics: [
     {
-      id: "vpc",
-      title: "VPC – Virtual Private Cloud",
-      shortDesc: "Isolated private network in AWS",
-      visuals: ["VPCIsolationDemo", "VPCBuildSteps", "CIDRExplorer", "TwoTierArchitecture", "PrivateSubnetAccess", "NATGatewayFlow"],
-      content: `## VPC – Virtual Private Cloud
+      id: "vpc-intro",
+      title: "VPC – Why It Exists",
+      shortDesc: "How AWS isolates your resources from everyone else's on shared hardware",
+      visuals: ["VPCIsolationDemo"],
+      content: `## The Question Nobody Asks First
 
-A **VPC (Virtual Private Cloud)** is your own **isolated private network** inside AWS. AWS is a *public* cloud — millions of users create resources in the same Availability Zones, sometimes on the **same physical host**. The VPC is the technology that keeps every user's resources isolated and secure.
+AWS is a **public cloud**. You create an account and launch resources; so does everyone else, in the same regions and the same availability zones.
 
-> Analogy: AWS region = the public city of **Mumbai**. Your VPC = **your home** inside that city — you decide who comes in, who goes out, and what lives inside.
-
----
-
-## Why VPC Exists — The Isolation Problem
-
-Imagine two users, **Rahul** and **Modi**, who don't know each other. Both launch an EC2 instance, and AWS's placement algorithm happens to put both on the **same physical host**.
-
-- **Can they access each other's instance?** No.
-- **Why not?** Because each instance lives in its owner's **own VPC**. Even sharing hardware, the VPC isolates them completely.
-
-If this *weren't* true, there would be zero security and nobody would use AWS.
-
-### The Default VPC
-You never had to "set up" a VPC for your first EC2 because **AWS gives every account a default VPC in every region**. Your instances are silently created inside it.
-
-- You **can** delete the default VPC — but then you **cannot launch an EC2 instance** until you recreate one (one click: *Actions → Create default VPC*) or build your own.
-- The default VPC has limitations (you can't choose its IP range, etc.). For real apps like Swiggy/Zomato you build a **custom VPC**.
+So: **how does AWS keep your resources isolated from a stranger's?**
 
 ---
 
-## The 5-Step Build Process
+## The Scenario That Makes It Concrete
 
-1. **Create the VPC** (choose "VPC only") — the isolated network container
-2. **Assign an IP range (CIDR block)** — usually a private range
-3. **Create subnets** — each inside one Availability Zone
-4. **Attach an Internet Gateway (IGW)** — your "ISP connection"
-5. **Configure the route table** — tell subnets how to reach the internet
+One region — **Mumbai**. One availability zone. One physical host.
+
+Two users who have never met — call them **A** and **B** — each launch an EC2 instance. **You cannot choose your physical host**: you pick the region and the availability zone, and an **AWS algorithm** decides the rest. So it is entirely possible both instances land on **the same physical machine**.
+
+**Can they reach each other?**
+
+- **If yes** — there is no security at all, and nobody would use AWS.
+- **If no** — then *how*, when they are on the same hardware?
+
+> **The answer is no, and the technology that makes it so is the Virtual Private Cloud.**
+
+When A launches an instance, it goes into **A's own VPC**. B's goes into **B's own VPC**. They may share a physical host, but they are in **different VPCs** — so they are isolated and cannot reach one another.
 
 ---
 
-## IP Addressing & CIDR
+## "But I Never Created a VPC"
 
-VPCs use **private IP ranges** (like on-premises networks):
+Correct — and you did use one.
 
-| Class | Private Range | CIDR | Best for |
-|-------|---------------|------|----------|
-| **A** | 10.0.0.0 – 10.255.255.255 | /8 | Very large infrastructure |
-| **B** | 172.16.0.0 – 172.31.255.255 | /16 | Medium infrastructure |
-| **C** | 192.168.0.0 – 192.168.255.255 | /24 | Small infrastructure |
+> **AWS gives every account a default VPC in every region.** Every EC2 instance you have launched so far went into it.
 
-Example VPC: \`192.168.0.0/24\` (a Class C range = 256 addresses).
+You can see it: **VPC console → Your VPCs**. The entry is flagged **Default VPC: Yes**, and the VPC ID shown there matches the one that appears in the Network settings when launching an instance.
 
-### The "Chocolate" Problem (Subnetting)
-A VPC has **one** range. If you assign the whole range to subnet 1, there's nothing left for subnet 2 — like a parent with one chocolate and two kids. Two solutions:
+**You can delete it** — but only if it holds no resources. Delete it and try to launch an instance: the VPC field is **blank** and the launch is **blocked**. No VPC, no instances.
 
-1. **Add more CIDR blocks** — *Edit CIDRs* lets you add up to **5 ranges** ("buy more chocolates"). But with 6 AZs (e.g. N. Virginia) you'd run out.
-2. **Subnetting** — *split* one range into smaller pieces (the scalable answer). Use a subnet calculator: e.g. \`192.168.0.0/24\` → two \`/25\` subnets of 128 IPs each.
+> If you delete it by accident, **Actions → Create default VPC** rebuilds it in about a minute.
 
-### AWS Reserves 5 IPs Per Subnet
-A \`/25\` should give 126 usable IPs, but AWS shows **123**. AWS reserves the first 4 and the last 1 of every subnet:
+---
+
+## The Analogy
+
+Think of the **Mumbai region** as the **city of Mumbai** — public infrastructure anyone can use, like the local trains.
+
+Inside that public city you have **your own home**. You decide who comes in, who goes out, and what you keep there.
+
+> **The region is the city. Your VPC is your home inside it.** Every resource you create goes in there, where you control access.
+
+---
+
+## Why the Default VPC Is Not Enough
+
+For a small workload the default VPC is fine. For a real application it is not, because:
+
+- **You cannot choose your own IP address range.**
+- Its layout is built for small, general use — not for your application's security requirements.
+
+An application at the scale of Swiggy or Zomato needs a VPC **you design**. And to design one you need: **public subnets, private subnets, internet gateway, NAT gateway, route tables, endpoints, network ACLs and security groups**.
+
+> That is exactly what the rest of this section builds — step by step, from an empty region to a working two-tier architecture.
+`,
+    },
+    {
+      id: "vpc-create-cidr",
+      title: "VPC – Creating a VPC & Choosing CIDR",
+      shortDesc: "The 5-step build, private IP ranges, and why subnets live inside availability zones",
+      visuals: ["VPCBuildSteps", "CIDRExplorer"],
+      content: `## The Five-Step Process
+
+Building your own VPC always follows the same sequence:
+
+1. **Create the VPC**
+2. **Choose the IP address range (CIDR)**
+3. **Create subnets**
+4. **Attach an internet gateway**
+5. **Configure route tables**
+
+This topic covers steps 1–2 and introduces step 3.
+
+---
+
+## Start by Deleting the Default VPC
+
+Not required, but it keeps things clear — otherwise you end up with a mixture of default and custom subnets that is easy to confuse.
+
+**VPC console → select the default VPC → Actions → Delete VPC**, then type the confirmation text.
+
+> ⚠️ **The VPC must be empty.** Any running resources and the delete is refused.
+
+---
+
+## Create the VPC
+
+**Create VPC → VPC only.** Give it a name — for example **my-corp-VPC**.
+
+---
+
+## Choosing the IP Range
+
+You are designing your own network, exactly as you would on-premises — and as on-premises, **you use private IP ranges**.
+
+| Class | Range | CIDR mask | Suits |
+|---|---|---|---|
+| **A** | 10.0.0.0 – 10.255.255.255 | **/8** | Very large infrastructure |
+| **B** | 172.16.0.0 – 172.31.255.255 | **/16** | Medium |
+| **C** | 192.168.0.0 – 192.168.255.255 | **/24** | Small |
+
+This build uses **192.168.0.0/24**.
+
+> ⚠️ **You cannot edit a CIDR range once set.** You can *add* more ranges later, but the original cannot be changed — only deleting the whole VPC removes it. Choose deliberately.
+
+---
+
+## Subnets Live Inside Availability Zones
+
+The VPC exists, but launching an instance still fails: the **Subnet** field is empty.
+
+A region has multiple availability zones — Mumbai has **ap-south-1a**, **1b** and **1c**. **A subnet is created inside one availability zone.**
+
+> **No subnet in an availability zone means you cannot use that availability zone at all** — and if you cannot use the AZ, you cannot place an instance there.
+
+**The rule to hold on to:**
+
+> ⚠️ **A subnet cannot span availability zones.** One subnet, one AZ. You may create **many subnets inside one AZ**, but never one subnet across several.
+>
+> This trips people up coming from **Azure**, where subnets *can* span zones. In AWS they cannot.
+
+---
+
+## Create the First Subnet
+
+**Subnets → Create subnet** → select your VPC → name it **subnet-1** → choose **ap-south-1a** → enter a CIDR.
+
+The CIDR **must sit inside the VPC's range**. With a VPC of 192.168.0.0/24 you cannot use 192.168.1.0/24 or a 10.x range — AWS rejects it.
+
+Give **subnet-1** the whole **192.168.0.0/24** and it is created successfully.
+
+---
+
+## And Immediately, a Problem
+
+Your instance now runs in **ap-south-1a**. For redundancy you want a second one in **ap-south-1b** — but that AZ has no subnet, so it is not offered.
+
+Try to create **subnet-2** in ap-south-1b and **it fails**: there is no address space left. **The entire VPC range was given to subnet-1.**
+
+> This is the central puzzle of the next topic — and it has **two** solutions.
+`,
+    },
+    {
+      id: "vpc-subnets",
+      title: "VPC – Subnets, CIDR Splitting & Reserved IPs",
+      shortDesc: "Two ways to free up address space, and why AWS gives you 123 IPs instead of 126",
+      visuals: ["ReservedIPExplainer"],
+      content: `## The Problem, Restated
+
+Your VPC is **192.168.0.0/24** and **subnet-1 took all of it**. There is nothing left for a subnet in ap-south-1b.
+
+**A simple way to think about it:** you brought home one chocolate and gave it to one child. The second child arrives and there is none left.
+
+**Two solutions**, and only one of them scales.
+
+---
+
+## Solution 1 — Add Another CIDR Range
+
+Buy a second chocolate.
+
+**VPC → Actions → Edit CIDRs → Add new IPv4 CIDR** — for example **192.168.1.0/24**. Now create **subnet-2** in ap-south-1b using that range.
+
+> **You cannot edit an existing CIDR — only add new ones.**
+
+It works, but there is a hard ceiling:
+
+> ⚠️ **A VPC accepts a maximum of five CIDR ranges.** Five chocolates, five children.
+
+**Why that matters:** Mumbai has three availability zones, so five is plenty. But **N. Virginia has six**. Put one subnet in each AZ and you need six ranges — **and you cannot**.
+
+So this solution does not generalise.
+
+---
+
+## Solution 2 — Split the Range (the Real Answer)
+
+Divide the chocolate instead of buying more.
+
+Use a **subnet calculator**: enter **192.168.0.0/24**, ask for **2 subnets**, and it returns two **/25** blocks:
+
+| Subnet | CIDR | Availability zone |
+|---|---|---|
+| **subnet-1** | **192.168.0.0/25** | ap-south-1a |
+| **subnet-2** | **192.168.0.128/25** | ap-south-1b |
+
+Delete the old subnet, create these two, and both availability zones are now usable — **from a single VPC CIDR**. Need more subnets? Split further into /26, /27 and so on.
+
+---
+
+## Why AWS Says 123 Usable IPs, Not 126
+
+Your subnet calculator says a **/25** gives **126 usable hosts**. AWS shows **123**. The missing three are not a bug.
+
+Standard networking always reserves two:
+
+- **192.168.0.0** — the **network address**
+- **192.168.0.127** — the **broadcast address**
+
+**AWS reserves three more**, at the start of every subnet:
 
 | Address | Reserved for |
-|---------|--------------|
-| .0 | Network address |
-| .1 | VPC router / gateway |
-| .2 | DNS |
-| .3 | Future use |
-| .255 (last) | Broadcast |
+|---|---|
+| **192.168.0.1** | The **VPC router** |
+| **192.168.0.2** | **DNS** |
+| **192.168.0.3** | **Future use** |
 
-> **Subnets live inside one Availability Zone.** A subnet cannot span AZs (unlike Azure). You can have multiple subnets in one AZ, but never one subnet across AZs.
+**128 total − 2 standard − 3 AWS = 123 usable.**
+
+> The same applies to the second subnet: **.128** network, **.129** router, **.130** DNS, **.131** future use, **.255** broadcast. Usable range **192.168.0.132 – .254**.
 
 ---
 
-## Internet Gateway (IGW) & Route Tables
+## Auto-Assign Public IP Is Off by Default
 
-A freshly built VPC has **no internet** — like a house with no ISP connection. Your manually-created EC2 instances can't be reached even with a public IP and open security group.
+Launch an instance into your new subnet and notice **Auto-assign public IP: Disabled**.
 
-### Internet Gateway
-- Create an IGW, then **attach it to the VPC** (not to a subnet)
-- It's **highly available**, gives **virtually unlimited** bandwidth, and is **free** to add (you pay only for outbound data transfer — **inbound traffic is always free**)
+> **In a subnet you created yourself, this defaults to off.** In the **default VPC** it is **on** for every subnet — which is why instances "just worked" before.
 
-### Route Table
-- AWS auto-creates a **Main Route Table**; all subnets are *implicitly* associated with it (you can't delete it)
-- To get internet, add a route: **\`0.0.0.0/0\` → Internet Gateway**
-- Once the route is active, public-IP instances have inbound **and** outbound internet
+Two ways to change it:
 
-> **No public IP = no internet.** The Internet Gateway only works with instances that have a public IP — no inbound and no outbound otherwise.
+- **Per instance** — enable it in Network settings at launch.
+- **Per subnet** — **Subnets → select → Actions → Edit subnet settings → Enable auto-assign public IPv4 address.** Every future instance in that subnet then gets one automatically.
+
+---
+
+## Still Not Reachable
+
+Create one instance in each subnet, give both public IPs, allow **SSH (22)** and **ICMP** in the security group, and try to connect.
+
+**It times out. Both of them.**
+
+Nothing is wrong with your key or your security group. Your VPC is a house with rooms and furniture — **but no internet connection**. That is the next topic.
+`,
+    },
+    {
+      id: "vpc-igw-route-table",
+      title: "VPC – Internet Gateway & Route Tables",
+      shortDesc: "The three things that must all be true before an instance reaches the internet",
+      visuals: ["IGWRouteFlow"],
+      content: `## Why the Connection Timed Out
+
+Your VPC, subnets and instances all exist. What is missing is **internet connectivity**.
+
+> You have built the house. Now you need to call an ISP. In a VPC, that is the **internet gateway**.
 >
-> Two instances in different subnets **can** still ping each other over their **private IPs** — subnets are connected through the VPC router by default.
+> A **default VPC has one already attached** — which is why instances there worked without any of this.
 
 ---
 
-## Public vs Private Subnets (2-Tier Architecture)
+## Step 1 — Create and Attach the Internet Gateway
 
-Real applications use a **2-tier** design:
+**VPC → Internet Gateways → Create internet gateway.** Name it and create — it appears in seconds with the state **Detached**.
 
-- **Web servers** (front-end) → **public subnets** → have a public IP, inbound + outbound internet. Users reach them directly.
-- **Database servers** (back-end) → **private subnets** → no public IP, **no inbound internet**. Only the web tier talks to them. This keeps your data safe from the internet.
+Then **Actions → Attach to VPC** and select your VPC.
 
-For **high availability**, spread across **two AZs** → 2 public subnets + 2 private subnets (4 total).
+> **An internet gateway attaches to a VPC** — not to a subnet, and not to an instance. One per VPC.
 
-### How a subnet becomes "public"
-A subnet is public **only because** its route table has a route to the Internet Gateway. The trick:
-1. Keep private subnets on the **Main Route Table** (no IGW route)
-2. Create a **second route table** (e.g. \`rt-public\`) with a \`0.0.0.0/0 → IGW\` route
-3. Associate the **public subnets** with \`rt-public\`
-
-A subnet can only be associated with **one** route table at a time.
+**Try to connect again. It still fails.**
 
 ---
 
-## Accessing Instances in a Private Subnet
+## Step 2 — The Route Table
 
-A private-subnet instance has no public IP, so you can't SSH to it directly. Two ways in:
+When you created the VPC, AWS created a **main route table** automatically.
 
-### 1. EC2 Instance Connect Endpoint
-- A newer VPC endpoint — connect straight from the AWS console, no extra server
-- Authenticated via your **AWS username/password** (uses AWS API calls)
-- **Downside:** the user must have AWS account access — not ideal if you only want to hand a freelancer a key
+> **You cannot delete the main route table**, and **both subnets are already associated with it** — shown as **implicit** associations, meaning you need do nothing to link them.
 
-### 2. Bastion Host (Jump Box)
-- A dedicated EC2 in a **public subnet** with a public IP
-- SSH to the bastion, then "hop" to the private instance via its **private IP**
-- Copy your key up with \`scp\`, then make it read-only (\`chmod 400\`) — a PEM file must not be world-readable or SSH refuses it
-- Great when a teammate should get only a **PEM file**, not AWS console access
+But it has no route to the gateway. So: **Route Tables → main route table → Routes → Edit routes → Add route**:
+
+- **Destination:** **0.0.0.0/0** — any traffic
+- **Target:** your **internet gateway**
+
+Save, and confirm the route shows as **Active**.
+
+**Now the connection works** — you can SSH in from your office, and from inside the instance you can ping Google. **Inbound and outbound both work.**
 
 ---
 
-## NAT Gateway — Outbound Internet for Private Subnets
+## Do Instances in Different Subnets Talk to Each Other?
 
-A private DB server still needs **outbound** internet (OS updates, install MySQL, antivirus updates) — but must stay safe from **inbound** access. A **NAT Gateway** solves this.
+**Yes** — over their **private IPs**, with nothing extra to configure.
 
-**Two problems it fixes:**
-1. The private subnet's route table has no path to the IGW
-2. The IGW only talks to resources with a **public IP** (which private instances don't have)
+The two subnets have different ranges, but **both are associated with the same route table**, so they are connected through the VPC router. Ping one instance's private IP from the other and it replies.
 
-**How it works:**
-1. Private route table sends \`0.0.0.0/0\` traffic → **NAT Gateway**
-2. NAT translates the private IP to its own **public IP** (NAT = *Network Address Translator*)
-3. NAT (with its public IP) reaches the **Internet Gateway** → the internet
-4. Replies return the same way; NAT swaps back to the private IP — **outbound only, never inbound**
+---
 
-> 📍 **Placement rule:** the NAT Gateway lives in a **public subnet** (it needs the IGW), even though it serves the **private** subnets. Putting it in a private subnet would give it no internet to share.
+## ⚠️ No Public IP Means No Internet — Either Direction
 
-### ⚠️ Cost Warning
-Unlike most VPC components, the **NAT Gateway is chargeable**, and it holds an **Elastic IP** which is also billed. After labs:
-1. **Delete the NAT Gateway**
-2. **Release the Elastic IP** separately (deleting the NAT does not release it automatically)
+This one is heavily examined.
+
+> **The internet gateway only works with instances that have a public IP.**
+
+An instance without one has:
+
+- **No inbound connectivity** — you cannot reach it over the internet.
+- **No outbound connectivity** — from inside it, you cannot reach Google, Facebook or anything else.
+
+Having the gateway attached and the route in place **changes nothing** for that instance.
+
+> You *can* still reach it — by connecting to an instance that **does** have a public IP and hopping across via private IP. That is the **bastion host** pattern from the EC2 section, and the proper answer for private subnets comes later with the **NAT gateway**.
+
+---
+
+## The Three Requirements
+
+All three must be true:
+
+| # | Requirement |
+|---|---|
+| **1** | An **internet gateway attached** to the VPC |
+| **2** | A **route** for **0.0.0.0/0** pointing at that gateway |
+| **3** | The instance has a **public IP** |
+
+Miss any one and there is no connectivity.
+
+---
+
+## Pricing and Availability
+
+- **The internet gateway itself is free.** There is no separate charge for it.
+- It is **highly available** — you do not manage its redundancy.
+- Bandwidth is **virtually unlimited**; AWS publishes no cap.
+- **You pay for bandwidth on the resource's own bill** — the EC2 instance's, not the gateway's.
+
+> ⚠️ **Inbound traffic to AWS is always free. You pay only for outbound.** That rule holds across AWS, not just here.
 `,
     },
     {
