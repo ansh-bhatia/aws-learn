@@ -804,10 +804,337 @@ AWS is shared infrastructure — your resources and a stranger's may sit on the 
 `,
     },
     {
+      id: "vpc-peering",
+      title: "VPC – Peering Connections",
+      shortDesc: "Connecting two VPCs across accounts and regions, and the routes both sides need",
+      visuals: ["VPCPeeringDemo"],
+      content: `## Two Questions to Start
+
+**Two VPCs in two different AWS accounts — can they communicate?** No.
+
+**Two VPCs in the same AWS account — can they communicate?** **Also no.**
+
+> **By default, two VPCs cannot communicate — even inside the same account.** Isolation is the whole point of a VPC.
+
+To connect them you create a **VPC peering connection**.
+
+---
+
+## What Peering Can Span
+
+Peering is unusually flexible:
+
+- **Same account or different accounts**
+- **Same region or different regions**
+
+Two VPCs on opposite sides of the world in unrelated accounts can be peered.
+
+---
+
+## ⚠️ Plan Your CIDR Ranges First
+
+Before anything else:
+
+> **The two VPCs must not use overlapping CIDR ranges.**
+
+Use **192.168.0.0/24** for one and **192.168.1.0/24** for the other — or a 10.x range. Use **the same range on both** and **peering cannot be established**.
+
+The reason becomes obvious later: each side needs a route to the other's range, and if that range is already its own **local** route, there is nothing to add.
+
+---
+
+## The Setup
+
+Two VPCs, deliberately in different regions:
+
+| | Mumbai (ap-south-1) | N. Virginia (us-east-1) |
+|---|---|---|
+| **VPC** | my-india-VPC · 192.168.0.0/24 | my-us-VPC · 192.168.1.0/24 |
+| **Subnet** | one private subnet | one private subnet |
+| **Instance** | india-server | us-server |
+
+Both instances are in **private subnets with no public IP and no internet gateway** — this demonstration uses **only the AWS private network**.
+
+> Security groups here allow **all traffic**, deliberately. If a security group blocked the test you would misread it as a peering failure.
+
+To reach a private instance with no public IP, use an **EC2 Instance Connect Endpoint**, as covered earlier.
+
+**Ping the US instance's private IP from the India instance and it hangs.** No reply — as expected, because the VPCs are isolated.
+
+---
+
+## Peering Is a Two-Way Handshake
+
+**One VPC requests, the other accepts.**
+
+**On the requester side (Mumbai): VPC → Peering connections → Create peering connection**
+
+- **Name** it
+- **VPC (Requester):** my-india-VPC
+- **Account:** My account (or **Another account** with its account ID)
+- **Region:** **Another region** → **us-east-1**
+- **VPC (Accepter):** the US VPC's **ID** — copy it from the US region's VPC page
+
+Create, and the request is **pending acceptance**.
+
+**On the accepter side (N. Virginia): Peering connections → select the pending request → Actions → Accept request.**
+
+After a couple of minutes both sides show **Active**.
+
+---
+
+## Still No Connection — Routes on Both Sides
+
+Ping again and it **still hangs**, even with peering Active.
+
+> **Peering only makes the connection possible. Traffic does not flow until each side has a route to the other.**
+
+**In Mumbai → Route Tables → Routes → Edit routes → Add route:**
+
+- **Destination:** **192.168.1.0/24** — the *remote* range
+- **Target:** **Peering connection**
+
+**In N. Virginia**, the mirror image:
+
+- **Destination:** **192.168.0.0/24**
+- **Target:** the same **peering connection**
+
+> ⚠️ **You must do this on BOTH sides.** One route only gets you halfway. This is also where overlapping CIDRs would break down — the destination you need to add would already exist as your own **local** route.
+
+**Now the ping replies.** Two VPCs, two regions, communicating over the AWS private network.
+
+---
+
+## Removing It
+
+Delete the peering connection and **communication stops immediately**. AWS offers to **delete the related routes** at the same time.
+
+> Peering underpins several later topics — **Transit Gateway** exists precisely because peering does not scale to many VPCs.
+`,
+    },
+    {
+      id: "vpc-nacl",
+      title: "VPC – Network ACLs",
+      shortDesc: "Subnet-level firewalling, rule numbers, and the deny rules security groups cannot do",
+      visuals: ["NACLRuleSimulator"],
+      content: `## Two Layers of Defence
+
+Reaching an EC2 instance means passing **two** security checks:
+
+1. **Network ACL** — protects the **entire subnet**
+2. **Security group** — protects the **individual resource**
+
+> **The building analogy.** A building holds 50 offices. Security at the **building entrance** is the **network ACL** — everyone entering passes it. Security at **your specific office door** is the **security group**.
+
+---
+
+## The Defaults Are Opposites — Learn Both
+
+| | Inbound | Outbound |
+|---|---|---|
+| **Default NACL** (created with the VPC) | **Allow all** | **Allow all** |
+| **A NACL you create** | **Deny all** | **Deny all** |
+
+> The default NACL allows everything both ways, so it is **effectively disabled** — which is why traffic "just worked" before you knew NACLs existed.
+>
+> A NACL **you** create denies everything. Associate one with a subnet and **all traffic stops instantly** — web, SSH, ping, everything.
+
+**A NACL does nothing until you associate it with a subnet.** Create it, then **Subnet associations → Edit** → select the subnet. That automatically removes the subnet from the default NACL.
+
+---
+
+## NACLs Are Stateless — You Need Both Directions
+
+Add an inbound rule allowing **ICMP** and try to ping. **It still fails.**
+
+> ⚠️ **A network ACL is stateless.** Allowing traffic in does **not** allow the reply out. **You must write both an inbound and an outbound rule.**
+
+Add an outbound rule allowing all traffic, and the ping works.
+
+That is the single biggest practical difference from security groups, which are **stateful** and handle the return path for you.
+
+---
+
+## Rule Numbers and Priority
+
+Every rule has a **number**, and:
+
+> **Lower rule number = higher priority.** Rules are evaluated **in order**, and **the first match wins** — evaluation stops there.
+
+Opening things up gradually:
+
+| Rule | Traffic | Source | Action |
+|---|---|---|---|
+| **100** | All ICMP | 0.0.0.0/0 | Allow |
+| **200** | SSH (22) | 0.0.0.0/0 | Allow |
+| **300** | HTTP (80) | 0.0.0.0/0 | Allow |
+
+---
+
+## Deny Rules — and the Mistake Worth Making Once
+
+**Network ACLs have deny rules. Security groups do not.** That is a genuine capability difference.
+
+Say you want to block HTTP **from one specific IP** while allowing everyone else. Add:
+
+| Rule | Traffic | Source | Action |
+|---|---|---|---|
+| **400** | HTTP (80) | your IP | **Deny** |
+
+**Test it — and the site still loads.** The deny rule appears to do nothing.
+
+**Why:** evaluation runs in order. Rule **300** already says *allow HTTP from anywhere*, it matches first, and **evaluation stops**. Rule 400 is never reached.
+
+**The fix is to renumber, not to rewrite.** Change the deny rule from **400** to **250**:
+
+| Rule | Traffic | Source | Action |
+|---|---|---|---|
+| 100 | All ICMP | 0.0.0.0/0 | Allow |
+| 200 | SSH (22) | 0.0.0.0/0 | Allow |
+| **250** | **HTTP (80)** | **your IP** | **Deny** |
+| 300 | HTTP (80) | 0.0.0.0/0 | Allow |
+
+Now traffic from your IP matches **250** first and is denied. Everyone else falls through to **300** and is allowed.
+
+**Verified:** the site no longer loads from your machine — including in incognito mode, which rules out caching — but **loads fine from a phone on a different IP**. SSH and ping still work, because those match different rules.
+
+> **Leave gaps when numbering.** Starting at 100, 200, 300 exists precisely so you can slot a rule in at 250 later.
+`,
+    },
+    {
+      id: "vpc-sg-vs-nacl",
+      title: "VPC – Security Groups vs Network ACLs",
+      shortDesc: "The four differences that decide which one to reach for",
+      visuals: ["NACLvsSecurityGroup"],
+      content: `## Four Differences
+
+This is one of the most common points of confusion in AWS, and it comes down to four things.
+
+---
+
+## 1 · What They Attach To
+
+**Security group → a network interface.** That means an **EC2 instance**, a **load balancer**, an **EFS mount target** — anything with a network interface.
+
+**Network ACL → a subnet.**
+
+**How that decides your choice:**
+
+- *"Block port 80 for the entire subnet — no instance in it should accept that traffic."* → **network ACL**. Security at the building entrance.
+- *"Allow port 80 to this one instance and not the others."* → **security group**. Security at one office door.
+
+---
+
+## 2 · How Rules Are Evaluated
+
+**Security group — all rules apply simultaneously.** Add rules for HTTP, FTP, NFS and SMTP and there is **no priority and no ordering**. Traffic matching any rule is allowed.
+
+**Network ACL — rules apply in sequence, by rule number.** **Lower number, higher priority**, and **the first match wins**.
+
+> This is why a deny rule numbered *above* a matching allow rule does nothing — as demonstrated in the previous topic.
+
+Sometimes ordering is an advantage; sometimes it is a trap.
+
+---
+
+## 3 · Allow Only, vs Allow and Deny
+
+**Security group — allow rules only.** There is no deny option. Whatever you allow is permitted; **everything else is implicitly denied**.
+
+**Network ACL — allow and deny.**
+
+> **This is the capability security groups lack.** "Allow HTTP from everyone *except* this one IP" is **impossible** with a security group and straightforward with a NACL.
+
+Worth remembering — it shows up in exam questions.
+
+---
+
+## 4 · Stateful vs Stateless
+
+**Security group — stateful.** Traffic your resource initiates is allowed back in automatically. **No inbound rule needed for replies.**
+
+**Network ACL — stateless.** No state is tracked, so **replies need their own explicit rule**.
+
+That is real administrative overhead, and it is why most people reach for security groups by default and use NACLs only where they add something.
+
+---
+
+## Summary
+
+| | 🛡️ Security Group | 🧱 Network ACL |
+|---|---|---|
+| **Attaches to** | **Network interface** — EC2, ELB, EFS | **Subnet** |
+| **Scope** | One resource | Every resource in the subnet |
+| **Rule evaluation** | **All simultaneously**, no priority | **In sequence** by rule number, first match wins |
+| **Rule types** | **Allow only** | **Allow and deny** |
+| **State** | **Stateful** — replies automatic | **Stateless** — needs both directions |
+| **Admin overhead** | Lower | Higher |
+
+> **Choosing between them:** subnet-wide policy or an explicit block on a specific source → **NACL**. Everything else → **security group**.
+`,
+    },
+    {
+      id: "vpc-stateless-vs-stateful",
+      title: "VPC – Stateless vs Stateful",
+      shortDesc: "Why the difference only shows up in one direction of traffic",
+      visuals: ["StatefulVsStateless"],
+      content: `## The Distinction in One Idea
+
+Both a security group and a network ACL are firewalls with **inbound** and **outbound** rules. The difference between **stateful** and **stateless** appears in **only one of the two traffic directions** — which is exactly why it confuses people.
+
+---
+
+## Direction 1 — Traffic Coming In
+
+Someone on the internet opens a website hosted on your EC2 instance. Traffic flows **from the internet into your instance**.
+
+**You must allow it inbound** — port 80, in this case.
+
+> **This is identical for stateful and stateless.** Both need the inbound rule. **No difference at all.**
+
+---
+
+## Direction 2 — Traffic You Initiate
+
+Now reverse it. **Your instance** starts a connection **out** to the internet — downloading a package, say.
+
+**Both** require an **outbound** rule to let the request leave. Still no difference.
+
+**The difference is in the reply.**
+
+**Stateful (security group):** when the request went out, the firewall **recorded the state** of that connection. The reply is recognised as belonging to it and **allowed back in automatically**.
+
+> **No inbound rule is needed.** Even with **zero** inbound rules, it works.
+
+**Stateless (network ACL):** no state is recorded. The reply is judged **purely on the inbound rules** — and if none permits it, **it is dropped**, despite being the answer to something you asked for.
+
+> **You must add an inbound rule for the return traffic.**
+
+---
+
+## Side by Side
+
+| | Stateful (Security Group) | Stateless (Network ACL) |
+|---|---|---|
+| **Inbound traffic from outside** | Needs an inbound rule | Needs an inbound rule |
+| **Outbound traffic you initiate** | Needs an outbound rule | Needs an outbound rule |
+| **The reply to traffic you initiated** | ✅ **Automatic** | ❌ **Needs its own inbound rule** |
+| **Administrative burden** | **Lower** | **Higher** |
+
+---
+
+## Why It Matters in Practice
+
+> **A stateful firewall is intelligent** — it notes the state when you initiate a connection and permits the matching reply without being told.
+
+That single behaviour removes a great deal of rule-writing, and it is the main reason people prefer security groups and use network ACLs only where a **subnet-wide** rule or an **explicit deny** is genuinely required.
+`,
+    },
+    {
       id: "vpc-connectivity",
       title: "VPC – Connectivity & Security (Part 2)",
       shortDesc: "Peering, NACL vs SG, VPN, Direct Connect, Transit Gateway, Endpoints",
-      visuals: ["VPCPeeringDemo", "NACLvsSecurityGroup", "StatefulVsStateless", "NACLRuleSimulator", "HybridConnectivity", "TransitGatewayMesh", "VPCEndpointExplorer"],
+      visuals: ["HybridConnectivity", "TransitGatewayMesh", "VPCEndpointExplorer"],
       content: `## VPC Part 2 — Connectivity & Security
 
 Part 1 built a VPC. Part 2 covers how VPCs **connect** to each other and to on-premises, and the **two security layers** that protect them: VPC Peering, Network ACLs vs Security Groups, stateful vs stateless, VPN, Direct Connect, Transit Gateway, and VPC Endpoints (PrivateLink).
