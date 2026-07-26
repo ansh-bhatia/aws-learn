@@ -344,6 +344,466 @@ Miss any one and there is no connectivity.
 `,
     },
     {
+      id: "vpc-two-tier-architecture",
+      title: "VPC – Two-Tier Architecture",
+      shortDesc: "Why real applications split into a public web tier and a private database tier",
+      visuals: ["TwoTierArchitecture"],
+      content: `## What We Have So Far Is Not Enough
+
+You have a VPC, two subnets, instances and an internet gateway. But **both subnets are public** — both are wired to the internet gateway, so anything in either is reachable from the internet.
+
+For a real deployment that is not good enough. **How secure your application is depends on how you design the VPC.**
+
+---
+
+## How Applications Are Actually Built
+
+Take an ordinary web application.
+
+**The web server** is the user's point of contact. Someone opening your site is talking to it, which is why it **always has a public IP**.
+
+But that exposure cuts both ways: **web servers are on the internet, so anyone can reach them.**
+
+**The database server** holds everything the users produce. That is the heart of the system — and you emphatically **do not** want anyone on the internet reaching it directly.
+
+**The intended flow:** the user talks to the **web server**, and the **web server** talks to the **database**. Nobody talks to the database from outside.
+
+> **Two tiers:** a **web tier** exposed to the internet, and a **database tier** that is not.
+
+---
+
+## Mapping That Onto a VPC
+
+- **Public subnets** — inbound internet connectivity. **Web servers** live here.
+- **Private subnets** — no inbound internet. **Database servers** live here.
+
+The database needs **no public IP at all**. Users reach the web server; the web server reaches the database over private IPs.
+
+---
+
+## Why Four Subnets, Not Two
+
+You could build this with one public and one private subnet. But **AWS best practice for high availability is to span two availability zones**.
+
+So the standard shape is:
+
+| Subnet | Availability zone | Holds |
+|---|---|---|
+| **public-subnet-1** | ap-south-1a | Web server |
+| **public-subnet-2** | ap-south-1b | Web server |
+| **private-subnet-1** | ap-south-1a | Database |
+| **private-subnet-2** | ap-south-1b | Database |
+
+If one availability zone fails, the other keeps serving.
+
+---
+
+## The Questions This Raises
+
+Building it surfaces two problems we have to solve:
+
+1. **If a database instance has no public IP and no inbound internet, how do you administer it?**
+2. **What about outbound?** The database still needs to download operating system patches, database packages and antivirus updates. That needs **outbound** internet — without allowing **inbound**.
+
+> The first is answered by **bastion hosts** and **EC2 Instance Connect endpoints**. The second is what the **NAT gateway** exists for. Both are coming up.
+`,
+    },
+    {
+      id: "vpc-public-private-subnets-lab",
+      title: "Lab – Build Public & Private Subnets",
+      shortDesc: "Four subnets, an internet gateway, and a custom route table that makes two of them public",
+      visuals: ["VPCBuildSteps"],
+      content: `## What Makes a Subnet "Public"
+
+Worth stating up front, because the name misleads:
+
+> **A subnet is public because its route table has a route to the internet gateway.** Nothing else. Naming a subnet "public-subnet-1" does not make it public.
+
+---
+
+## Step 1 — Create the VPC and Four Subnets
+
+**Create VPC → VPC only**, name it, CIDR **192.168.0.0/24**.
+
+Then **Subnets → Create subnet**, and use **Add new subnet** to create all four on one screen. Split the /24 into four **/26** blocks with a subnet calculator:
+
+| Name | Availability zone | CIDR |
+|---|---|---|
+| **public-subnet-1** | ap-south-1a | **192.168.0.0/26** |
+| **public-subnet-2** | ap-south-1b | **192.168.0.64/26** |
+| **private-subnet-1** | ap-south-1a | **192.168.0.128/26** |
+| **private-subnet-2** | ap-south-1b | **192.168.0.192/26** |
+
+> At this point **all four are effectively private** — there is no internet connectivity anywhere in the VPC yet.
+
+---
+
+## Step 2 — Internet Gateway
+
+**Internet Gateways → Create internet gateway** → name it → create. It appears **Detached**.
+
+**Actions → Attach to VPC** → select your VPC.
+
+---
+
+## Step 3 — Understand the Main Route Table First
+
+AWS created a **main route table** with the VPC. Select it and open **Subnet associations**:
+
+**All four subnets are already associated with it**, shown under **"Subnets without explicit association"** — meaning the association is **implicit** and automatic.
+
+**This is the crux of the problem.** Add an internet-gateway route to the main route table and **all four subnets become public** — which is not what you want.
+
+---
+
+## Step 4 — A Custom Route Table for the Public Subnets
+
+**Route Tables → Create route table** → name it **rt-public** → select your VPC → create.
+
+It has no subnets associated, so right now it does nothing.
+
+**Select it → Subnet associations → Edit subnet associations** → tick **public-subnet-1** and **public-subnet-2** → **Save associations**.
+
+> **A subnet can only be associated with one route table.** Associating the two public subnets with **rt-public** automatically removes them from the main route table — there is nothing to disassociate manually.
+
+The result: the two public subnets use **rt-public**; the two private subnets remain on the **main** route table.
+
+---
+
+## Step 5 — Add the Internet Route
+
+**rt-public → Routes → Edit routes → Add route:**
+
+- **Destination:** **0.0.0.0/0**
+- **Target:** your **internet gateway**
+
+Save.
+
+**Now the split is real.** The two subnets associated with rt-public have a path to the internet gateway — they are **public**. The two on the main route table have no such path — they are **private**.
+
+---
+
+## The Result
+
+| | Route table | Route to IGW? | Subnet type |
+|---|---|---|---|
+| **public-subnet-1 / 2** | rt-public | ✅ 0.0.0.0/0 → igw | **Public** |
+| **private-subnet-1 / 2** | main | ❌ none | **Private** |
+
+---
+
+## And Now the Difficulty
+
+Put a database instance in a private subnet and you immediately hit it: **no inbound internet, no public IP.**
+
+You are at your desk and you need to SSH in to install and configure the database. **How do you reach a machine with no public IP?**
+
+> There are two answers, and the next topic covers both.
+`,
+    },
+    {
+      id: "vpc-private-subnet-access",
+      title: "VPC – Reaching Instances in a Private Subnet",
+      shortDesc: "EC2 Instance Connect endpoints vs bastion hosts, and when each one fits",
+      visuals: ["PrivateSubnetAccess"],
+      content: `## The Problem
+
+Two instances: a **web server** in a public subnet with a public IP, and a **database server** in a private subnet with **only a private IP**.
+
+The web server is easy — SSH straight to its public IP.
+
+The database server is not. Try SSH to its private IP and it fails, because **private IPs are not routable over the internet**.
+
+**Two solutions.**
+
+---
+
+## Solution 1 — EC2 Instance Connect Endpoint
+
+A relatively recent AWS feature, and the tidier option.
+
+**VPC → Endpoints → Create endpoint:**
+
+- **Name** it
+- **Type:** **EC2 Instance Connect Endpoint**
+- **VPC:** yours
+- **Security group:** one allowing the traffic
+- **Subnet:** the **private subnet** holding the instance
+
+Wait for **Available**.
+
+**To use it:** select the instance → **Connect** → **Connect using EC2 Instance Connect Endpoint** → choose your endpoint → **Connect**. You are in — no password prompt, no public IP.
+
+**The catch, and it matters:**
+
+> ⚠️ **The endpoint authenticates through AWS API calls**, so **whoever uses it needs credentials for your AWS account.**
+
+**Where that breaks down:** suppose a **freelancer** administers your database. With this approach you would have to give them **AWS account access**. Often you do not want that — you want to hand them a **.pem file** and nothing more.
+
+---
+
+## Solution 2 — Bastion Host
+
+The classic pattern, and the one to name in an interview.
+
+Keep an instance in the **public subnet** with a **public IP** whose job is to be the way in. Connect to it, then hop onward to the private instance over its **private IP**.
+
+> **Interview note:** you *can* answer "connect to the public instance, then to the private one from there" — but say **bastion host** and the follow-up question does not come.
+
+---
+
+## Walking Through the Bastion Hop
+
+**1 · Connect to the bastion** using its public IP:
+
+**ssh -i my-key.pem ec2-user@bastion-public-ip**
+
+**2 · The key is not there.** Run **ls** on the bastion and your **.pem** is missing — it is on **your own computer**, not on the bastion. You cannot hop without it.
+
+**3 · Copy the key across with SCP.** From your own machine:
+
+**scp -i my-key.pem my-key.pem ec2-user@bastion-public-ip:/home/ec2-user**
+
+> The key appears **twice** deliberately: once to **authenticate** the copy, once as the **file being copied**.
+
+Confirm with **ls** on the bastion — it is there now.
+
+**4 · Try the hop** to the private instance's private IP — and it fails with **Permission denied**.
+
+**5 · Fix the permissions.** The copied file is readable by others, and SSH refuses keys that are too open. AWS gives you the exact command under **Connect → SSH client**:
+
+**chmod 400 my-key.pem**
+
+**6 · Hop again** — and you are on the database server. Check the IP: it is the private one. **exit** returns you to the bastion; the connection is nested.
+
+---
+
+## Choosing Between Them
+
+| | EC2 Instance Connect Endpoint | Bastion Host |
+|---|---|---|
+| **Extra instance needed?** | ❌ No | ✅ Yes, running in a public subnet |
+| **Authentication** | **AWS account credentials** | The **.pem** key file |
+| **Suits a third party?** | ❌ They would need AWS access | ✅ Just hand over the key |
+| **Setup** | Create an endpoint | Launch and maintain an instance |
+
+---
+
+## Still One Problem Left
+
+You are on the database server. Now try:
+
+- **ping google.com** — nothing.
+- **yum install** anything — it hangs at "downloading packages".
+
+**No internet.** Which is exactly what a private subnet means — but it blocks you from **installing the database**, **patching the OS**, or **updating antivirus**.
+
+> To be precise about what is wanted: **no inbound** internet — nobody should reach this machine from outside. But **outbound** internet is needed. That is the **NAT gateway**.
+`,
+    },
+    {
+      id: "vpc-nat-gateway",
+      title: "VPC – NAT Gateway",
+      shortDesc: "Outbound-only internet for private subnets — and why it lives in a public subnet",
+      visuals: ["NATGatewayFlow", "NATPlacementQuiz"],
+      content: `## Why the Private Instance Has No Internet
+
+Two separate reasons, and both must be solved:
+
+**1 · No route.** The private subnets use the **main route table**, which has no path to the internet gateway.
+
+**2 · No public IP.** Even with a route, **the internet gateway only communicates with resources that have a public IP.** Your database has a private IP only — and you deliberately do not want to give it a public one.
+
+> So you need an **agent**: something that *does* have a public IP, which can talk to the internet gateway on the private instance's behalf.
+>
+> **That agent is the NAT gateway.**
+
+---
+
+## What NAT Means
+
+**NAT = Network Address Translation.**
+
+Outbound, it **swaps the private source IP for its own public IP** so the internet gateway will accept the traffic. Inbound, it **translates back** and delivers the reply to the right private instance.
+
+> Your home wireless router does exactly this. It is the same idea.
+
+---
+
+## ⚠️ Which Subnet Does It Go In?
+
+This is the question people reliably get wrong.
+
+You are building it **for the private subnet**, so the instinct is to put it **in** the private subnet.
+
+> **Wrong. The NAT gateway goes in a PUBLIC subnet.**
+
+**Why:** in a private subnet the NAT gateway would have **no internet itself** — and it cannot hand out what it does not have. Sitting in a **public subnet**, it can reach the internet gateway, and *then* relay for the private instances.
+
+Either public subnet is fine.
+
+---
+
+## Creating It
+
+**VPC → NAT Gateways → Create NAT gateway:**
+
+- **Name** it
+- **Subnet:** a **public** subnet
+- **Connectivity type:** Public
+- **Elastic IP:** click **Allocate Elastic IP** — the NAT gateway needs a public IP to talk to the internet gateway
+
+Create, and wait for **Available**.
+
+---
+
+## It Still Does Not Work — Add the Route
+
+The gateway exists, but the private subnets have no idea it is there.
+
+**Route Tables → main route table → Routes → Edit routes → Add route:**
+
+- **Destination:** **0.0.0.0/0**
+- **Target:** your **NAT gateway** — not the internet gateway
+
+> ⚠️ Easy slip: selecting the **internet gateway** here instead. If you pick a stale or wrong target, the route shows as **Blackhole** rather than **Active**. Check for **Active**.
+
+Save, go back to the private instance, and **ping google.com** now works. **yum install** completes.
+
+---
+
+## What You Have Built
+
+**Outbound works. Inbound does not.**
+
+Only the **NAT gateway's public IP** is ever seen by the internet gateway. Your private instance's IP never leaves the VPC. Nobody on the internet can **initiate** a connection to it.
+
+| | Internet Gateway | NAT Gateway |
+|---|---|---|
+| **Serves** | Public subnets | **Private** subnets |
+| **Lives** | Attached to the VPC | **In a public subnet** |
+| **Inbound** | ✅ Yes | ❌ **No** |
+| **Outbound** | ✅ Yes | ✅ Yes |
+| **Needs a public IP on the instance** | ✅ Yes | ❌ No |
+| **Cost** | **Free** | **Chargeable** |
+
+**Capacity:** up to **55,000 simultaneous connections** and **45 Gbps** of bandwidth.
+
+---
+
+## ⚠️ Clean Up — Two Things, Not One
+
+> **The NAT gateway is chargeable** — one of the few VPC components that is. Most of the rest are free.
+
+1. **Delete the NAT gateway.**
+2. **Release its elastic IP.** Deleting the gateway does **not** release it, and an unattached elastic IP **keeps billing**. Go to **Elastic IPs → select → Release**.
+
+> The release will be refused while the gateway is still deleting. Wait a few minutes, then release it.
+`,
+    },
+    {
+      id: "vpc-components-summary",
+      title: "VPC – Components Summary & Limits",
+      shortDesc: "The seven-component cheat sheet, with every limit worth memorising",
+      visuals: [],
+      content: `## Why This Topic Exists
+
+VPC is a favourite in both interviews and the exam. This is the condensed version of everything built so far — worth rereading before an exam rather than rewatching the whole build.
+
+---
+
+## 1 · VPC
+
+> **A virtual network dedicated to your AWS account within the AWS cloud, providing logical isolation between AWS resources.**
+
+AWS is shared infrastructure — your resources and a stranger's may sit on the same hardware. **VPC is what isolates them.**
+
+| Limit | Value |
+|---|---|
+| **CIDR mask range** | **/16 to /28** |
+| **CIDR ranges per VPC** | **5** |
+| **VPCs per region** | **5** — a **soft limit**; contact AWS support to raise it |
+
+> A CIDR range **cannot be changed** once added. You can remove it or add more, but not edit it.
+
+---
+
+## 2 · Subnets
+
+> **A segmented portion of the VPC IP range**, from which resources draw their IP addresses.
+
+- **Subnets are created inside an availability zone.** You choose which.
+- **You can create many subnets in one availability zone** — but **one subnet never spans two**.
+- **Limit: 200 subnets** per VPC.
+
+---
+
+## 3 · Public Subnet
+
+> **A subnet that is accessible from the internet.**
+
+- **Typically holds:** load balancers and web servers — anything that must be reachable worldwide.
+- **Requires an internet gateway**, which gives it **both inbound and outbound** connectivity.
+
+---
+
+## 4 · Private Subnet
+
+> **A subnet that is not accessible from the internet.**
+
+- **Ideal for:** sensitive resources, especially **databases**.
+- **Requires a NAT gateway** for **outbound** internet.
+
+> The distinction that matters: a private subnet is **not** without internet. It has **outbound** — you can download packages and updates. What it lacks is **inbound**: nobody can reach in.
+
+---
+
+## 5 · Internet Gateway
+
+- **Role:** connects the VPC to the internet.
+- **Configuration:** create it, then **attach it to the VPC**.
+- ⚠️ **A public IP is mandatory** on any resource that wants to communicate through it.
+
+---
+
+## 6 · NAT Gateway
+
+- **Role:** lets instances in a **private** subnet reach the internet for updates and downloads.
+- **Configuration:** placed **inside a public subnet** — never a private one.
+- ⚠️ **No inbound traffic.** Outbound only.
+- **Capacity:** **55,000 simultaneous connections**, **45 Gbps**.
+
+---
+
+## 7 · Route Tables
+
+- **Role:** control where network traffic is directed.
+- **Main route table** — created automatically, **cannot be deleted**, and **all subnets associate with it implicitly** unless you move them.
+- **Custom route table** — what you create to make specific subnets public.
+
+| Limit | Value |
+|---|---|
+| **Route tables per VPC** | **200** |
+| **Routes per route table** | **50** |
+
+> Fifty routes seems excessive after adding just one — but **Transit Gateway**, **VPC peering** and **endpoints** all add entries here. Later topics fill that space.
+
+---
+
+## The Whole Picture
+
+| Component | Purpose | Key constraint |
+|---|---|---|
+| **VPC** | Isolation | /16–/28 · 5 CIDRs · 5 per region |
+| **Subnet** | Segment of the range | Inside **one** AZ · 200 max |
+| **Public subnet** | Internet-facing | Needs an **internet gateway** route |
+| **Private subnet** | Protected | Needs a **NAT gateway** for outbound |
+| **Internet gateway** | VPC ↔ internet | Attached to the **VPC** · public IP required · **free** |
+| **NAT gateway** | Outbound for private | Lives in a **public** subnet · **chargeable** |
+| **Route table** | Traffic direction | Main cannot be deleted · 200 tables · 50 routes |
+`,
+    },
+    {
       id: "vpc-connectivity",
       title: "VPC – Connectivity & Security (Part 2)",
       shortDesc: "Peering, NACL vs SG, VPN, Direct Connect, Transit Gateway, Endpoints",

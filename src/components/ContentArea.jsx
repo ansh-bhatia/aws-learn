@@ -113,6 +113,7 @@ import {
   ReservedIPExplainer,
   IGWRouteFlow,
 } from "./visuals/VPCVisuals4";
+import { NATPlacementQuiz } from "./visuals/VPCVisuals5";
 import {
   DHCPOptionSetDemo,
   VPCFlowLogExplorer,
@@ -658,6 +659,7 @@ const VISUAL_MAP = {
   ManagedPrefixListDemo,
   ReservedIPExplainer,
   IGWRouteFlow,
+  NATPlacementQuiz,
   DNSResolutionFlow,
   FQDNAnatomy,
   DNSRecordTypes,
