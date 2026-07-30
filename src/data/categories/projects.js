@@ -326,5 +326,254 @@ Open the **same ALB DNS name, but with :8080 appended**. This hits the **test ap
 The load balancer and Auto Scaling Group are alive and load-balancing correctly — but every security group involved is still wide open ("allow all traffic"), and there's no custom domain name yet, just the raw ALB DNS name. Both of those are the next two sessions.
 `,
     },
+    {
+      id: "capstone1-security-groups-lab",
+      title: "Capstone 1 – Lab: Hardening the Security Groups",
+      shortDesc: "Locking all-traffic-allowed down to exactly what each tier actually needs — the layered defense the whole build was building toward",
+      visuals: [],
+      content: `## Why This Was Always Coming
+
+Every security group created so far — **ALB-SG**, **web-server-SG**, **efs-SG** — was deliberately left wide open ("allow all traffic") purely so nothing blocked progress while the VPC, EFS, AMI, Auto Scaling, and ALB were being wired together. That was never the intended final state.
+
+> This session locks all three down to **exactly** what each tier legitimately needs — building a real **layered defense**: the internet can only reach the ALB; the ALB is the only thing that can reach the web servers; the web servers are the only thing that can reach EFS.
+
+---
+
+## Step 1 — Harden ALB-SG
+
+The ALB is the one component genuinely meant to be public.
+
+**Inbound rules** (delete the existing all-traffic rule first):
+- **HTTP (80)** from **anywhere (0.0.0.0/0)** — the real application, open to everyone
+- **Custom TCP (8080)** from **My IP** only — the test app is a debugging tool, not something that should be publicly reachable by anyone who discovers the ALB's DNS name
+
+Outbound stays at its default (all traffic allowed) — outbound restrictions aren't this project's concern.
+
+---
+
+## Step 2 — Harden web-server-SG (The Layer That Actually Matters Most)
+
+> **The key move: instead of sourcing rules from an IP range, source them from the ALB's security group itself.** This means literally nothing — not your own IP, not the entire internet — can reach the web servers directly on these ports. Only traffic that has already passed through the ALB is accepted.
+
+**Inbound rules** (delete the all-traffic rule first):
+- **HTTP (80)**, source = **ALB-SG** (not an IP — the security group)
+- **Custom TCP (8080)**, source = **ALB-SG**
+- (SSH management access is deferred — noted as a later concern, not needed to finish this project)
+
+> This is a genuinely important pattern worth internalizing: **referencing another security group as the source** is what actually prevents someone from bypassing the load balancer and hitting a web server on its private IP directly, even from inside the same VPC.
+
+---
+
+## Step 3 — Harden efs-SG
+
+Only the web servers should ever be allowed to mount this file system.
+
+**Inbound rules** (delete the all-traffic rule first):
+- **NFS**, port **2049**, source = **web-server-SG**
+
+---
+
+## Step 4 — Verify Nothing Broke
+
+Open the ALB's DNS name — the real application still loads exactly as before. Refresh a few times to confirm the load balancer is still distributing traffic across both instances.
+
+Then try the test app (**:8080**) from a **different network** than the one used to configure "My IP" — it should now be **unreachable**, proving the restriction is real rather than cosmetic.
+
+---
+
+## The Full Picture
+
+| Security Group | Inbound Source | Port(s) |
+|---|---|---|
+| **ALB-SG** | Anywhere | 80 |
+| **ALB-SG** | My IP only | 8080 |
+| **web-server-SG** | ALB-SG | 80, 8080 |
+| **efs-SG** | web-server-SG | 2049 (NFS) |
+
+> Each tier only accepts traffic from the tier immediately in front of it — the internet talks to the ALB, the ALB talks to the web servers, the web servers talk to EFS, and nothing skips a layer. This exact pattern — and the reasoning behind it — is a common exam and interview topic in its own right, beyond just this project.
+
+---
+
+## What's Left
+
+Two sessions remain: giving the application a real **domain name via Route 53** instead of the raw ALB URL, and then a full **testing and optimization** pass to prove every objective (availability, scalability, security, resilience) actually holds up under real conditions.
+`,
+    },
+    {
+      id: "capstone1-route53-lab",
+      title: "Capstone 1 – Lab: Route 53 Domain Integration",
+      shortDesc: "Pointing a real domain — even one bought elsewhere — at the Application Load Balancer via an alias record",
+      visuals: [],
+      content: `## The Problem
+
+The application works perfectly via the ALB's raw DNS name — but that's not a viable production URL. Users need to reach the app through an actual **domain name**.
+
+> **Registering the domain with Route 53 is not required to use Route 53 for DNS.** A domain bought through any registrar — GoDaddy, Namecheap, anywhere — can still have its **name resolution** handled by Route 53 instead of the registrar's own DNS. That's the exact setup this lab walks through: a domain purchased at GoDaddy, with Route 53 taking over as the authoritative DNS.
+
+---
+
+## Step 1 — Create a Public Hosted Zone
+
+**Route 53 → Hosted zones → Create hosted zone.**
+
+> ⚠️ **The zone name must exactly match your already-registered domain name** — e.g. if the domain is **cloudfox.in**, the hosted zone must be named exactly **cloudfox.in**, regardless of which registrar it was purchased through.
+
+Type: **Public hosted zone**. Create it — Route 53 automatically generates an **NS (name server) record** with 4 name server addresses.
+
+---
+
+## Step 2 — Point the Registrar at Route 53's Name Servers
+
+This is the step that actually **hands DNS authority to Route 53** — without it, the hosted zone exists but nothing on the internet knows to ask it anything.
+
+In the registrar's own dashboard (GoDaddy in this walkthrough): **domain → Manage DNS → Change Name Servers → use custom (your own) name servers.**
+
+Copy **all 4** name server addresses from the Route 53 hosted zone's NS record into the registrar's name server fields, and save.
+
+> ⚠️ From this point on, DNS resolution for the domain is handled entirely by **Route 53**, not the registrar. The domain itself still needs to be renewed at the original registrar — only the **name resolution** responsibility has moved.
+
+---
+
+## Step 3 — Create the Alias Record
+
+Back in the Route 53 hosted zone: **Create record.**
+
+- **Record name:** a subdomain, e.g. **learn** (making the full name **learn.cloudfox.in**)
+- **Record type:** **A** record, with **Alias** toggled on
+- **Route traffic to:** **Alias to Application Load Balancer**, select the region (e.g. **ap-south-1**), then select the project's ALB from the list
+
+Create the record.
+
+---
+
+## Step 4 — Wait for Propagation, Then Test
+
+DNS propagation isn't instant — expect to wait **around 10–15 minutes** before the new name resolves anywhere reliably.
+
+Open the new domain name in a browser. If it doesn't resolve yet, be patient rather than assuming something's broken — this is normal DNS propagation delay, not a configuration error.
+
+> If it still doesn't resolve after a reasonable wait, flush your **local DNS cache** (**ipconfig /flushdns** on Windows) — a stale cached failure can outlast the actual propagation delay.
+
+Once it resolves: the real application loads at the friendly domain name, and appending **:8080** still reaches the test app — confirming both listeners still work correctly through the new alias.
+
+---
+
+## What This Achieves
+
+> The project is now reachable by a real, memorable domain name instead of a raw ALB DNS string — completing every piece of the **implementation** phase. What remains is proving, under real test conditions, that the availability, scalability, security, and resilience objectives from the introduction actually hold — covered next.
+`,
+    },
+    {
+      id: "capstone1-testing-optimization",
+      title: "Capstone 1 – Testing & Optimization",
+      shortDesc: "Killing an instance to prove self-healing, then spiking CPU load to watch dynamic scaling react live",
+      visuals: ["ResilienceTest"],
+      content: `## What Testing Actually Proves
+
+Implementation being *done* isn't the same as the project's objectives being *verified*. This session runs real tests against each stated objective: **high availability**, **scalability**, **security**, and **resilience**.
+
+---
+
+## Test 1 — High Availability (Kill an Instance)
+
+The two running web servers sit in **different Availability Zones** (private-subnet-1a and private-subnet-2b) — confirmed by checking each instance's subnet in the console.
+
+**Terminate one instance directly.** Because the ASG's minimum is **2**, the moment the count drops to 1, Auto Scaling immediately begins launching a replacement.
+
+Open the application during this window: a brief **504 Gateway Timeout** may appear for a couple of seconds while the ALB re-routes, then the site loads normally — served entirely by the one surviving instance. Refreshing the **test app** (:8080) repeatedly shows the same hostname every time, confirming only one instance is currently live.
+
+> Wait for the replacement instance to finish its **warm-up** and health checks, then refresh the test app again — its hostname now alternates between the original survivor and the new replacement, confirming the ALB added the freshly-launched instance back into rotation **automatically**, with zero manual re-registration. Check the target group's **Targets** tab directly to see both listed as healthy, and the ASG's **Activity** log to see the exact terminate → launch sequence timestamped.
+
+---
+
+## Test 2 — Scalability (Spike the Load, Watch It Scale Out and Back In)
+
+So far, capacity has been **manual** (fixed at 2). This test introduces a real **dynamic scaling policy**:
+
+**ASG → Automatic scaling → Create dynamic scaling policy** → target tracking → **Average CPU Utilization**, target **60%**, max capacity **5**.
+
+Open the test app in two browser tabs (one per current instance, identified by hostname) and trigger the **CPU load generator** on **both** — pushing average CPU well above the 60% target.
+
+> **Wait roughly 5–10 minutes** (warm-up plus evaluation time) — a **third**, then a **fourth** instance launches automatically as the average stays elevated, all the way up toward the configured maximum of 5. Refreshing the test app during this window surfaces a rotating set of hostnames — direct proof each new instance is live and actually receiving traffic, not just sitting idle.
+
+**Cancel the load on every instance.** Once average CPU drops back down, wait again — Auto Scaling terminates the extra instances one at a time, bringing the fleet back down to the baseline of **2**. The ASG's **Activity** log shows the complete timeline: the scale-out launches, then the scale-in terminations, each with its own timestamp.
+
+---
+
+## Test 3 — Security (Already Verified, Worth Restating)
+
+The hardened security groups from the previous session were already confirmed working — the test app on :8080 is unreachable from outside the configured "My IP," while the real application on :80 remains open to everyone through the ALB. No new action needed here; this test simply confirms that hardening didn't quietly break anything during the scaling tests above.
+
+---
+
+## Test 4 — Resilience (What These Two Tests Actually Demonstrate Together)
+
+> Both tests above ran with **zero manual intervention** at the moment of failure or load spike — Auto Scaling reacted on its own, and the ALB absorbed each change automatically. That combination, functioning correctly under an actual instance termination and an actual load spike, **is** the resilience objective from the project's introduction — not a separate thing to configure, but the observable result of the availability and scalability mechanisms already built.
+
+---
+
+## What's Left
+
+Everything technical is now built and verified. The final session covers the **documentation and deliverables** phase — writing up what was built, why, and how it performed, which is the difference between a working project and a finished, presentable one.
+`,
+    },
+    {
+      id: "capstone1-documentation",
+      title: "Capstone 1 – Documentation & Deliverables",
+      shortDesc: "The 4 documents that turn a working build into a finished, presentable project",
+      visuals: ["ProjectDeliverables"],
+      content: `## Why Documentation Is Not Optional
+
+> **Documentation is often the least enjoyable phase of a project — and also the first thing anyone reviewing it actually sees.** A working AWS deployment nobody can understand or evaluate isn't a finished project; the four deliverables below are what make it presentable and reviewable by someone who wasn't in the room while it was built.
+
+---
+
+## Deliverable 1 — Architecture Diagram & Design Document
+
+Two pieces:
+
+- **Diagrams** — at minimum, the **VPC design** (subnets, AZs, gateways) and a **data-flow diagram** showing how a request actually travels from a user through the ALB, into a private-subnet instance, and out to EFS
+- **Design document** — the **reasoning** behind each major decision: why a VPC with public/private subnets, why EFS instead of per-instance storage, why an ALB instead of a Classic Load Balancer, why Auto Scaling instead of a fixed fleet
+
+> This is the document that answers "why did you build it this way?" — exactly the kind of question that comes up in a real interview or a project review, and the reasoning is worth understanding deeply, not just copying into a template.
+
+---
+
+## Deliverable 2 — Implementation & Configuration Guide
+
+A **versioned**, dated, authored guide — table of contents, then one section per phase (VPC design, EC2/AMI, EFS, Auto Scaling, Load Balancer, security groups, Route 53), each with the **actual console steps** taken.
+
+> Writing this section-by-section, right after actually performing each phase (rather than trying to reconstruct it from memory afterward), is far more accurate and far less painful than writing it all at the end.
+
+---
+
+## Deliverable 3 — Performance & Optimization Report
+
+A template covering:
+
+- **Infrastructure summary** — what was actually deployed (instance types, AZ count, subnet layout)
+- **Baseline performance** — behavior under normal/no load
+- **Load test results** — what happened during the CPU-spike test: how many instances launched, how long scale-out took, how long scale-in took to settle back down
+- **Optimization notes** — anything that could be tuned (e.g. adjusting the target-tracking percentage, adjusting warm-up/cooldown timers)
+
+> The load-test data gathered directly from the testing session is exactly what fills in this report's real numbers — it isn't a separate exercise, just a write-up of what was already observed and measured.
+
+---
+
+## Deliverable 4 — Comprehensive Project Presentation
+
+A presentation (title, date, author) covering: **agenda → introduction → architecture → deployment strategy → challenges encountered → solutions applied → results**.
+
+> Frame the "challenges and solutions" section around what was genuinely non-obvious during the build — e.g. the EFS DNS-hostname prerequisite, the source/destination-style thinking behind SG-as-source rules, or the warm-up delay before a scale-out visibly appears. Real friction points make a far more credible presentation than a purely polished retelling.
+
+---
+
+## Capstone Project 1 — Complete
+
+Every phase from the original 6-phase plan is now built, tested, and documented: **VPC → EFS → custom AMI → Auto Scaling + ALB → hardened security groups → Route 53 → testing/optimization → documentation.**
+
+> This project deliberately used **HTTP, not HTTPS**, and **no database layer** — both explicitly called out as directions a future, more advanced capstone project would extend. This is Capstone Project 1 of five planned across the course; each later one builds on services covered since this one, using the same "design → implement → test → document" structure established here.
+`,
+    },
   ],
 };
