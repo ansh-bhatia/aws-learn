@@ -2653,5 +2653,192 @@ The first two policies each hard-code one side of the trade-off — terminate-an
 > Don't forget to delete the Auto Scaling Group when finished, to remove every instance it created across both policy tests.
 `,
     },
+    {
+      id: "asg-termination-policy-default",
+      title: "Auto Scaling – Default Termination Policy",
+      shortDesc: "The 5-step funnel that decides exactly which instance dies on a scale-in",
+      visuals: ["TerminationPolicy"],
+      content: `## The Question Termination Policy Answers
+
+Scale-out adds instances; scale-in removes them. But if an ASG is currently running two instances and you drop desired capacity to one, **which** of the two gets terminated? That decision — for **any** scaling method (manual, scheduled, or dynamic) — is governed entirely by the **termination policy**.
+
+> AWS provides several **built-in** termination policies (next topic), plus the **default** policy every new ASG uses unless you change it. This topic is the default policy's exact decision funnel.
+
+Find it under **ASG → Details → Advanced configurations → Edit → Termination policies**.
+
+---
+
+## Worked Scenario
+
+Three AZs, six instances total:
+
+| AZ | Instances |
+|---|---|
+| **ap-south-1a** | A1, A2, A3 |
+| **ap-south-1b** | B1, B2 |
+| **ap-south-1c** | C1 |
+
+A scale-in needs to pick exactly one instance to remove. The default policy runs this funnel, narrowing the candidate pool at each step:
+
+---
+
+### Step 1 — Balance Across Availability Zones
+
+> **Target the AZ with the most instances**, to correct any imbalance. Here, **ap-south-1a has 3** (more than 1b's 2 or 1c's 1) — so the candidate pool starts as **A1, A2, A3** only. B1, B2, and C1 are never considered while an imbalance like this exists.
+
+---
+
+### Step 2 — Scale-In Protection
+
+Each remaining candidate is checked for **scale-in protection** — a flag you can set explicitly on any instance to tell Auto Scaling "never terminate this one during scale-in."
+
+**Setting it:** ASG → **Instance management** → select the instance → **Actions → Set scale-in protection**.
+
+> Assuming none of A1/A2/A3 are protected, all three remain in consideration. If one *were* protected, it would be removed from the pool here, regardless of any other criteria.
+
+---
+
+### Step 3 — Oldest Launch Template
+
+If some instances were launched from an **older** version of the launch template than others, the older ones are preferred for termination — this is how a fleet gradually phases out an old configuration.
+
+> **Worked continuation:** A1 and A2 were launched on the old template version; A3 was launched after an update, on the new version. A3 is **removed** from consideration (it represents where you want to end up) — leaving just **A1, A2**.
+
+---
+
+### Step 4 — Closest to the Next Billing Hour
+
+Among any instances still tied, the default policy picks whichever is **closest to completing its current billing hour** — minimizing the "wasted" already-paid-for time you'd lose by keeping it running past this point.
+
+> **Worked continuation:** A1 has been running for **50 minutes** of its current hour; A2 for only **10 minutes**. Terminating A1 wastes just **10 minutes** of already-paid time; terminating A2 instead would waste **50**. **A1 is terminated.**
+
+> Modern Linux/Windows/Ubuntu instances bill in **per-second increments**, which makes this step largely moot for them today — it matters more for older per-hour-only billing models.
+
+---
+
+### Step 5 — Random Tiebreaker
+
+If two or more candidates are still perfectly tied after all four prior steps (e.g. both launched at the exact same time), Auto Scaling picks one **at random**.
+
+---
+
+## The Full Funnel, Summarized
+
+1. **AZ balance** — narrow to the most-populated AZ
+2. **Scale-in protection** — exclude protected instances
+3. **Oldest launch template** — prefer phasing out old config
+4. **Closest to next billing hour** — minimize wasted paid time
+5. **Random** — final tiebreaker
+
+> This ordering is worth memorizing directly — it's exactly how AWS documents the default policy, and each step only ever operates on whatever pool of candidates survived the step before it.
+`,
+    },
+    {
+      id: "asg-termination-policy-builtin",
+      title: "Auto Scaling – Other Built-In Termination Policies",
+      shortDesc: "AllocationStrategy, OldestLaunchTemplate, ClosestToNextInstanceHour, NewestInstance, OldestInstance",
+      visuals: [],
+      content: `## Beyond the Default
+
+The default policy's 5-step funnel isn't the only option. Individual built-in policies let you pick **one specific rule** directly, instead of the full funnel — useful when you know exactly which criterion matters for your situation.
+
+Find these under the same place as the default policy: **ASG → Advanced configurations → Edit → Termination policies.**
+
+---
+
+## AllocationStrategy
+
+Relevant only when an ASG mixes **instance types and purchase options** (e.g. a mix of On-Demand and Spot, or several instance sizes) — configured via **Instance type requirements** and **Instance purchase options** when creating the ASG, along with an **allocation strategy** for how new instances of each kind get created (lowest price, price-capacity-optimized, capacity-optimized).
+
+> **This termination policy terminates instances following that same allocation strategy** — so the instance pool you end up with, after any scale-in, still matches the cost/availability trade-off you originally configured for creating instances. Use it whenever you've already defined an allocation strategy and want scale-in decisions to respect it, rather than override it.
+
+---
+
+## Oldest Launch Configuration / Oldest Launch Template
+
+> **Terminates whichever instance is running the oldest launch template version** — useful specifically when you're phasing out an old configuration and want every scale-in to chip away at the outdated instances first, until only the current version remains.
+
+("Launch configuration" is the deprecated predecessor to launch templates — AWS keeps both names in the console since older accounts may still reference the old term, but they mean the same thing operationally today.)
+
+---
+
+## Closest to Next Instance Hour
+
+> **Terminates whichever instance is nearest to completing its current billing hour** — minimizing wasted already-paid time, the same idea Step 4 of the default policy uses.
+
+⚠️ **Caveat:** this only meaningfully applies to instance types billed in **hourly** increments. Amazon Linux, Windows, and Ubuntu instances today bill in **per-second** increments, which makes this policy largely irrelevant for them — there's no "wasted hour" to optimize around. It still matters for older or non-standard billing models.
+
+---
+
+## Newest Instance
+
+> **Terminates the most recently launched instance** — the opposite of what intuition suggests, but genuinely useful when you're **testing a new launch template** in a live ASG and aren't fully confident in it yet. If the new instances misbehave, this policy lets you back them out first while production traffic keeps running on the proven, older instances.
+
+---
+
+## Oldest Instance
+
+> **Terminates the longest-running instance in the group** — the mirror image of Newest Instance. Useful when **migrating an entire fleet to a new instance type** (e.g. every t2.micro should eventually become a t2.medium): each scale-in event gracefully retires the oldest instances first, so the fleet transitions to the new type over time instead of all at once.
+
+---
+
+## Choosing Among Them
+
+| Policy | Best fit |
+|---|---|
+| **Default (5-step funnel)** | General-purpose, AZ-aware, no special requirement |
+| **AllocationStrategy** | Mixed instance types/purchase options — keep scale-in aligned with your creation strategy |
+| **Oldest Launch Template** | Phasing out an outdated configuration |
+| **Closest to Next Instance Hour** | Hourly-billed instance types only — minimizes wasted paid time |
+| **Newest Instance** | Testing a new launch template cautiously in production |
+| **Oldest Instance** | Gradual fleet-wide migration to a new instance type |
+
+> If none of these fit your exact requirement, the next topic — **Custom Termination Policy** — hands you full programmable control instead.
+`,
+    },
+    {
+      id: "asg-termination-policy-custom",
+      title: "Auto Scaling – Custom Termination Policy",
+      shortDesc: "A Lambda function decides which instance dies — for logic no built-in policy can express",
+      visuals: [],
+      content: `## When Built-In Policies Aren't Enough
+
+Every policy covered so far — default and the individual built-ins — encodes a **fixed** rule AWS decided in advance. Sometimes your actual requirements don't match any of them.
+
+> **A Custom Termination Policy hands the decision to a Lambda function you write yourself** — giving you fully programmable logic for exactly which instance to terminate during a scale-in event, in any language Lambda supports (Python, Node.js, Java, Go, and more).
+
+Selecting it: **ASG → Advanced configurations → Edit → Termination policies → Custom**, then point it at your Lambda function. (This topic covers the concept and use cases in depth; actually writing the Lambda function is its own topic, covered later in the course.)
+
+---
+
+## Five Reasons to Reach for This
+
+### 1. Standard Rules Don't Fit Your Logic
+
+Sometimes the built-in criteria (AZ balance, launch template age, billing hour, instance age) simply don't match how *your* application decides what's expendable. A custom policy can check **tags**, or live **performance metrics** (CPU, network, storage, memory) that no built-in policy considers at all.
+
+### 2. Graceful Shutdown
+
+> **Every built-in policy terminates an instance immediately** — it doesn't wait for in-flight work to finish. A Lambda function can run a **graceful shutdown sequence** first: let active requests complete, close connections cleanly, then allow termination — preventing data loss and service disruption that an abrupt kill could cause.
+
+### 3. Pre-Termination Actions and Data Backup
+
+Before an instance actually goes away, you might need to back up critical local data elsewhere, drain active connections, or **deregister the instance** from an external service-discovery system so nothing keeps routing traffic to it. A Lambda function can perform all of this **before** the termination actually happens.
+
+### 4. Integration With External Systems
+
+Some termination decisions depend on context Auto Scaling has no visibility into — license management, an external health-check system, or a separate database tracking instance state. A Lambda function can call out to those systems as part of making (or informing) the termination decision.
+
+### 5. Flexible, Evolving Logic
+
+As an application's requirements change, a custom policy's logic lives entirely in the Lambda function — **update the function code**, and the termination behavior changes with it, with **no modification to the Auto Scaling Group itself** required.
+
+---
+
+## The Practical Takeaway
+
+> A custom termination policy is a real, occasionally-asked interview and exam topic — but actually building one is a deliberate architectural choice for teams with genuine requirements the built-ins can't express, not something most ASGs need day to day. Understanding **why** it exists and what problems it solves is what matters; you don't need a working Lambda function in hand to answer the exam-style question correctly.
+`,
+    },
   ],
 };
