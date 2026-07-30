@@ -3399,10 +3399,186 @@ Compare the DNS burden directly against the previous lab: path-based needed **on
 `,
     },
     {
+      id: "lb-nlb-concepts",
+      title: "Network Load Balancer – Concepts",
+      shortDesc: "Layer 4, ultra-low latency, static IP support — and what it gives up versus an ALB",
+      visuals: ["LBTypeComparison"],
+      content: `## Why a Second Load Balancer Type Exists
+
+The Application Load Balancer operates at **Layer 7** — it reads HTTP/HTTPS and routes on URL paths, hostnames, and cookies. That reading takes work.
+
+> **The Network Load Balancer operates at Layer 4** — TCP, UDP, TLS. It never looks past the transport layer, which is exactly why it is capable of **millions of requests per second at ultra-low latency**. If you're running a gaming backend where every millisecond of latency matters and traffic scales into the millions, an NLB — not an ALB — is the right tool.
+
+---
+
+## Side-by-Side: ALB vs NLB
+
+| | Application Load Balancer | Network Load Balancer |
+|---|---|---|
+| **OSI layer** | 7 (application) | 4 (transport) |
+| **Supported protocols** | HTTP, HTTPS, gRPC | TCP, UDP, TLS |
+| **Sticky sessions** | ✅ Supported | ✅ Supported |
+| **Idle connection timeout** | ✅ Yes — waits briefly for reconnection | ❌ None — a dropped connection starts fresh |
+| **Path/host-based routing** | ✅ Supported | ❌ Not supported (no Layer 7 visibility) |
+| **WebSocket** | ✅ Supported | ✅ Supported |
+| **Static IP** | ❌ Not available | ✅ Supported |
+
+---
+
+## ⚠️ Exam Facts Worth Memorizing
+
+- **Sticky sessions work on both** — a common trick question assumes NLB can't do this. It can, via session cookies identifying which server a client used previously.
+- **Idle timeout is an ALB-only concept.** An NLB has no equivalent — disconnect and reconnect, and it is treated as a brand-new session.
+- **Path-based and host-based routing require Layer 7.** The NLB simply cannot see the HTTP request line or Host header, so neither is possible here — this is the trade-off for its raw speed.
+- **Static IP is the NLB's signature advantage.** An ALB can never be given a fixed IP address; an NLB can be assigned an **Elastic IP** directly, one per AZ, giving it a stable address that never changes.
+
+---
+
+## What You're Building Next
+
+The lab reuses the same VPC layout as the ALB labs — two public subnets for the load balancer, two private subnets for the backend instances — but this time creates a **Network Load Balancer** in front of two web servers, and shows exactly how its routing decision differs from an ALB's.
+`,
+    },
+    {
+      id: "lb-create-nlb-lab",
+      title: "Lab – Creating a Network Load Balancer",
+      shortDesc: "TCP listener, target group, and watching NLB routing behave differently from an ALB",
+      visuals: [],
+      content: `## Prerequisites
+
+The same VPC used for the ALB labs: two public subnets (for the load balancer) and two private subnets (for the backend instances), across two AZs, with an internet gateway and NAT gateway already in place.
+
+---
+
+## Step 1 — Security Groups
+
+**nlb-SG** (attached to the load balancer):
+
+- **Inbound:** **TCP 80** from **anywhere (0.0.0.0/0)**
+
+**web-SG** (attached to the instances):
+
+- **Inbound:** **HTTP 80**, source = **nlb-SG** — not an IP range, the security group itself
+
+> Same defence-in-depth pattern as the ALB lab: the web servers only ever accept traffic that has already passed through the load balancer.
+
+---
+
+## Step 2 — Two Backend Instances
+
+Launch them **one at a time**, since each needs a different subnet:
+
+**web-server-a1:** Amazon Linux, t2.micro, **private-subnet-1a**, no public IP, security group **web-SG**. User data script installs httpd and serves "Welcome to Web Server 1".
+
+**web-server-a2:** identical, but **private-subnet-1b**, user data serves "Welcome to Web Server 2".
+
+---
+
+## Step 3 — Create the Network Load Balancer
+
+**EC2 → Load Balancers → Create load balancer → Network Load Balancer.**
+
+- **Scheme:** Internet-facing
+- **IP address type:** IPv4
+- **VPC:** the one built above
+- **Mappings:** select **both public subnets**, one per AZ (mandatory — at least two AZs)
+
+> ⚠️ **Here is the NLB's signature option, absent from the ALB flow:** for each AZ you can leave the IP **assigned by AWS** (dynamic) or attach your own **Elastic IP** for a fixed, static address. Allocate an Elastic IP first if you want this — it's exactly the static-IP capability the concepts topic called out as the NLB's standout feature.
+
+- **Security group:** **nlb-SG**
+- **Listener:** protocol **TCP**, port **80** (not HTTP — the NLB doesn't speak Layer 7)
+
+---
+
+## Step 4 — Target Group
+
+**Create target group** → name **target-1** → protocol **TCP**, port **80** → register **both instances**, port **80** → **Include as pending below** → **Create target group**.
+
+Attach **target-1** to the listener, then **Create load balancer**.
+
+---
+
+## Step 5 — Verify and Test
+
+Wait for the load balancer state to reach **Active**, and the target group's targets to show **healthy**.
+
+Copy the load balancer's **DNS name** into a browser.
+
+> ⚠️ **The behavior here is the whole point of this lab.** Refresh the page repeatedly — unlike the ALB lab, you keep landing on the **same** web server every time.
+
+---
+
+## Why It Always Picks the Same Server
+
+An ALB's routing decision has no fixed rule tying a client to a server. An NLB's does:
+
+> **A Network Load Balancer routes by source IP hash**, not round-robin. Your browser's IP address doesn't change between refreshes, so the hash always resolves to the same target — it looks like load balancing has stopped working, but it hasn't.
+
+To prove both servers are actually in rotation without changing your own IP: **stop web-server-a2** in the EC2 console. With its current target gone, the NLB now sends your (unchanged) source IP's traffic to **web-server-a1** instead — confirming both instances are live participants, just deterministically assigned by hash rather than rotated.
+
+> Don't forget to delete the load balancer, target group, and instances when you're done experimenting.
+`,
+    },
+    {
+      id: "lb-cross-zone-lab",
+      title: "Lab – Cross-Zone Load Balancing",
+      shortDesc: "Why traffic split by node, not by instance, can leave some servers doing far more work",
+      visuals: ["CrossZoneLB"],
+      content: `## One Load Balancer, Multiple Nodes
+
+Selecting multiple AZs when you create a load balancer doesn't create one object — it creates **one load balancer node per AZ** you selected. A 2-AZ load balancer is really two nodes, each fielding a share of incoming traffic.
+
+> **Cross-zone load balancing decides whether a node can forward traffic to targets in a different AZ from its own.**
+
+---
+
+## Disabled (the NLB/GWLB Default)
+
+Each node forwards **only** to targets in its own AZ — it cannot reach across.
+
+**Worked example — 2 AZs, uneven instance counts:**
+
+| AZ | Load balancer node's share | Instances in this AZ | Traffic per instance |
+|---|---|---|---|
+| **AZ1** | 50% | 2 | **25%** each |
+| **AZ2** | 50% | 8 | **6.25%** each |
+
+> The split is 50/50 **by node**, not by instance. An AZ with fewer instances gets hammered — each of AZ1's two instances absorbs **4x** the traffic of each instance in AZ2, even though every instance is theoretically identical.
+
+---
+
+## Enabled
+
+Every node can forward to **any** target in **any** AZ. Traffic is now divided evenly across the **total instance count**, regardless of which AZ it landed in first.
+
+**Same example, cross-zone enabled:** 10 total instances, evenly split → **10% each**, whether in AZ1 or AZ2.
+
+> If your instances are uniform in size and capacity, enabling this is almost always the right call — it prevents the AZ-count mismatch from ever creating a hot spot.
+
+---
+
+## ⚠️ The Default Differs by Load Balancer Type — Exam Fact
+
+| Load balancer type | Cross-zone default | Can you change it? |
+|---|---|---|
+| **Application Load Balancer** | **Always enabled** | ❌ No option to disable at the load-balancer level |
+| **Network Load Balancer** | **Disabled** | ✅ Yes, toggle anytime after creation |
+| **Gateway Load Balancer** | **Disabled** | ✅ Yes, toggle anytime after creation |
+
+---
+
+## Toggling It
+
+On the NLB built in the previous lab: select it → **Actions → Edit load balancer attributes → Load balancer target selection policy** → **Enable cross-zone load balancing** (or disable it again).
+
+> Changing this takes effect immediately — no need to recreate the load balancer, and it can be flipped back and forth freely while testing traffic distribution.
+`,
+    },
+    {
       id: "elb",
       title: "ELB – Elastic Load Balancing",
       shortDesc: "Distribute traffic across targets",
-      visuals: ["LBTypeComparison", "CrossZoneLB", "GatewayLBFlow"],
+      visuals: ["LBTypeComparison", "GatewayLBFlow"],
       content: `## ELB – Elastic Load Balancing
 
 A **Load Balancer** distributes incoming traffic across multiple targets (EC2 instances), improving availability and letting your servers stay **private**.
