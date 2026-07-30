@@ -26,3 +26,6 @@ Topmost AWS Certified Solutions Architect Associate SAA-C03/
 *.njsproj
 *.sln
 *.sw?
+
+# MCP server config — contains API tokens, never commit
+.mcp.json
