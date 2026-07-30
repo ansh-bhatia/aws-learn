@@ -1988,10 +1988,297 @@ That weight is what counts against your rule limits, **not one**.
 `,
     },
     {
+      id: "dns-fundamentals",
+      title: "DNS – How Name Resolution Works",
+      shortDesc: "FQDN anatomy and the full resolution path from your browser to an authoritative server",
+      visuals: ["DNSResolutionFlow", "FQDNAnatomy"],
+      content: `## Why DNS Exists
+
+Internet connectivity runs on **TCP/IP**, so opening a website means connecting to an **IP address**. DNS is what lets you type a **name** instead.
+
+> Imagine the web without it: no facebook.com, just 11.1.1.5. No google.com, just 13.5.19.80. **Names are easy to remember; numbers are not.**
+
+> **DNS is the phonebook of the internet.** You dial a name; the phone connects to a number.
+
+**Why "Route 53"?** DNS uses **TCP/UDP port 53**. Hence the name.
+
+---
+
+## Anatomy of an FQDN
+
+Take **learn.etc.cloudfox.in**. The whole thing is an **FQDN — fully qualified domain name**.
+
+Reading it **right to left**, from the most general to the most specific:
+
+| Part | Name | Example |
+|---|---|---|
+| **in** | **TLD** — top level domain | .com, .in, .org, .co.uk, .live |
+| **cloudfox** | Domain | your registered name |
+| **etc** | **Subdomain** | |
+| **learn** | **DNS label** | the leftmost piece |
+
+**Two limits worth knowing:**
+
+- An **FQDN** may be at most **255 characters**.
+- A **DNS label** may be at most **63 characters**.
+
+> **You cannot invent a TLD.** They are a fixed set — .com, .in, .org and the rest.
+
+---
+
+## The Resolution Path
+
+You type **www.facebook.com** into a browser. Here is what actually happens.
+
+**1 · Your device asks the DNS resolver.**
+
+How does it know where that is? **Your ISP hosts it**, and when you got internet access your ISP supplied an IP address, subnet mask, default gateway **and the DNS resolver's address**. It is already configured in your home router or your computer.
+
+**2 · The resolver asks a DNS root server.**
+
+Assume nothing is cached. The resolver forwards the query to a **root server**. There are **13 DNS root servers**, operated by the internet authority and distributed worldwide.
+
+**3 · The root server points at the TLD servers.**
+
+Root servers do not know Facebook's IP. But they can read the TLD — **.com** — and forward the query to the **.com TLD servers**. A **.live** domain would go to the .live TLD servers instead.
+
+**4 · The TLD server returns the authoritative server.**
+
+The .com servers do **not** return facebook.com's IP either. They return the IP of **Facebook's authoritative DNS server**.
+
+**5 · The authoritative server returns the actual IP.**
+
+The query goes there, gets the real answer, and your computer connects.
+
+---
+
+## Caching Makes It Fast
+
+Once resolved, the answer is **cached at the resolver**. The next query for facebook.com is answered from cache, and **steps 2, 3 and 4 are skipped entirely**.
+
+---
+
+## The Part That Matters for You
+
+Running your own website, which of those five components must you configure?
+
+| Component | Yours to manage? |
+|---|---|
+| DNS resolver | ❌ Your ISP's |
+| 13 root servers | ❌ The internet authority's |
+| TLD servers | ❌ The registry's |
+| **Authoritative DNS server** | ✅ **Yours** |
+
+> **Facebook owns none of that infrastructure. It manages one thing: its authoritative DNS server.**
+
+So do you. And **Route 53 is the AWS service that acts as your authoritative DNS server** — which is exactly why an EC2-hosted site is reachable by IP but not by name until Route 53 is configured.
+`,
+    },
+    {
+      id: "route53-hosted-zones",
+      title: "Route 53 – Domains & Hosted Zones",
+      shortDesc: "Registering a domain, delegating an external one, and creating your first record",
+      visuals: [],
+      content: `## Step 1 — You Need a Registered Domain
+
+> **Domain names are not free**, and there is no way around that. Expect roughly ₹100 to a few thousand per year depending on the TLD.
+
+**A genuinely useful tip:** buy a domain **with your own name**. Then build a page hosting your **CV** on it, and give employers the link. It costs a couple of hundred rupees and it is far more impressive than a attachment.
+
+**Where to buy:**
+
+- **Route 53 itself** — **Registered domains → Register domain**. It quotes per TLD (e.g. **.in** around $15/year, **.org** around $12).
+- **Third-party registrars** — GoDaddy, Namecheap and others, often cheaper.
+
+---
+
+## Step 2 — Create a Hosted Zone
+
+**Route 53 → Hosted zones → Create hosted zone.** There are **two types**:
+
+| Type | For | Requires a registered domain? |
+|---|---|---|
+| **Public hosted zone** | Name resolution **over the internet** | ✅ Yes |
+| **Private hosted zone** | Name resolution **inside your VPC** | ❌ No |
+
+> If you would rather not spend money, follow the public-zone topics for understanding and do the hands-on work when **private hosted zones** come up — those need no domain.
+
+Enter **exactly the domain name you registered** and create the zone.
+
+---
+
+## Step 3 — If the Domain Is Registered Elsewhere
+
+Buying from GoDaddy but wanting Route 53 to do the resolving? You have **two options**.
+
+**Option A — transfer the domain to Route 53.**
+
+> ⚠️ **The domain must be at least one month old.** A freshly-registered domain **cannot be transferred** — registrars block it.
+
+**Option B — delegate the nameservers (works immediately).**
+
+Keep the domain at GoDaddy but point it at Route 53:
+
+1. In **Route 53**, open your hosted zone and find the **NS record**. It lists **four Route 53 nameservers**.
+2. In **GoDaddy**: **Manage domain → DNS → Nameservers → Change nameservers → "I'll use my own nameservers"**.
+3. **Paste all four** Route 53 nameservers and save.
+
+> From then on, GoDaddy's job is done — every query it receives is **forwarded to Route 53**.
+
+**"Why not just use GoDaddy's DNS?"** You can — adding an A record there works fine. But you lose **Route 53's routing policies**, which are the real reason to use it. Those are covered across the following topics.
+
+---
+
+## Step 4 — Create Your First Record
+
+Inside the hosted zone, **Create record**:
+
+- **Record name:** e.g. **learn** → giving **learn.cloudfox.in**
+- **Record type:** **A**
+- **Value:** your EC2 instance's **public IP**
+- **Routing policy:** **Simple routing** for now
+
+Create it.
+
+---
+
+## Step 5 — Wait, Then Verify
+
+> ⚠️ **The record does not work instantly.** Propagation typically takes **10 to 15 minutes** while it synchronises out.
+
+**Three ways to check:**
+
+- **Test record** in the Route 53 console — click **Get response**. Seeing your IP means the record is correct, regardless of what your browser does.
+- **dnschecker.org** — enter your URL and see resolution results **from countries worldwide**.
+- **ipconfig /flushdns** on Windows — clears your local DNS cache. **Essential** when a name recently changed IP and your machine is serving a stale answer.
+
+Once resolved, the site opens by **name** as well as by IP.
+
+> One thing still missing: the site is **HTTP**, not HTTPS. Making it HTTPS needs **AWS Certificate Manager (ACM)**, covered in the security section.
+`,
+    },
+    {
+      id: "route53-record-types",
+      title: "Route 53 – Record Types",
+      shortDesc: "A, AAAA, CNAME, MX, TXT, PTR, SRV, SPF — what each one is actually for",
+      visuals: ["DNSRecordTypes"],
+      content: `## A — The One You Will Use Most
+
+> **Give it a name, it returns an IPv4 address.**
+
+This is the main record type. Running a web server means creating an **A record**: name **learn.cloudfox.in**, value your EC2 instance's IP.
+
+---
+
+## AAAA — Same Job, IPv6
+
+**Identical purpose, different address family.**
+
+| Record | Returns |
+|---|---|
+| **A** | An **IPv4** address |
+| **AAAA** | An **IPv6** address |
+
+Site on IPv4 → **A record**. Site on IPv6 → **AAAA record**.
+
+---
+
+## CNAME — A Second Name for the Same Thing
+
+You want the site reachable at **both** **learn.cloudfox.in** and **test.cloudfox.in**.
+
+You *could* create a second **A record** — but then **changing the IP means updating both**.
+
+Instead create a **CNAME** (canonical name) record: name **test**, value **learn.cloudfox.in**.
+
+> Now opening **test.cloudfox.in** resolves to **learn.cloudfox.in**, which resolves to the IP. **Change the A record's IP and the CNAME follows automatically**, because it points at a name rather than an address.
+
+Think of it as a **nickname** for an existing record.
+
+> There is also an **Alias** option, which is Route 53-specific and behaves differently. It comes up with **load balancers** and **S3 static website hosting**.
+
+---
+
+## MX — Mail Exchange
+
+The **A record** handles your **web** server. **MX handles your mail server.**
+
+When someone emails **info@cloudfox.in**, their mail system looks up your domain's **MX record** to find where to deliver it.
+
+> ⚠️ **No mail server and no MX record means nobody can email you at that domain.** You must first stand up a mail server — in Microsoft 365, Google Workspace, or on AWS — then publish it as an MX record.
+
+---
+
+## TXT — Free-Form Text
+
+Arbitrary information attached to the domain — ownership details, for example.
+
+**Its most common real use is verification.** A third-party tool tells you to add a specific TXT record; once it can read that record, it accepts that you control the domain.
+
+---
+
+## PTR — The Reverse of A
+
+> **Give it an IP, it returns a name.**
+
+| Record | Direction |
+|---|---|
+| **A** | **Name → IP** |
+| **PTR** | **IP → Name** |
+
+---
+
+## SRV — Service Records
+
+**Application-specific.** Some applications depend on DNS to locate their own services, and need an **SRV** record to do it.
+
+**The classic example: Microsoft Active Directory.** AD depends heavily on DNS, and client computers **find the domain controller through SRV records**.
+
+> You do not need to memorise how to construct these. Any application requiring one will document exactly what to create. What matters is knowing **Route 53 can create SRV records** when asked.
+
+---
+
+## SPF — Sender Policy Framework
+
+This one has a story attached.
+
+> Someone receives an email claiming to be from a large employer, offering a job for an up-front fee. It looks legitimate — **it came from that company's domain**.
+>
+> Attackers can put **your domain name** in the From field of mail sent from **their** server. That is phishing, and twenty years ago it was rampant.
+
+**SPF fixes it by publishing which IPs are allowed to send mail for your domain.** Any message from anywhere else fails the check.
+
+> ⚠️ SPF records in Route 53 get awkward for **large organisations sending from many mail servers** — which is why AWS no longer recommends the dedicated SPF record type for complex setups.
+
+---
+
+## The Rest
+
+**CAA**, **NAPTR** and others exist for security and specialist telephony uses. **CAA** returns when making a site **HTTPS**, alongside ACM.
+
+---
+
+## Summary
+
+| Record | Purpose |
+|---|---|
+| **A** | Name → **IPv4** — the main one |
+| **AAAA** | Name → **IPv6** |
+| **CNAME** | Name → **another name** (nickname) |
+| **MX** | Where to deliver **email** |
+| **TXT** | Free-form text · **domain verification** |
+| **PTR** | **IP → name** (reverse of A) |
+| **SRV** | Application service location (e.g. **Active Directory**) |
+| **SPF** | Which IPs may **send mail** for the domain |
+
+> In practice you will mostly use **A**, occasionally **CNAME**, and **Alias** once load balancers appear. Next: **routing policies**, which are the real reason to choose Route 53.
+`,
+    },
+    {
       id: "route53",
       title: "Route 53",
       shortDesc: "Scalable DNS and domain registration",
-      visuals: ["DNSResolutionFlow", "FQDNAnatomy", "DNSRecordTypes", "RoutingPolicyOverview", "WeightedRoutingCalculator", "HealthCheckDemo", "GeoproximityBias", "FailoverDemo"],
+      visuals: ["RoutingPolicyOverview", "WeightedRoutingCalculator", "HealthCheckDemo", "GeoproximityBias", "FailoverDemo"],
       content: `## Route 53 — AWS DNS Service
 
 **Route 53** is AWS's **DNS** (Domain Name System) service. It's named after **port 53**, the TCP/UDP port DNS uses. It resolves human-friendly **names** (like \`learn.cloudfox.in\`) into **IP addresses**, registers domains, and offers powerful **routing policies** and **health checks**.
