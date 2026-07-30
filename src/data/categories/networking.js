@@ -3575,202 +3575,417 @@ On the NLB built in the previous lab: select it → **Actions → Edit load bala
 `,
     },
     {
-      id: "elb",
-      title: "ELB – Elastic Load Balancing",
-      shortDesc: "Distribute traffic across targets",
-      visuals: ["LBTypeComparison", "GatewayLBFlow"],
-      content: `## ELB – Elastic Load Balancing
+      id: "lb-gwlb-concepts",
+      title: "Gateway Load Balancer – Concepts",
+      shortDesc: "Layer 3 routing that lets you insert a third-party firewall appliance inline",
+      visuals: ["GatewayLBFlow"],
+      content: `## A Third Kind of Load Balancer Entirely
 
-A **Load Balancer** distributes incoming traffic across multiple targets (EC2 instances), improving availability and letting your servers stay **private**.
+ALB balances HTTP/HTTPS requests across app servers. NLB balances raw TCP/UDP connections across app servers. **Neither one lets you insert anything in between** — no way to route traffic through a firewall before it reaches your instances.
 
-> Prerequisite: VPC with public & private subnets, internet gateway, NAT gateway. See the VPC topics first.
-
----
-
-## Why Use a Load Balancer?
-
-Say you run two web servers in two AZs for high availability. You *could* balance them with Route 53, but a load balancer is better:
-
-- **Spread traffic** across any number of instances
-- Keep EC2 instances in **private subnets** with **no public IP** — the LB (in the public subnet) is the only public door
-- Built-in **health checks** automatically remove unhealthy instances from rotation (and re-add them when they recover)
-- **HTTPS offload** — terminate TLS at the LB so instances don't need certificates
+> **A Gateway Load Balancer (GWLB) is Layer 3.** It doesn't understand HTTP, TCP, or UDP — it simply forwards **IP packets** to a destination. It is, functionally, a routing device. And what it routes traffic **through** is the entire point.
 
 ---
 
-## Terminology
+## Why Companies Need This: Virtual Appliances
 
-| Term | Meaning |
-|------|---------|
-| **Listener** | Watches a protocol+port (HTTP:80 / HTTPS:443) for incoming requests |
-| **Target Group** | The backend resources: EC2 instances, IPs, Lambda, or another ALB |
-| **Health Check** | Probes targets; **default protocol is HTTP**. Unhealthy targets are dropped |
-| **Internet-facing** | Public DNS name — reachable from the internet |
-| **Internal** | Reachable only inside the VPC |
+Many companies already run **Palo Alto, Cisco, Fortinet, or Check Point** firewalls on-premises — they've paid for the license, and their security team knows the product. Moving to AWS, they don't want to abandon that investment for a generic AWS-native tool.
 
-> Listener port and target port can differ (e.g. listen on 80, forward to 8080). HTTPS on the listener lets the LB handle encryption — something Route 53 cannot do.
+> **AWS Marketplace offers these same vendors as "virtual appliances"** — AMIs you launch like any EC2 instance, pre-loaded with the full firewall/IDS/IPS software. Launch it, manage it through its own console over HTTP/HTTPS, and it protects your VPC exactly like the physical box did on-prem.
+
+A **Gateway Load Balancer** is the AWS service built specifically to **deploy, scale, and manage a fleet of these virtual appliances** — distributing traffic across them, health-checking them, and supporting equal-cost multi-path routing for throughput and availability.
 
 ---
 
-## The 4 Load Balancer Types
+## Two Components, Not One
 
-| Type | Layer | Protocols | Best for |
-|------|-------|-----------|----------|
-| **Application LB (ALB)** | 7 | HTTP, HTTPS, gRPC | Web apps with smart path/host routing |
-| **Network LB (NLB)** | 4 | TCP, UDP, TLS | Extreme performance, millions of req/s, ultra-low latency |
-| **Gateway LB (GLB)** | 3 | IP packets | Inline virtual appliances (firewalls, IDS/IPS) |
-| **Classic LB (CLB)** | 4 & 7 | HTTP, HTTPS, TCP | Legacy / previous generation — avoid |
+Unlike ALB and NLB, a GWLB is **not** one thing you talk to directly:
 
----
-
-## Application Load Balancer (Layer 7)
-
-Operates on **HTTP/HTTPS**, so it can make smart routing decisions on the **URL**. The big win over Classic LB: **one** ALB can serve many targets via rules — no need for one LB per route.
-
-### Path-based vs Host-based Routing
-
-| | Path-based | Host-based |
-|--|-----------|-----------|
-| Example | \`cloudfox.in/aws\` | \`aws.cloudfox.in\` |
-| Decides on | URL **path** (after the slash) | **Hostname** (subdomain) |
-| DNS | Easy — one record | A record per host/subdomain |
-| Certificates | One covers all paths | May need multiple |
-
-> Memory hook: **slash = path**, **subdomain (dot) = host**. e.g. \`order.example.com\` is host-based; \`example.com/orders\` is path-based.
-
-Routing is configured with **listener rules** (condition → target, with a priority). The **default rule** (lowest priority) catches anything unmatched.
+| Component | Role |
+|---|---|
+| **Gateway Load Balancer** | Balances traffic across the appliance fleet. Has **no URL, no IP address** — you cannot address it directly. |
+| **Gateway Load Balancer Endpoint** | The "assistant" — the *only* way anything communicates with the GWLB. |
 
 ---
 
-## Network Load Balancer (Layer 4)
+## The Traffic Flow
 
-Operates on **TCP/UDP/TLS** — no understanding of URLs. In exchange you get **millions of requests/sec** and **ultra-low latency** — ideal for gaming servers and high-throughput systems.
+1. User traffic arrives at the **GWLB Endpoint**
+2. Endpoint forwards it to the **Gateway Load Balancer**
+3. GWLB forwards it to one of the **security appliances** for inspection
+4. The appliance approves (or blocks) it, and sends it back to the GWLB
+5. GWLB → endpoint → the **application server**
+6. The reply travels the exact same path in reverse
 
-### ALB vs NLB
-
-| Feature | ALB (L7) | NLB (L4) |
-|---------|----------|----------|
-| Protocols | HTTP/HTTPS/gRPC | TCP/UDP/TLS |
-| Path/Host routing | ✅ | ❌ |
-| Sticky sessions | ✅ | ✅ |
-| Idle connection timeout | ✅ | ❌ |
-| WebSocket | ✅ | ✅ |
-| **Static IP** | ❌ | ✅ (Elastic IP) |
-| Routing decision | URL + cookies | Source-IP hash |
-
-> **Exam favourites:** NLB supports a **static (Elastic) IP**; ALB does not. NLB routes by **source-IP hash**, so the same client tends to hit the same target.
+> The whole point: with ALB/NLB, nothing can sit between the load balancer and your app servers to inspect traffic. **With a GWLB, every packet — inbound or outbound — passes through your chosen security appliance first**, while the appliance itself does the load balancing, scaling, and high-availability work for you.
 
 ---
 
-## Cross-Zone Load Balancing
+## What's Ahead
 
-The LB places a **node in each AZ**, and incoming traffic splits **50/50** across nodes.
+This is genuinely the most complex load balancer type in the exam. Two foundational ideas make the rest click into place:
 
-- **OFF:** a node serves only targets in **its own AZ**. If AZs have different target counts, load is **uneven** (e.g. AZ-A's 2 targets get 25% each while AZ-B's 8 targets get 6.25% each).
-- **ON:** any node serves **any** target — perfectly **even** distribution.
-
-**Defaults:**
-- **ALB → always ON** (can't fully disable)
-- **NLB & GLB → OFF by default** (enable later via *Edit attributes*)
-
----
-
-## Gateway Load Balancer (Layer 3)
-
-Routes **raw IP packets** through **virtual appliances** — third-party **firewalls / IDS / IPS** like Palo Alto, Fortinet, or Sophos (available as AWS Marketplace AMIs, often BYOL).
-
-It has **two components**: the **Gateway Load Balancer** and a **GWLB Endpoint**.
-
-**Traffic flow:**
-1. User → **GWLB Endpoint**
-2. Endpoint → **Gateway Load Balancer**
-3. GWLB → **security appliance** (e.g. Palo Alto firewall) for inspection
-4. Appliance approves → back to GWLB → endpoint
-5. Clean traffic → **application server**
-
-> Unlike ALB/NLB, a GWLB lets you insert firewalls **inline** to inspect all inbound and outbound VPC traffic — bringing existing on-prem security tools and licenses into AWS.
+- **VPC Ingress Routing** — the mechanism that lets traffic be redirected through an appliance in the first place (covered next)
+- **The two-VPC design** — why GWLB deployments almost always span a "service provider" and a "service consumer" VPC (covered after that)
 `,
     },
     {
-      id: "elb-gwlb-classic",
-      title: "ELB – Gateway LB & Classic (Part 2)",
-      shortDesc: "VPC ingress routing, Gateway LB architecture, Classic LB",
-      visuals: ["IngressRoutingDemo", "GWLBArchitecture", "ClassicLBComparison"],
-      content: `## Load Balancer Part 2 — Gateway LB Deep Dive & Classic LB
+      id: "lb-ingress-routing-concepts",
+      title: "VPC Ingress Routing – Why It Exists",
+      shortDesc: "Redirecting traffic through a transparent third-party firewall before it reaches your servers",
+      visuals: ["IngressRoutingDemo"],
+      content: `## The On-Premises Pattern
 
-Part 1 covered ALB, NLB, and the GLB concept. Part 2 goes deeper: **VPC ingress routing** (the foundation of GLB), the full **two-VPC Gateway Load Balancer architecture**, and the legacy **Classic Load Balancer**.
+In a traditional data centre, web servers sit behind a **next-generation firewall** — Palo Alto, Check Point, Cisco, Fortinet. The client still connects using the server's own IP address; the firewall inspects every packet **transparently**, without altering source or destination addresses. Legitimate traffic passes through; suspicious traffic is blocked.
 
----
-
-## VPC Ingress Routing
-
-Normally, traffic flows straight from the **Internet Gateway** to your servers — you can't insert anything in between (you can use AWS-native firewalls, but not a third-party appliance).
-
-Many companies want their existing **Palo Alto / Checkpoint / Cisco / Fortinet** firewalls in AWS too. **Ingress routing** makes this possible.
-
-### How it works
-- You add an **Internet Gateway route table** — a special route table **associated with the IGW** (not a subnet)
-- It routes the **app subnet's CIDR** to the firewall appliance's **network interface (ENI)** instead of the server directly
-- The firewall is **transparent**: the client uses the server's normal public IP; the appliance doesn't change the packet's source/destination — it just inspects it
-- The reply returns the same path
-
-### Critical setup detail
-You must **disable the source/destination check** on the appliance, so it's allowed to forward traffic it didn't originate (it acts as a router/firewall).
-
-### The single-appliance problem
-If you route everything through **one** appliance and it goes down, **every** server becomes unreachable — the appliance is the only entrance. The fix: **multiple appliances across AZs**, load-balanced and auto-scaled by a **Gateway Load Balancer**.
+> These vendors are firewall specialists the way Apple is a phone specialist — companies have built years of expertise and paid for licenses around them, and want the same tool wherever their infrastructure lives.
 
 ---
 
-## Gateway Load Balancer — Full Architecture
+## The Problem in a Normal AWS VPC
 
-A GWLB is **not** like ALB/NLB (which balance app servers). It **load-balances the fleet of security appliances**, handles their **high availability**, and **auto-scales** them.
+Without anything extra, traffic flows **straight** from the **Internet Gateway** to your EC2 instances. There is no point of insertion:
 
-### Two components
-1. **Gateway Load Balancer** — has **no URL or IP**
-2. **GWLB Endpoint** — the "assistant"; the *only* way to communicate with the GWLB
+- AWS-native tools exist — **Security Groups, NACLs, WAF** — but a company that has standardized on Palo Alto wants *that* tool, not a substitute
+- Even fronting instances with an ALB doesn't fully solve it: the ALB itself is exposed to the internet, and the same customer will ask, "what protects the load balancer?"
 
-### Best practice: two VPCs
+---
+
+## The Solution: VPC Ingress Routing
+
+> **Ingress routing lets you redirect traffic arriving at your VPC through a third-party appliance before it ever reaches your servers — and the appliance behaves exactly like the on-prem firewall: transparent, not changing any address.**
+
+### How it's wired
+
+- A special route table is created and **associated with the Internet Gateway itself** — not with any subnet
+- Its route says: traffic destined for the app subnet's CIDR should go to the firewall appliance's **network interface (ENI)**, not directly to the server
+- The appliance inspects the packet and forwards it onward, unmodified
+- The reply from the server takes the **same path back** through the appliance
+
+### One non-obvious setting
+
+> ⚠️ **The appliance's network interface must have "Source/destination check" disabled.** By default, EC2 drops any packet where the instance isn't the actual source or destination — which is exactly what a router/firewall needs to do. Disabling this check is what lets the appliance forward traffic that isn't "its own."
+
+---
+
+## The Problem This Alone Doesn't Solve
+
+A single appliance is now the **only entrance** to your servers. If it goes down, *every* server behind it becomes unreachable — and if traffic grows past what one appliance can handle, there's no way to add capacity.
+
+> This is exactly the gap a **Gateway Load Balancer** fills: run **multiple appliances across AZs**, and let the GWLB load-balance, health-check, and auto-scale the fleet — ingress routing is the wiring; GWLB is what makes it highly available.
+
+---
+
+## What's Next
+
+The hands-on lab builds this exact setup **without** a GWLB first — two web servers directly exposed, then one EC2 instance standing in as a simple "security appliance," wired in with an ingress route table — so the mechanism is visible before the GWLB's extra layer of complexity gets added on top.
+`,
+    },
+    {
+      id: "lb-ingress-routing-lab",
+      title: "Lab – VPC Ingress Routing",
+      shortDesc: "Wiring a single EC2 instance in as a transparent firewall using an Internet Gateway route table",
+      visuals: [],
+      content: `## What This Lab Builds
+
+A minimal, single-AZ version of ingress routing: two web servers reachable directly, then one EC2 instance inserted as a stand-in "security appliance" so every packet to those servers is forced through it first.
+
+---
+
+## Step 1 — VPC and Subnets (No Firewall Yet)
+
+Delete the default VPC. **Create VPC** → **192.168.0.0/24**.
+
+Create two subnets, both in a single AZ (high availability is deliberately skipped here to keep the concept visible):
+
+| Subnet | CIDR |
+|---|---|
+| **firewall-subnet** | 192.168.0.0/25 |
+| **app-subnet** | 192.168.0.128/25 |
+
+---
+
+## Step 2 — Route Tables, IGW, and Two Plain Web Servers
+
+Create **firewall-subnet-rt** and **app-subnet-rt**, associate each with its matching subnet, create an **internet gateway**, attach it to the VPC, and add a **0.0.0.0/0** → IGW route to **both** route tables — both subnets are public for now.
+
+Launch **web-server-1** and **web-server-2** in **app-subnet**, each with a public IP, a permissive **web-server-SG** (all traffic, to avoid unrelated SG friction while learning this concept), and a user data script installing httpd with a distinguishing message.
+
+**Verify:** open each instance's public IP directly in a browser. Both work — nothing is inspecting this traffic yet.
+
+---
+
+## Step 3 — The Security Appliance
+
+Launch one more EC2 instance in **firewall-subnet**, public IP enabled, security group allowing all traffic, with a user data script that configures it as a basic router (this stand-in does not run a real firewall product — it just proves the routing mechanism).
+
+At this point, opening the web servers directly still works exactly as before — the appliance exists, but nothing routes traffic through it yet.
+
+---
+
+## Step 4 — The Internet Gateway Route Table
+
+This is the actual ingress-routing mechanism:
+
+**Create route table** → name it clearly, e.g. **igw-route-table-for-ingress-routing** → select the VPC.
+
+> ⚠️ **No subnet gets associated with this table.** Instead: **Edge associations → Edit edge associations** → select the **internet gateway**. This is what makes it an *Internet Gateway* route table rather than a subnet route table.
+
+**Add a route:** destination = the app subnet's CIDR (**192.168.0.128/25**) → target = the security appliance's **network interface (ENI)**, found under the appliance instance's **Networking** tab.
+
+---
+
+## Step 5 — Redirect Outbound Traffic Too
+
+The app subnet's own route table currently sends **0.0.0.0/0** to the **internet gateway** directly. Edit that route: change the target from the IGW to the security appliance's **network interface** instead — so replies leaving the servers also pass through the appliance.
+
+---
+
+## Step 6 — The One Setting Everything Depends On
+
+On the security appliance instance: **Networking → Change source/destination check → disable it.**
+
+> Without this, EC2 silently drops any packet where the instance isn't the actual source or destination — exactly what an appliance forwarding someone else's traffic needs to do. Skip this step and nothing will pass through, with no obvious error to explain why.
+
+---
+
+## Step 7 — Verify With tcpdump
+
+SSH into the security appliance. Confirm its interface name with **ifconfig** (typically **eth0**), then capture matching traffic with **tcpdump -i eth0 tcp -A port 80**.
+
+Open a web server's public IP in a browser from a separate machine. The capture shows the **client's real source IP** passing through the appliance on its way to the server — proof the traffic is being routed through it, even though the client only ever addressed the server directly. A **tcpdump icmp** capture plus a **ping** from the client shows the same thing for ICMP.
+
+---
+
+## Step 8 — Prove It's Actually In the Path
+
+**Stop the security appliance instance.** Ping stops responding immediately — because with the routes now pointing at the appliance's ENI, there is no other path to the server. **Start it again**, and connectivity resumes.
+
+> This is the single-point-of-failure problem the next topic addresses: one appliance means one outage takes down every server behind it.
+`,
+    },
+    {
+      id: "lb-gwlb-multi-vpc",
+      title: "Gateway Load Balancer – Multi-VPC Design",
+      shortDesc: "Why a GWLB deployment almost always spans a service-provider VPC and a service-consumer VPC",
+      visuals: [],
+      content: `## Solving the Single-Appliance Problem
+
+The ingress-routing lab exposed two problems with a lone appliance:
+
+1. **No high availability** — if it goes down, every server behind it goes unreachable
+2. **No scaling** — if traffic outgrows one instance, there's no way to add capacity without manually re-wiring routes
+
+> **A Gateway Load Balancer solves both**: run **multiple** security appliances (across AZs), and let the GWLB distribute traffic across them, health-check them, and route around a failed one automatically — exactly the job ALB/NLB do for app servers, applied instead to a fleet of firewalls.
+
+---
+
+## No URL, No IP — the GWLB Endpoint
+
+Unlike ALB and NLB, a **Gateway Load Balancer has no DNS name and no IP address of its own.** All communication happens through a separate **Gateway Load Balancer Endpoint (GWLBe)** — described in the concepts topic as the GWLB's "assistant."
+
+---
+
+## Why Split This Across Two VPCs
+
+The architecture AWS recommends puts the GWLB and the appliance fleet in one VPC, and the endpoint plus app servers in another:
+
 | VPC | Contains |
-|-----|----------|
-| **Service Provider VPC** | The GWLB + the fleet of security appliances |
-| **Service Consumer VPC** | A GWLB Endpoint, ingress route table, and the app servers |
+|---|---|
+| **Service Provider VPC** | The Gateway Load Balancer + the fleet of security appliances |
+| **Service Consumer VPC** | The GWLB Endpoint, the ingress route table, and the application servers |
 
-**Why two VPCs?** One central security fleet can protect **many** consumer VPCs — you don't duplicate firewalls and a GWLB in every VPC. The two VPCs connect via a **PrivateLink endpoint service** (no peering needed).
+It would be *possible* to put everything in one VPC — so why not?
 
-### Traffic flow
-1. User → Service Consumer VPC
-2. **Ingress route table** → **GWLB Endpoint**
-3. Endpoint → (PrivateLink) → **Gateway Load Balancer** in the provider VPC
-4. GWLB load-balances to a **security appliance**
-5. Appliance inspects (via the **Geneve** protocol, **UDP port 6081**) and approves
-6. Traffic returns via GWLB → endpoint → **app server**; replies follow the reverse path
-
-> **Geneve / UDP 6081:** before choosing any third-party appliance, confirm it supports **Geneve** — that's how the GWLB and appliances communicate. Health checks remove unhealthy appliances; if one dies, traffic flips to another automatically.
+> **A single security-appliance fleet in one "service provider" VPC can protect many "service consumer" VPCs at once.** A company might run 5 separate VPCs (the regional per-account maximum) for different applications or teams. Without this split, each one of those 5 VPCs would need its **own** GWLB and its **own** fleet of appliances — 5x the cost and 5x the appliances to patch and manage. With the split, **one** provider VPC's fleet serves traffic for **all** of them.
 
 ---
 
-## Classic Load Balancer (Previous Generation)
+## How the Two VPCs Talk
 
-The **Classic Load Balancer (CLB)** was built for the old **EC2-Classic** network — the flat, shared network that existed **before VPC**. AWS now marks CLB **previous generation** and steers everyone to **ALB / NLB**.
+The consumer VPC's endpoint and the provider VPC's load balancer connect via a **VPC endpoint service** (the PrivateLink mechanism from the VPC section) — **not** VPC peering. Each consumer VPC's traffic reaches the shared fleet privately, without the two VPCs needing routable IP overlap or a peering connection at all.
 
-### EC2-Classic vs Amazon VPC
+### Full traffic path
+
+1. Traffic arrives in the **service consumer VPC**
+2. The **ingress route table** (attached to the IGW) sends it to the **GWLB Endpoint**
+3. The endpoint reaches across the **PrivateLink connection** into the **service provider VPC**
+4. The **Gateway Load Balancer** there picks a healthy **security appliance**
+5. The appliance inspects and approves the traffic
+6. It flows back: appliance → GWLB → endpoint → the **application server**
+
+> This is why the hands-on lab builds two entirely separate VPCs from scratch before touching the Gateway Load Balancer itself — the multi-VPC shape isn't an optional detail, it's the design GWLB is actually built around.
+`,
+    },
+    {
+      id: "lb-gwlb-setup-lab",
+      title: "Lab – Building a Gateway Load Balancer",
+      shortDesc: "Two VPCs, a Geneve target group, a GWLB endpoint service, and an ingress route pointing at it",
+      visuals: ["GWLBArchitecture"],
+      content: `## Part 1 — Service Consumer VPC
+
+Delete the default VPC, then **create VPC** → **service-consumer-vpc** → **192.168.0.0/24**.
+
+Two subnets, single AZ (high availability is skipped to keep the lab simple):
+
+| Subnet | CIDR | Purpose |
+|---|---|---|
+| **gwlb-endpoint-subnet** | 192.168.0.0/25 | Will hold the GWLB Endpoint |
+| **app-subnet** | 192.168.0.128/25 | Web servers |
+
+Create matching route tables for each, associate them, create an **internet gateway** named for this VPC, attach it, and add a **0.0.0.0/0** → IGW route to **both** tables for now (the ingress route gets added later, once the endpoint exists).
+
+Launch **web-server-1** and **web-server-2** in **app-subnet**, public IP, a permissive **web-server-SG**, and user data installing httpd.
+
+---
+
+## Part 2 — Service Provider VPC
+
+**Create VPC** → **service-provider-vpc** → a **different** CIDR range, e.g. **192.168.1.0/24** (must not overlap the consumer VPC).
+
+One subnet only: **firewall-subnet**. Its own route table, its own internet gateway, attached and routed **0.0.0.0/0** → IGW.
+
+At this point both VPCs are fully wired but entirely independent — nothing links them yet.
+
+---
+
+## Part 3 — Security Appliances
+
+Launch **two** appliance instances in **firewall-subnet**, public IP, security group allowing all traffic. Real vendor firewall AMIs (Palo Alto, Fortinet) typically require large paid instance types with no free-tier option — for learning purposes, a lightweight community-built AMI supporting **T2.micro** and the **Geneve protocol** works as a stand-in and needs one command run as root to enable its tunnel handler.
+
+> ⚠️ Whatever appliance you actually deploy in production, **confirm it supports the Geneve protocol** first — this is a hard GWLB requirement, covered next.
+
+---
+
+## Part 4 — Target Group (Geneve, Not HTTP or TCP)
+
+**Create target group** → type **Instance** → name **gwlb-tg**.
+
+> ⚠️ **Protocol is GENEVE — not HTTP/HTTPS (ALB) and not TCP/UDP (NLB).** This is how a Gateway Load Balancer communicates with its appliances. **Geneve runs on UDP port 6081** — if the appliance's security group doesn't allow inbound UDP 6081, the GWLB can never reach it.
+
+VPC: **service-provider-vpc**. Health check: TCP. Register both security appliances, **include as pending below**, then create.
+
+---
+
+## Part 5 — The Gateway Load Balancer Itself
+
+**EC2 → Load Balancers → Create load balancer → Gateway Load Balancer.**
+
+- VPC: **service-provider-vpc**
+- Mapping: the single **firewall-subnet**
+- Listener routing: the **gwlb-tg** target group created above
+
+Create it, then confirm **two** things before moving on: the load balancer state reaches **Active**, and the target group shows both appliances **healthy**.
+
+> Notice there is no listener protocol/port to pick, and no DNS name is shown afterward — a GWLB genuinely has neither.
+
+---
+
+## Part 6 — Endpoint Service (Exposing the GWLB to the Other VPC)
+
+**VPC → Endpoint Services → Create endpoint service.**
+
+- Load balancer type: **Gateway Load Balancer** → select the GWLB from Part 5
+- **Acceptance required: leave unchecked** — both VPCs belong to the same account, so no manual approval step is needed
+- Supported IP type: **IPv4**
+
+Create it, then **copy the generated service name** — the consumer VPC's endpoint needs it next.
+
+---
+
+## Part 7 — The GWLB Endpoint (In the Consumer VPC)
+
+**VPC → Endpoints → Create endpoint**, in the **service-consumer-vpc**:
+
+- Service category: **Other endpoint services** (there's no dedicated GWLB category to pick)
+- Service name: paste the name copied in Part 6
+- VPC: **service-consumer-vpc**
+- Subnet: **gwlb-endpoint-subnet**
+
+Wait for the endpoint's status to move from **Pending** to **Available**.
+
+---
+
+## Part 8 — The Ingress Route (Finally Wiring It Together)
+
+Without this last step, traffic still flows straight from the IGW to the app servers, bypassing the entire GWLB setup.
+
+**Create route table** → name **ingress-rt-for-igw** → VPC: **service-consumer-vpc**.
+
+> ⚠️ **No subnet association — instead, Edge associations → Edit edge associations → select the internet gateway.** Same pattern as the single-appliance ingress-routing lab, just pointing at a GWLB Endpoint instead of a lone ENI.
+
+Add a route: destination = **app-subnet's CIDR (192.168.0.128/25)** → target = the **GWLB Endpoint**.
+
+Then update **app-subnet's own route table**: change its **0.0.0.0/0** route from the internet gateway to the **GWLB Endpoint** as well, so outbound replies also traverse the appliance fleet.
+
+---
+
+## Verifying It
+
+Open a web server's public IP — the site loads normally, exactly as before. The proof is in *how* it got there:
+
+SSH into **both** security appliances and run **tcpdump** on the Geneve tunnel interface for **port 80** on each — traffic will appear on **whichever one the GWLB happened to route it to**, confirming load balancing is actually occurring across the fleet. A ping from your own machine, checked against "what is my IP," confirms the same for ICMP.
+
+**Prove the failover:** stop whichever appliance is currently handling your traffic. The website keeps loading — traffic has automatically shifted to the surviving appliance, with no route or configuration changes needed. This is the entire value proposition of a GWLB over the single-appliance ingress-routing lab.
+
+> Don't forget to tear down both VPCs' resources — the endpoint, endpoint service, load balancer, target group, appliances, and servers — when you're done.
+`,
+    },
+    {
+      id: "classic-lb",
+      title: "Classic Load Balancer (Previous Generation)",
+      shortDesc: "The pre-VPC load balancer AWS is quietly retiring — asked about in interviews, not in the exam",
+      visuals: ["ClassicLBComparison"],
+      content: `## Why It Still Gets Mentioned
+
+The Classic Load Balancer (CLB) predates ALB and NLB entirely. AWS marks it **previous generation** in the console today, and it will eventually disappear — but understanding *why* it exists explains a piece of AWS history worth knowing for interviews, even though it **will not appear in the SAA-C03 exam**.
+
+---
+
+## EC2-Classic vs Amazon VPC
+
+Before VPC existed, AWS ran everything on a flat, shared network called **EC2-Classic**. The CLB was purpose-built for that environment. Once VPC arrived, its limitations became the reason AWS moved everyone off it:
 
 | Aspect | EC2-Classic | Amazon VPC |
-|--------|-------------|------------|
-| Network | Shared with other customers | Logically isolated |
-| IP addressing | Public IP by default, internet-reachable | You choose (public/private subnets) |
-| Security groups | Inbound only, fixed at launch | Inbound + outbound, editable anytime |
-| Subnets | ❌ Not supported | ✅ Public & private |
-| Control | Limited | NACLs, SGs, route tables |
-| VPN / Direct Connect | ❌ No | ✅ Yes |
+|---|---|---|
+| **Network** | Shared with other AWS customers | Logically isolated, yours alone |
+| **IP addressing** | Every instance gets a public IP by default, directly internet-reachable | You choose — public or private subnets |
+| **Security groups** | Inbound rules only, fixed at instance launch, uneditable after | Inbound **and** outbound, editable anytime |
+| **Subnets** | Not supported at all | Full public/private subnet design |
+| **Network control** | Minimal | NACLs, security groups, route tables, full routing control |
+| **VPN / Direct Connect** | No native support | Full support for hybrid connectivity |
 
-### EC2-Classic Retirement Timeline
-- **Dec 4, 2013** — new accounts became VPC-only
-- **Oct 30, 2021** — EC2-Classic disabled in regions with no active Classic resources
-- **Aug 15, 2022** — target completion; EC2-Classic fully retired
+> Every one of these gaps is a real security or design limitation companies actually hit — not a hypothetical. VPC exists specifically because EC2-Classic couldn't do any of this.
 
-> CLB lacks path/host routing, WebSockets, and container support (you'd need one CLB per rule). It **won't appear in the SAA-C03 exam**, but may come up in interviews. For anything new, use **ALB** (Layer 7) or **NLB** (Layer 4).
+---
+
+## The Retirement Timeline
+
+- **December 4, 2013** — all new AWS accounts became VPC-only by default
+- **October 30, 2021** — EC2-Classic disabled entirely in any region with no active Classic resources remaining
+- **August 15, 2022** — AWS's target completion date for the last EC2-Classic resources anywhere to be migrated off
+
+> By the time this course was recorded, essentially no EC2-Classic resources exist in any AWS account — the network the CLB was built for is already gone in practice.
+
+---
+
+## What the Classic LB Can't Do
+
+Because CLB predates Layer-7-aware routing, it's missing everything ALB and NLB later introduced:
+
+- **No path-based or host-based routing** — one CLB per route, unlike ALB's single-load-balancer-many-targets model
+- **No WebSocket support**
+- **No container-native target support**
+
+AWS's own guidance is explicit: use **ALB** for Layer 7 workloads or **NLB** for Layer 4 workloads on anything built today. AWS also provides migration tooling specifically to move existing CLBs onto ALB/NLB.
+
+---
+
+## The Practical Takeaway
+
+> **Won't appear in the SAA-C03 exam** (no timeline for actual removal, but it is legacy and de-emphasized), **may come up in an interview** if someone wants to test whether you understand AWS's networking history. For anything you build today: **ALB** or **NLB** — never CLB.
+
+This closes out the Load Balancer section: **ALB** (Layer 7, smart routing), **NLB** (Layer 4, extreme performance + static IP), **GWLB** (Layer 3, inline security appliances), and **CLB** (legacy, avoid).
 `,
     },
     {
