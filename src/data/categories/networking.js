@@ -2844,10 +2844,275 @@ A complete real-world build:
 `,
     },
     {
+      id: "lb-intro",
+      title: "Load Balancer – Why It Exists",
+      shortDesc: "Getting EC2 instances out of the public subnet entirely, plus built-in health checks",
+      visuals: ["LoadBalancerBasics"],
+      content: `## The Alternative You Already Know
+
+You have two web servers across two availability zones, each with a public IP, for high availability. **Route 53 weighted routing** can already split traffic between them.
+
+So why load balancers at all?
+
+---
+
+## Problem 1 — Your Instances Sit Exposed
+
+To be reachable, both instances need a **public IP** in a **public subnet**. That means both are directly exposed to the internet.
+
+> **A load balancer removes this requirement entirely.** Your EC2 instances move into a **private subnet**, with **no public IP** at all. The load balancer — which does sit in the public subnet — is the only thing reachable from outside, and it forwards traffic inward.
+
+Users reach the load balancer's URL; the load balancer sends the request on to whichever backend instance should handle it, over private IPs.
+
+---
+
+## Problem 2 — Route 53 Has No Idea What's Actually Running
+
+Weighted routing splits traffic by a fixed percentage. It does **not** know whether either server is up — pair it with a health check and it can stop offering a dead IP, but that is bolted on separately.
+
+> **A load balancer has health checking built in as a core feature, not an add-on.** It continuously probes each backend, and the moment one stops responding correctly, **it is pulled out of rotation automatically** — no separate service to configure.
+
+When the instance recovers, the load balancer detects that too and adds it back.
+
+---
+
+## What This Buys You
+
+| | Public IP per instance | Health-aware | Understands HTTP/HTTPS |
+|---|---|---|---|
+| **Route 53 alone** | ✅ Required | Only with a separate health check | ❌ No |
+| **Load balancer** | ❌ Not needed | ✅ Built in | ✅ Yes |
+
+> Route 53 can still load-balance in a pinch. But for a **proper** load-balancing setup — with instances safely in a private subnet and traffic distribution that understands what's actually running — a **load balancer is the better tool**.
+
+---
+
+## What's Still to Cover
+
+- **Four load balancer types** exist, each suited to different traffic
+- Load balancers themselves need **high availability** — spanning multiple availability zones, exactly like the instances behind them
+- How to **distribute traffic across multiple groups** of instances, not just one
+
+> All of that starts with the vocabulary in the next topic.
+`,
+    },
+    {
+      id: "lb-terminology",
+      title: "Load Balancer – Terminology",
+      shortDesc: "Scheme, listener, target group, and the HTTPS-offload advantage over Route 53",
+      visuals: ["LBTerminology"],
+      content: `## Where It Lives
+
+**Load balancers are part of EC2** — find them under **EC2 → Load Balancers → Create load balancer**. All **four types** are offered here: Application, Network, Gateway, and the legacy Classic.
+
+---
+
+## Scheme — Internet-Facing or Internal
+
+- **Internet-facing** — reachable from the public internet. This is what fronts a public website.
+- **Internal** — reachable **only from inside your VPC**. Use this when several backend services must be load-balanced but nothing external should ever reach them directly.
+
+Most of what follows in this course is **internet-facing**.
+
+---
+
+## IP Address Type
+
+- **IPv4**
+- **Dual-stack** — IPv4 **and** IPv6 together, not IPv6 alone.
+
+---
+
+## The Load Balancer's Own Security Group
+
+The load balancer sits in a **public subnet** and needs its **own security group** — separate from the one protecting your instances. Allow the port your users will actually connect on (typically **TCP 80**).
+
+---
+
+## Listener — What the Load Balancer Is Listening For
+
+> **A listener defines a protocol and port the load balancer watches.** Traffic matching a listener is what activates the load balancer's forwarding logic.
+
+An Application Load Balancer listens on **application-layer protocols** — **HTTP** (port 80) or **HTTPS** (port 443).
+
+---
+
+## ⚠️ HTTPS Offload — One of the Biggest Advantages
+
+> **Route 53 has no concept of HTTPS.** It resolves names to IPs; encryption is not its concern.
+>
+> **A load balancer does understand HTTPS**, and it can **terminate the TLS/SSL connection itself**. Your EC2 instances need **no certificate configuration at all** — the load balancer absorbs that entire responsibility.
+
+This course starts with an HTTP listener for simplicity; HTTPS with a certificate comes later.
+
+---
+
+## Target Group — Where the Traffic Goes
+
+Configuring a listener, you next create a **target group**: what the matched traffic actually gets forwarded **to**.
+
+A target group can point at:
+
+- **Instances**
+- **IP addresses**
+- **A Lambda function**
+- **Another Application Load Balancer**
+
+**Its own port matters too, and it is independent of the listener's port.** A listener on **80** can forward to a target group on **80** — or, if you configure it, to a **different** port entirely on the instance side.
+
+---
+
+## ⚠️ Health Checks Default to HTTP — Exam Fact
+
+> **The default health check protocol for a target group is HTTP.** This is asked directly in the exam.
+
+Configure the health check path and thresholds when you create the target group, or adjust them afterwards.
+
+---
+
+## Summary
+
+| Term | Meaning |
+|---|---|
+| **Scheme** | Internet-facing vs internal |
+| **Listener** | Protocol + port the load balancer watches for incoming traffic |
+| **Target group** | Where matched traffic is forwarded — instances, IPs, Lambda, or another ALB |
+| **Health check** | Automatic monitoring of targets — **HTTP by default** |
+| **HTTPS offload** | The load balancer terminates TLS so instances don't have to |
+
+> Next: building the VPC these load balancers actually live in.
+`,
+    },
+    {
+      id: "lb-vpc-design-lab",
+      title: "Lab – VPC Design for a Load Balancer",
+      shortDesc: "Four subnets across two AZs, an internet gateway, and a NAT gateway — the load balancer's home",
+      visuals: [],
+      content: `## Why Rebuild the VPC Here
+
+Setting up a load balancer properly means putting it on solid VPC foundations first: **two public subnets** (for the load balancer, across two AZs for its own high availability) and **two private subnets** (for the backend instances).
+
+> This is the same **two-tier VPC pattern** from the VPC section, purpose-built for a load balancer sitting in front of private instances. If any of this feels unfamiliar, the VPC section covers every piece in depth — this lab is the pattern applied.
+
+---
+
+## The Plan
+
+| Subnet | AZ | CIDR |
+|---|---|---|
+| **public-subnet-1a** | ap-south-1a | 192.168.0.0/26 |
+| **public-subnet-1b** | ap-south-1b | 192.168.0.64/26 |
+| **private-subnet-1a** | ap-south-1a | 192.168.0.128/26 |
+| **private-subnet-1b** | ap-south-1b | 192.168.0.192/26 |
+
+---
+
+## Step 1 — VPC and Subnets
+
+**Delete the default VPC** to avoid confusion (only possible if it holds no resources). Then:
+
+**Create VPC** → name it, CIDR **192.168.0.0/24**.
+
+**Create all four subnets** in one pass via **Add new subnet**, using the table above.
+
+---
+
+## Step 2 — Internet Gateway
+
+**Create internet gateway** → name it → **Actions → Attach to VPC**.
+
+---
+
+## Step 3 — Public Route Table
+
+The **main route table** already exists and holds all four subnets **implicitly**. Rather than route everything through it:
+
+**Create route table** named e.g. **rt-public** → **Subnet associations → Edit** → select **both public subnets**. This automatically removes them from the main table's association.
+
+**rt-public → Routes → Edit routes → Add route:** destination **0.0.0.0/0** → target the **internet gateway**.
+
+The two public subnets are now genuinely public. The two private subnets, still on the main table, are not.
+
+---
+
+## Step 4 — NAT Gateway for the Private Subnets
+
+Private-subnet instances still need **outbound** internet — for OS updates and package installs.
+
+**Create NAT gateway** → place it in **one public subnet** → allocate an **Elastic IP**.
+
+Then, on the **main route table**: **Add route** → destination **0.0.0.0/0** → target the **NAT gateway**.
+
+---
+
+## What You Now Have
+
+- **Two public subnets**, routed to the **internet gateway** — where the load balancer will live
+- **Two private subnets**, routed to the **NAT gateway** — where the EC2 instances will live, outbound-only, unreachable directly from outside
+
+> The VPC is ready. Next: security groups and the two EC2 instances the load balancer will actually distribute traffic across.
+`,
+    },
+    {
+      id: "lb-sg-ec2-lab",
+      title: "Lab – Security Groups & Backend Instances",
+      shortDesc: "Two security groups — one for the load balancer, one sourced from it — plus two private instances",
+      visuals: [],
+      content: `## The Two-Layer Security Design
+
+Users reach the **load balancer** on port 80. The load balancer reaches the **EC2 instances**, also on port 80. Each hop gets its **own** security group.
+
+> **The instances' security group should allow traffic ONLY from the load balancer's security group** — not from anywhere. That is what actually prevents someone bypassing the load balancer and hitting an instance directly, even though the instance itself has no public IP to be hit on anyway. It is the same defence-in-depth habit as the EFS lab earlier in the course.
+
+---
+
+## Step 1 — ALB-SG
+
+**Create security group** named **alb-SG**:
+
+- **Inbound:** **HTTP (80)** from **anywhere (0.0.0.0/0)** — the public needs to reach it
+- **Outbound:** default, all traffic allowed
+
+---
+
+## Step 2 — web-SG
+
+**Create security group** named **web-SG**:
+
+- **Inbound:** **HTTP (80)**, source = **alb-SG** — not an IP range, the **security group itself**
+- **Inbound:** **SSH (22)** — optional, for management via a bastion or endpoint later
+- **Outbound:** default, all traffic allowed
+
+> Referencing **alb-SG** as the source means **only traffic that has actually passed through the load balancer** can reach an instance on port 80.
+
+---
+
+## Step 3 — Two Backend Instances
+
+**web-server-1:** Amazon Linux, t2.micro, **private-subnet-1a**, **no public IP**, security group **web-SG**.
+
+Under **Advanced details → User data**, paste a script that installs and starts a web server, distinguishing the instance name so you can tell them apart when testing (e.g. printing "Web Server 1" on the page).
+
+**web-server-2:** identical, but **private-subnet-1b**, and the user data script prints "Web Server 2" instead.
+
+> No bastion host or connect endpoint is needed for this step — **user data** configures each instance automatically at launch, exactly as covered in the EC2 section.
+
+---
+
+## What's In Place
+
+- **alb-SG** — open to the internet on port 80, ready to attach to the load balancer itself
+- **web-SG** — open only to alb-SG, attached to both instances
+- **web-server-1** and **web-server-2** — private, unreachable directly, each serving a distinguishable page
+
+> The VPC, the security groups and the instances are all ready. The load balancer itself — tying all of this together — is the next topic.
+`,
+    },
+    {
       id: "elb",
       title: "ELB – Elastic Load Balancing",
       shortDesc: "Distribute traffic across targets",
-      visuals: ["LoadBalancerBasics", "LBTerminology", "LBTypeComparison", "ALBRouting", "CrossZoneLB", "GatewayLBFlow"],
+      visuals: ["LBTypeComparison", "ALBRouting", "CrossZoneLB", "GatewayLBFlow"],
       content: `## ELB – Elastic Load Balancing
 
 A **Load Balancer** distributes incoming traffic across multiple targets (EC2 instances), improving availability and letting your servers stay **private**.
