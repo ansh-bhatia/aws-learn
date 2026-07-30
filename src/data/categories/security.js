@@ -437,6 +437,256 @@ Name the role (e.g. **my-app-s3-access**) and create it.
 `,
     },
     {
+      id: "iam-assume-role-same-account-lab",
+      title: "Lab – Assume Role (Same Account)",
+      shortDesc: "Temporary S3 access for a user whose day job is EC2 — without ever attaching S3 permission directly",
+      visuals: ["AssumeRoleFlow"],
+      content: `## The Second Role Use Case
+
+The previous topic covered a **service** (EC2) assuming a role. This one covers a **user** assuming a role — the same underlying mechanism, applied to occasional, temporary access instead of a service's permanent need.
+
+> **Assume Role lets a user, service, or application temporarily adopt a role's permissions.** The result is a set of **temporary security credentials** from **STS**, customizable from **15 minutes to 12 hours** (default: **1 hour**, auto-renewing).
+
+Roles support **same-account** access (this topic) and **cross-account** access (next topic).
+
+---
+
+## The Scenario
+
+Developer **Amit** needs **daily** access to EC2 (his actual job) but only **occasional** access to an S3 bucket. Two different access patterns need two different mechanisms:
+
+> **Permanent, daily need → attach a policy directly to the user. Occasional, temporary need → create a role and let the user assume it when actually needed.**
+
+---
+
+## Step 1 — Permanent EC2 Access (Directly Attached)
+
+Create user **Amit**, console access enabled. Attach **AmazonEC2FullAccess** **directly** to Amit's user account — since this is his daily-driver permission, there's no reason to route it through a role at all.
+
+---
+
+## Step 2 — A Role for Occasional S3 Access
+
+**IAM → Roles → Create role → Trusted entity: AWS account → This account** (same-account access, not cross-account).
+
+Attach **AmazonS3FullAccess** (a Customer Managed policy scoped to a specific bucket works too, for tighter control) → name it **S3-temp-access** → create.
+
+---
+
+## Step 3 — Grant Amit Permission to Assume It
+
+**Two ways to wire this up:**
+
+1. **Edit the role's trust policy directly** — Role → **Trust relationships → Edit trust policy → Add principal** → select IAM user → paste **Amit's user ARN**. This defines *who may assume this role*.
+2. **Attach a policy to Amit's user** granting **sts:AssumeRole** on the role's ARN instead — functionally equivalent, approached from the user side rather than the role side.
+
+This lab uses the first method — editing the role's trust policy to add Amit as a trusted principal.
+
+---
+
+## Step 4 — Assume the Role and Test
+
+Log in as **Amit**. Right now: full EC2 access (from Step 1), but **zero** S3 access — S3 actions are greyed out entirely.
+
+**Click the account name (top right) → Switch role.** First time, this requires entering the **account ID**, the **role name** (S3-temp-access), and optionally a **display name** for convenience.
+
+Once switched: Amit can now create buckets, upload files — full S3 access, temporarily. Critically: **while the role is active, EC2 access disappears** — assuming a role doesn't add its permissions on top of the user's own; it **replaces** the current session's permissions with exactly what the role grants, nothing more.
+
+**Switch back** to return to being plain Amit — S3 access disappears again, EC2 access returns.
+
+---
+
+## Why This Beats Just Attaching S3FullAccess to Amit Directly
+
+1. **Security — limited blast radius.** The STS token expires in as little as an hour. If Amit's session or credentials are somehow compromised while the role isn't even assumed, there's nothing extra to steal — S3 access only exists during the brief window the role is actively assumed.
+2. **Centralized management.** Need to grant (or revoke) this same occasional S3 access for an entire team of developers? Add or remove their ARNs from **one role's trust policy**, rather than attaching and detaching a policy on every individual user account.
+3. **Full audit trail.** Every assumption of a role is logged in **CloudTrail** — exactly who assumed what, and when — distinguishing "Amit doing his daily EC2 work" from "Amit temporarily touching S3," which a single blanket permission could never distinguish.
+4. **Optional MFA enforcement.** Role creation offers a **"Require MFA"** toggle — an extra identity check specifically at the moment of assuming elevated, if-temporary access.
+
+> **Rule of thumb:** permanent, daily-use permission → attach directly to the user. Occasional, temporary, or sensitive access → create a role and assume it only when actually needed.
+`,
+    },
+    {
+      id: "iam-assume-role-cross-account-lab",
+      title: "Lab – Assume Role (Cross-Account Access)",
+      shortDesc: "Letting one company's user borrow another company's S3 access — without ever creating them an account",
+      visuals: [],
+      content: `## The Scenario
+
+**Cloud Store Pvt Ltd** stores high-resolution photos in an S3 bucket. **Photo Magic Pvt Ltd**, a separate company with its own separate AWS account, needs to **read** those photos for their editing platform.
+
+> **Cross-account access lets a user or resource in one AWS account access resources in a completely different AWS account** — the same Assume Role mechanism as same-account access, just with the trust extended across an account boundary instead of within one.
+
+---
+
+## The Tempting-But-Wrong Approach
+
+> ⚠️ **Option 1 (don't do this): Cloud Store creates a dedicated IAM user inside its own account, specifically for someone at Photo Magic to log in with.**
+
+Three real problems with this:
+
+1. **Security risk** — sharing IAM credentials with an outside company for ongoing use is inherently riskier; if compromised, the blast radius includes a partner company's access into your account
+2. **Credential lifecycle burden** — Cloud Store now owns the responsibility of managing this user's password resets, and re-provisioning every time Photo Magic's staff changes (someone leaves, someone new joins) — indefinitely
+3. **Poor audit clarity** — actions taken by this "guest" user look identical to actions by Cloud Store's own real employees in the logs; there's no clean way to distinguish "our team" from "external partner" activity
+
+---
+
+## The Correct Approach: a Cross-Account Role
+
+> **Cloud Store creates a role trusting Photo Magic's AWS account ID. Photo Magic's own users assume that role temporarily — no new user account ever gets created in Cloud Store's account at all.**
+
+In this pattern, Cloud Store (owning the resource) is the **trusting account**; Photo Magic (borrowing access) is the **trusted account**.
+
+---
+
+## Step 1 — In Cloud Store's Account: Create the Bucket and Role
+
+Create the S3 bucket (e.g. **hd-pictures-01**), upload some sample images.
+
+**IAM → Roles → Create role → Trusted entity: AWS account → Another AWS account** → enter **Photo Magic's 12-digit account ID** → attach **AmazonS3FullAccess** (or a bucket-scoped Customer Managed policy for tighter control) → name it, e.g. **cross-account-access-for-photo-magic** → create.
+
+The resulting **trust policy** now names Photo Magic's account ID as an entity permitted to assume this role. Copy the role's **ARN** — Photo Magic's side needs it next.
+
+---
+
+## Step 2 — In Photo Magic's Account: a User That Can Assume It
+
+Create a user, e.g. **magic-editor** (named so it's clearly identifiable as "the one who touches the cross-account role," since not every Photo Magic employee necessarily should).
+
+Attach an **inline policy** (or Customer Managed) granting **sts:AssumeRole** specifically on the **role ARN copied in Step 1** — this is what actually authorizes magic-editor to attempt the assumption from the Photo Magic side.
+
+---
+
+## Step 3 — Assume It and Test
+
+Log in as **magic-editor** in Photo Magic's account. No S3 access of its own yet.
+
+**Switch role** → enter **Cloud Store's account ID** and the role name (**cross-account-access-for-photo-magic**) → switch.
+
+Now logged in "as" that assumed role: Photo Magic's user can browse, download, and (with full access) upload to Cloud Store's **hd-pictures-01** bucket — despite never having had a Cloud Store IAM account at any point. **Switch back**, and that access disappears immediately.
+
+---
+
+## Why This Is the AWS-Recommended Pattern
+
+- **Time-boxed exposure** — the STS token expires (as little as an hour), so a compromised credential has a hard, short shelf life
+- **No duplicated user management** — Cloud Store manages exactly **one role**, regardless of how many people at Photo Magic eventually need this access, or how much their staff turns over
+- **Scales cleanly** — a third, fourth, fifth partner company needing similar access is just another trusted account ID (or another role), never another manually-provisioned guest user
+- **Clean audit trail** — CloudTrail logs the role assumption distinctly, making "an external partner used this specific role" trivially separable from "our own employees did X"
+
+> This exact pattern — one company's role trusting another company's account ID — is the standard, exam-favored answer whenever a scenario describes two separate AWS accounts needing to share access to a resource.
+`,
+    },
+    {
+      id: "iam-web-identity-saml",
+      title: "IAM Roles – Web Identity & SAML 2.0 Federation",
+      shortDesc: "Letting millions of app users or an entire corporate directory assume a role — without ever becoming IAM users",
+      visuals: [],
+      content: `## Two Federation Use Cases, One Underlying Idea
+
+Both remaining role use cases let someone assume a role **without ever having an IAM user account at all** — by proving their identity through an external **Identity Provider (IdP)** first. They differ in *which* protocol the IdP uses.
+
+> **An Identity Provider lets a user prove their identity using credentials they already have elsewhere** — think "Sign in with Google" on a website that never asked you to create a new password.
+
+---
+
+## Use Case 3 — Web Identity Federation (Consumer Login)
+
+> **Web Identity Federation covers IdPs using OAuth 2.0 and OpenID Connect** — Google, Facebook, Amazon login, and similar consumer-facing social/public identity providers.
+
+- **OAuth 2.0** handles **authorization** — letting an application request an access token to act on a user's behalf
+- **OpenID Connect** sits on top of OAuth for **authentication** — proving *who* the user actually is
+- Together, they issue a **JWT (JSON Web Token)** after successful login, which the application uses going forward
+
+**Use case:** an app with potentially **millions** of users needs some of them to access an S3 bucket directly (e.g. uploading a profile photo). Creating an IAM user for each of millions of end users is completely impractical — instead, a user logs in via Google, receives a JWT, and **assumes an IAM role** scoped to exactly the narrow permission they need (e.g. read-only on one bucket).
+
+---
+
+## Use Case 4 — SAML 2.0 Federation (Corporate SSO)
+
+> **SAML 2.0 Federation covers enterprise identity providers — most commonly Active Directory Federation Services (AD FS)** — for a company's own workforce, not the general public.
+
+- Uses **XML** assertions to exchange authentication/authorization data — **not** JWT
+- Enables true **single sign-on**: an employee logs into their corporate directory **once** and can reach every connected application without re-entering credentials anywhere else
+
+**Use case:** a large organization with tens of thousands of employees already has one centralized Active Directory identity per person. Rather than provisioning a separate IAM user for every employee who might ever touch AWS, employees authenticate against AD, and AD issues a SAML assertion that lets them **assume a role** with whatever AWS permissions their job requires.
+
+---
+
+## Side by Side
+
+| | Web Identity | SAML 2.0 Federation |
+|---|---|---|
+| **Typical IdP** | Google, Facebook, Amazon login | Active Directory Federation Services |
+| **Protocol** | OAuth 2.0 + OpenID Connect | SAML 2.0 |
+| **Token format** | **JWT** | **XML** assertion |
+| **Audience** | Public/consumer app users (potentially millions) | Corporate workforce (existing centralized directory) |
+
+---
+
+## The Common Flow
+
+1. **User attempts to log in** — via "Sign in with Google" or a corporate SSO portal
+2. **Redirect to the IdP** — Google's login page, or the corporate Active Directory login
+3. **Credential verification** — the IdP checks the credentials against **its own** user database (AWS never sees or stores the actual password)
+4. **Token issued on success** — JWT for OAuth/OIDC, an XML assertion for SAML
+5. **The application uses that token to assume an IAM role** — and the permissions the user ends up with are exactly whatever policy is attached to **that role**, nothing more
+
+> Two different users authenticating through two different IdPs can be routed to assume **different** roles — a social-login user might assume a role with read-only bucket access, while a SAML-authenticated corporate user assumes a role with full access — the IdP used and the role assumed are two independently configurable pieces.
+
+---
+
+## Why Both Exist
+
+- **Simplicity** — users get a single, familiar login experience with credentials they already have
+- **Security** — AWS credentials are never stored on the client device; only a short-lived token/assertion is exchanged
+- **Scalability** — millions of end users, or an entire enterprise directory, are handled without provisioning a single additional IAM user
+
+> No hands-on lab accompanies this topic — building it out fully requires **Amazon Cognito** (covered separately later in the course), which is the AWS service that actually implements this web-identity login flow end to end for application developers.
+`,
+    },
+    {
+      id: "iam-custom-trust-policy",
+      title: "IAM Roles – Custom Trust Policy",
+      shortDesc: "The 5th role option: hand-write exactly who can assume a role and under what conditions",
+      visuals: [],
+      content: `## Why a 5th Option Exists
+
+The four role types covered so far — AWS Service, AWS Account (same/cross), Web Identity, and SAML 2.0 — each have a **fixed** shape for who's allowed to assume them. An AWS-service role can't be assumed by an external IAM user; a web-identity role can't be assumed by an AWS service, and so on.
+
+> **A Custom Trust Policy lets you hand-craft exactly who can assume a role, and under precisely what conditions** — for scenarios too specific to fit any of the four preset templates.
+
+---
+
+## What "Conditions" Actually Means Here
+
+Beyond just naming *who* can assume a role, a custom trust policy can require:
+
+- **Multi-Factor Authentication** — the assuming principal must have MFA enabled and active at the moment of assumption
+- **A specific time window** — e.g. only during business hours
+- **Source IP restriction** — only from a specific IP address or CIDR range
+- **Identity attributes** — e.g. only if the authenticated user's email domain, department, or group membership matches a specific value (relevant when combined with Web Identity or SAML federation)
+
+---
+
+## Worked Examples
+
+**Cross-account access with a condition:** allow another AWS account's user to assume a role — **but only if** they've authenticated with MFA, **and only if** the request arrives within a defined time window. Neither the plain "AWS Account" role type nor a bare trust relationship can express this extra conditional layer — a custom trust policy can.
+
+**Federated access with attribute-based conditions:** for a Web Identity or SAML-federated role, restrict assumption further based on identity attributes carried in the token/assertion — e.g. only users whose corporate group membership is "Sales," or whose email domain matches the company's own domain.
+
+**Source-IP-restricted role assumption:** for a role granting access to particularly sensitive resources, restrict assumption to requests originating from a specific, known IP range — e.g. only from the corporate office's public IP block.
+
+---
+
+## Where It Lives
+
+**IAM → Roles → Create role → Custom trust policy** — written directly as JSON, with full control over the principal(s) allowed and any **Condition** block layered on top. The same visual building blocks from the four preset role types (assume-role-with-SAML, assume-role-with-web-identity, assume-role for a user) are all still available here — a custom trust policy is really "the same underlying mechanism, but you write the JSON policy directly instead of picking a preset."
+
+> No hands-on lab is included here — the syntax is the same JSON-policy skill already covered across the earlier IAM policy and role topics; what's genuinely new is the **concept** that trust policies support arbitrary conditions, not a new mechanical skill to practice. This is explicitly the kind of topic tested by concept in the exam, not by requiring you to have built one yourself.
+`,
+    },
+    {
       id: "iam-org-sso",
       title: "IAM – Reports, Organizations & SSO (Part 2)",
       shortDesc: "IAM reports, AWS Organizations + SCPs, Identity Center",
