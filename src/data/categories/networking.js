@@ -3109,10 +3109,300 @@ Under **Advanced details → User data**, paste a script that installs and start
 `,
     },
     {
+      id: "lb-create-alb-lab",
+      title: "Lab – Creating the Application Load Balancer",
+      shortDesc: "Wiring the ALB to a target group of the two private instances, then a Route 53 alias",
+      visuals: [],
+      content: `## Picking Up From the Last Two Labs
+
+The VPC, both security groups, and both private web servers already exist. This is the third and final piece: the load balancer itself.
+
+---
+
+## Step 1 — Create the Load Balancer
+
+**EC2 → Load Balancers → Create load balancer → Application Load Balancer:**
+
+- **Name** it
+- **Scheme:** Internet-facing
+- **IP address type:** IPv4
+- **VPC:** yours
+- **Mappings:** select **both public subnets** — ap-south-1a and ap-south-1b. This is exactly why the VPC lab built two of them: the load balancer needs its own multi-AZ redundancy, same as any other resource.
+- **Security group:** **alb-SG** from the earlier lab
+
+---
+
+## Step 2 — Listener and Target Group
+
+Configuring the **HTTP : 80** listener, you are prompted to create a **target group** — where matched traffic actually goes.
+
+**Create target group:**
+
+- **Target type:** Instances
+- **Name** it, **protocol HTTP, port 80**
+- **VPC**, IPv4
+- **Health check:** leave the HTTP default
+
+**Register targets:** select **both** web servers.
+
+> ⚠️ **Click "Include as pending below" before moving on.** It is easy to select both instances and go straight to Next without registering them — the target group then exists but is empty.
+
+Finish creating the target group, return to the load balancer wizard, refresh, select it, and **Create load balancer**.
+
+---
+
+## Step 3 — Wait, Then Verify
+
+Provisioning takes a few minutes. Two things to check:
+
+- The load balancer's own state reaches **Active**
+- Both targets in the target group show **healthy**
+
+Copy the load balancer's **DNS name** into a browser. The page from **web-server-1** or **web-server-2** loads — whichever the load balancer picked — confirmed by whatever distinguishing text the user data script printed.
+
+**Refresh repeatedly** and the response alternates between the two — the load balancer distributing traffic across both healthy targets.
+
+---
+
+## Proving the Health Check Works
+
+**Stop one instance.** Refresh the browser and every request now comes from the **other** server — the load balancer detected the failure and pulled it from rotation. Depending on timing you may see a **Bad Gateway** briefly during the transition.
+
+**Start the instance again.** Once its health check passes, it rejoins rotation and responses start alternating again.
+
+---
+
+## Step 4 — A Real Domain Name, via Route 53
+
+The load balancer's own DNS name is functional but not what you want to hand out. **Route 53 → your hosted zone → Create record:**
+
+- **Record name:** whatever subdomain you want, e.g. **learn**
+- **Alias:** ✅ enabled
+- **Route traffic to:** **Application Load Balancer**, your region, then select your load balancer from the list
+
+Once created, the same site opens under your own domain — still load-balanced across both instances underneath.
+
+> One thing still missing: this is **HTTP**, not HTTPS. Making it HTTPS needs a certificate from **AWS Certificate Manager**, covered in the security section.
+`,
+    },
+    {
+      id: "lb-routing-policies",
+      title: "ALB – Path-Based vs Host-Based Routing",
+      shortDesc: "One load balancer serving many targets by URL path or by hostname, instead of many load balancers",
+      visuals: ["ALBRouting"],
+      content: `## The Problem With the Old Generation
+
+**Classic Load Balancer** (the previous generation) can only forward everything it receives to **one** set of targets. Need **images.example.com** and **orders.example.com** to go to different backends? You need **two separate classic load balancers**.
+
+> **An Application Load Balancer needs only one.** Its **listener rules** route incoming requests to different target groups based on the request itself — no second load balancer required.
+
+There are **two ways** to make that routing decision.
+
+---
+
+## Path-Based Routing
+
+> **Routes by the URL path** — the part after the domain.
+
+**example.com/images** → target group A. **example.com/orders** → target group B. Same domain, same load balancer, different paths, different backends.
+
+**Real-world example:** Pearson VUE's exam site uses **home.pearsonvue.com/cisco** and **home.pearsonvue.com/client/aws** — one domain, different paths routing to different content.
+
+---
+
+## Host-Based Routing
+
+> **Routes by the hostname** — the subdomain or domain itself.
+
+**images.example.com** → target group A. **orders.example.com** → target group B. Different hostnames, same load balancer, different backends.
+
+**Real-world example:** Google uses **drive.google.com** and **mail.google.com** — genuinely different hostnames, routed by the load balancer to entirely different services.
+
+---
+
+## The Memory Trick
+
+> **A slash (/) means path-based. A dot before the domain (like order.example.com) means host-based.**
+
+**order.example.com** — "order" is a **hostname** → host-based. **example.com/orders** — "/orders" is a **path** → path-based.
+
+---
+
+## Six Differences
+
+| | Path-Based | Host-Based |
+|---|---|---|
+| **DNS setup** | ✅ Simple — one alias record covers every path | ⚠️ A **record per hostname/subdomain** |
+| **Use case** | Multiple **services under one domain** | Multiple **domains or subdomains** |
+| **SSL/TLS** | One certificate covers every path | May need **multiple certificates** for different domains |
+| **Flexibility** | Limited to a single domain | **More flexible** — spans multiple domains |
+| **Complexity** | Simpler — fewer DNS records | **More complex** — multiple DNS entries and certificates |
+| **Example** | cloudfox.in**/aws**, cloudfox.in**/azure** | **aws**.cloudfox.in, **azure**.cloudfox.in |
+
+> **If everything lives under one domain, path-based routing is the simpler choice.** Reach for host-based when the services genuinely need to look like separate domains or subdomains.
+
+Both are configured the same way: **one listener, multiple rules**, each rule matching a condition (path or host) and forwarding to its own target group. The next two topics build one of each.
+`,
+    },
+    {
+      id: "lb-path-based-routing-lab",
+      title: "Lab – Path-Based Routing",
+      shortDesc: "One ALB, three target groups, and listener rules matching /aws* and /azure*",
+      visuals: [],
+      content: `## The Goal
+
+One load balancer, three destinations, routed by path:
+
+| URL | Target |
+|---|---|
+| **cloudfox.in** | Server "CloudFox" (the default target) |
+| **cloudfox.in/aws** | Server "AWS" |
+| **cloudfox.in/azure** | Server "Azure" |
+
+> This lab uses **one private subnet and one instance per target** rather than the fully redundant multi-AZ pattern — the point here is the routing, not repeating the VPC build.
+
+---
+
+## Step 1 — Security Groups
+
+Same two-group pattern as before: **alb-SG** (HTTP 80 from anywhere) and **web-SG** (HTTP 80 sourced from **alb-SG only**).
+
+---
+
+## Step 2 — Three Instances, Three Different User Data Scripts
+
+Launch **three separate instances** — one at a time, because each needs **different** user data:
+
+- **CloudFox server:** installs httpd, places **index.html** at the web root (**/var/www/html/**) — this becomes the default target
+- **AWS server:** installs httpd, but places index.html inside **/var/www/html/aws/** — a subdirectory matching the URL path
+- **Azure server:** same idea, index.html inside **/var/www/html/azure/**
+
+> ⚠️ **The subdirectory name must exactly match the path you will route on.** Get "aws" or "azure" wrong — wrong case, typo, missing folder — and that target will report unhealthy or simply 404, with no obvious error pointing at the cause.
+
+---
+
+## Step 3 — Three Target Groups
+
+One per server: **Create target group → Instances**, HTTP : 80, default health check, register the matching instance.
+
+> The health check still probes the **web root**, not the subpath. Since httpd is genuinely running and answering on port 80 for all three, all three targets report healthy regardless of which subdirectory holds their content.
+
+---
+
+## Step 4 — The Load Balancer With a Default Rule
+
+Create the ALB as before — internet-facing, both public subnets, **alb-SG** — with its default listener rule forwarding to the **CloudFox** target group. This becomes the catch-all: any path that matches nothing else.
+
+---
+
+## Step 5 — Add Path-Based Rules
+
+**Load balancer → Listener → Add rule:**
+
+**Rule for AWS:**
+
+- **Condition:** Path → **/aws***
+- **Action:** forward to the **AWS** target group
+- **Priority:** e.g. 100
+
+**Rule for Azure:**
+
+- **Condition:** Path → **/azure***
+- **Action:** forward to the **Azure** target group
+- **Priority:** e.g. 200
+
+> ⚠️ **Don't forget the trailing asterisk.** **/aws*** matches /aws, /aws/anything, /aws/deeper/path — all of it. **/aws** alone matches only that exact path.
+>
+> **Priority determines evaluation order** when multiple rules could match. The **default rule always has the lowest priority** — it only fires when nothing more specific matched.
+
+---
+
+## Step 6 — Route 53 and Verification
+
+**One alias A record** for the bare domain, pointing at the load balancer, is all the DNS you need — the whole benefit of path-based routing.
+
+Open **cloudfox.in** → CloudFox page. **cloudfox.in/aws** → AWS page. **cloudfox.in/azure** → Azure page. One load balancer, one DNS record, three destinations.
+`,
+    },
+    {
+      id: "lb-host-based-routing-lab",
+      title: "Lab – Host-Based Routing",
+      shortDesc: "The same three destinations, routed by subdomain instead of path — and three DNS records instead of one",
+      visuals: [],
+      content: `## The Same Goal, Different Mechanism
+
+| URL | Target |
+|---|---|
+| **cloudfox.in** | Server "CloudFox" |
+| **aws.cloudfox.in** | Server "AWS" |
+| **azure.cloudfox.in** | Server "Azure" |
+
+Same three servers conceptually as the path-based lab — but **simpler on the instance side, more work in DNS**.
+
+---
+
+## Step 1 — Instances Are Actually Simpler Here
+
+Each server's **index.html sits at the plain web root** — no subdirectory required, because the routing decision is made by **hostname**, not by anything inside the URL path.
+
+> This is the mirror image of the path-based lab's biggest gotcha: there, the folder name had to match exactly. Here, **all three servers are configured identically** — install httpd, drop index.html at the root, done. The distinguishing text ("Welcome to AWS CloudFox" vs "Welcome to Azure CloudFox") is all that differs between the three scripts.
+
+---
+
+## Step 2 — Target Groups and Load Balancer
+
+Identical to the path-based lab: **one target group per instance**, then an ALB with **alb-SG**, spanning both public subnets, default rule pointing at the CloudFox target group.
+
+---
+
+## Step 3 — Host-Based Listener Rules
+
+**Load balancer → Listener → Add rule:**
+
+**Rule for AWS:**
+
+- **Condition:** **Host header** → **aws.cloudfox.in**
+- **Action:** forward to the AWS target group
+- **Priority:** 100
+
+**Rule for Azure:**
+
+- **Condition:** **Host header** → **azure.cloudfox.in**
+- **Action:** forward to the Azure target group
+- **Priority:** 200
+
+---
+
+## Step 4 — ⚠️ Now DNS Actually Matters
+
+This is where host-based routing costs more than path-based.
+
+> **Every hostname needs its own Route 53 record.** Path-based routing needed exactly one alias record for the bare domain. Host-based needs **one per subdomain** — all pointing at the **same load balancer**, but each its own DNS entry.
+
+**Route 53 → Create record**, three times:
+
+| Record name | Alias target |
+|---|---|
+| **cloudfox.in** (blank/root) | Your ALB |
+| **aws.cloudfox.in** | Same ALB |
+| **azure.cloudfox.in** | Same ALB |
+
+All three are **alias records pointing at the identical load balancer** — the load balancer's own listener rules are what actually differentiate them once traffic arrives.
+
+---
+
+## Verifying It
+
+**cloudfox.in** → CloudFox page. **aws.cloudfox.in** → AWS page. **azure.cloudfox.in** → Azure page.
+
+Compare the DNS burden directly against the previous lab: path-based needed **one** record for three destinations; host-based needed **three** — one genuine cost of the extra flexibility host-based routing buys you (real, separate-looking subdomains, and the ability to point different hostnames at entirely different domains later if needed).
+`,
+    },
+    {
       id: "elb",
       title: "ELB – Elastic Load Balancing",
       shortDesc: "Distribute traffic across targets",
-      visuals: ["LBTypeComparison", "ALBRouting", "CrossZoneLB", "GatewayLBFlow"],
+      visuals: ["LBTypeComparison", "CrossZoneLB", "GatewayLBFlow"],
       content: `## ELB – Elastic Load Balancing
 
 A **Load Balancer** distributes incoming traffic across multiple targets (EC2 instances), improving availability and letting your servers stay **private**.
