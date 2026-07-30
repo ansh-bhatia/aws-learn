@@ -116,6 +116,7 @@ import {
 import { NATPlacementQuiz } from "./visuals/VPCVisuals5";
 import { PeeringMathCalculator } from "./visuals/VPCVisuals6";
 import { PrefixListWeight } from "./visuals/VPCVisuals7";
+import { PolicyComparisonMatrix } from "./visuals/Route53Visuals2";
 import {
   DHCPOptionSetDemo,
   VPCFlowLogExplorer,
@@ -664,6 +665,7 @@ const VISUAL_MAP = {
   NATPlacementQuiz,
   PeeringMathCalculator,
   PrefixListWeight,
+  PolicyComparisonMatrix,
   DNSResolutionFlow,
   FQDNAnatomy,
   DNSRecordTypes,

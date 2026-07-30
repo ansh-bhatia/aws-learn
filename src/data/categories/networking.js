@@ -2275,117 +2275,408 @@ This one has a story attached.
 `,
     },
     {
-      id: "route53",
-      title: "Route 53",
-      shortDesc: "Scalable DNS and domain registration",
-      visuals: ["RoutingPolicyOverview", "WeightedRoutingCalculator", "HealthCheckDemo", "GeoproximityBias", "FailoverDemo"],
-      content: `## Route 53 — AWS DNS Service
+      id: "route53-simple-weighted",
+      title: "Route 53 – Simple & Weighted Routing",
+      shortDesc: "One answer per query vs splitting traffic by percentage across servers",
+      visuals: ["RoutingPolicyOverview", "WeightedRoutingCalculator"],
+      content: `## The Scenario
 
-**Route 53** is AWS's **DNS** (Domain Name System) service. It's named after **port 53**, the TCP/UDP port DNS uses. It resolves human-friendly **names** (like \`learn.cloudfox.in\`) into **IP addresses**, registers domains, and offers powerful **routing policies** and **health checks**.
-
-> DNS is the **phonebook of the internet**. You dial a name; it connects you to a number (IP). Without it you'd have to memorise \`13.5.19.80\` instead of \`google.com\`.
+Two identical web servers in two availability zones — **ap-south-1a** and **ap-south-1b** — for high availability. Both serve the same site. The question is how Route 53 should hand out their IPs.
 
 ---
 
-## How DNS Name Resolution Works
+## Simple Routing — One Answer, No Exceptions
 
-When you open \`www.facebook.com\`, your computer must find its IP first:
+Create an **A record** with **simple routing** and one IP, and every query gets **that IP, every time**.
 
-1. **Your device** sends the name to a **DNS Resolver** (your ISP provides its IP via DHCP)
-2. If not cached, the resolver asks a **Root Server** (13 worldwide). Root sees \`.com\` and points to the **.com TLD servers**
-3. The **TLD server** returns the domain's **authoritative name server** address
-4. The **Authoritative Server** (this is **Route 53**!) holds the real records and returns the IP, e.g. \`7.5.8.9\`
-5. The resolver **caches** the answer and your device connects. Next time, the cache replies instantly
+> ⚠️ **You cannot add a second record with the same name under simple routing.** Try it and Route 53 rejects it outright. Simple routing is built for exactly **one** resource behind a name — no distribution, no failover.
 
-You only ever configure the **authoritative** server (Route 53) — the rest is the internet's shared hierarchy.
+That is a real limitation once you have two servers you want to actually use.
 
 ---
 
-## FQDN — Domain Name Anatomy
+## Weighted Routing — Splitting Traffic by Percentage
 
-A **Fully Qualified Domain Name** (max **255 chars**) reads right-to-left in hierarchy:
+Create **two records with the same name**, both **type A**, both set to **weighted routing** — one pointing at each server, each given a **weight**.
 
-\`\`\`
-learn  .  cloudfox  .  in
- │           │          └── TLD (top-level domain): .com, .in, .org… (fixed set)
- │           └───────────── Subdomain (the domain you register)
- └───────────────────────── DNS Label / host (max 63 chars)
-\`\`\`
+> **Weight runs from 0 to 255.** A weight of 0 means that record is never returned. Anything from 1 to 255 is fair game.
+
+Give both servers weight **50** and traffic splits **50/50** — verified by repeatedly testing the record and watching the returned IP alternate.
 
 ---
 
-## Registering a Domain & Hosted Zones
+## The Weight Formula
 
-Domains aren't free (~$5–15/yr). You can:
-- **Register** directly in Route 53, **or**
-- Use another registrar (GoDaddy, Namecheap…) and point its **name servers (NS)** to Route 53's 4 NS records
+Weights are **not percentages** — they are relative numbers, and the split is computed from them:
 
-A **Hosted Zone** is the container for your records:
-- **Public hosted zone** — resolvable over the internet (needs a registered domain)
-- **Private hosted zone** — name resolution inside your VPC only
+> **Each server's share = (its weight ÷ total weight) × 100**
 
-> Why use Route 53 over a registrar's DNS? **Routing policies** — the feature registrars don't offer.
+**Worked example — three servers:**
 
----
+| Server | Weight |
+|---|---|
+| A | 120 |
+| B | 50 |
+| C | 30 |
 
-## Record Types
+**Total weight = 120 + 50 + 30 = 200**
 
-| Record | Maps | Use |
-|--------|------|-----|
-| **A** | Name → IPv4 | The main website record |
-| **AAAA** | Name → IPv6 | Same as A, for IPv6 |
-| **CNAME** | Name → another name | Alias (e.g. \`test\` → \`learn\`); update once, all follow |
-| **MX** | Domain → mail server | Receive email (no MX = no mail) |
-| **TXT** | Name → free text | Verification, ownership, SPF/DKIM |
-| **PTR** | IP → name | Reverse lookup |
-| **SRV** | Service → host:port | App-specific (e.g. Active Directory) |
-| **SPF** | Domain → allowed mail IPs | Anti-spoofing/phishing |
+- Server A: 120 ÷ 200 × 100 = **60%**
+- Server B: 50 ÷ 200 × 100 = **25%**
+- Server C: 30 ÷ 200 × 100 = **15%**
 
-> There's also an AWS-specific **Alias** record to point at ELB / CloudFront / S3 — covered with those services.
+That adds to 100%, as it always will — the formula is self-normalising, so the individual weights never need to sum to any particular number.
+
+> Try it yourself: weights **150, 50, 100** → total **300** → **50%, 16.7%, 33.3%**.
 
 ---
 
-## The 8 Routing Policies
+## Verifying It
 
-Most are **active-active** (use all resources). Only **Failover** is **active-passive**.
+Beyond the console's **Test record** button, use **nslookup** from a terminal against your domain and run it several times — the returned IP should alternate roughly according to the weights.
 
-### 1. Simple
-One record. No health checks. The default for a single resource.
-
-### 2. Weighted (Active-Active)
-Split traffic by **weight** (0–255; 0 = off). Share = \`thisWeight / totalWeight × 100\`.
-- Example: weights **120 / 50 / 30** → total 200 → **60% / 25% / 15%**
-- Great for A/B testing and gradual rollouts
-
-### 3. Latency (Active-Active)
-Routes to the region with the **lowest latency** for the user — the *fastest network path*, not the nearest in km (though usually they correlate).
-
-### 4. Geolocation (Active-Active)
-Routes by the user's **country/continent**. India → India server, US → US server, everyone else → a **default** record. Used for localised content and compliance. (Purely location-based — ignores latency.)
-
-### 5. Geoproximity (Active-Active)
-Routes by **geographic distance**, adjustable with a **bias** to grow/shrink a region's coverage — your conscious business decision. Requires a **Traffic Policy** (~**$50/mo**).
-
-### 6. Failover (Active-Passive) ⭐
-The **only** active-passive policy. **Primary** serves all traffic; if its health check fails, Route 53 flips everyone to the **secondary** standby. Used for disaster recovery.
-
-### 7. Multivalue Answer (Active-Active)
-Returns up to **8 healthy records** at once in **round-robin**; the client picks one. Simple load spreading with health checks.
-
-### 8. IP-Based (Active-Active)
-Routes by the resolver's **source IP** (you define CIDR collections). e.g. ISP-A's IP range → server 1. Useful for session affinity and cost optimisation.
+> ⚠️ **Your own machine may appear to return the same IP repeatedly.** That is usually local **DNS caching**, not a broken policy. Clear it with **ipconfig /flushdns** on Windows and query again.
 
 ---
 
-## Health Checks
+## The Gap Still Open
 
-Without health checks, Route 53 keeps handing out a **dead server's IP** — so a fraction of users fail. A health check sends **probe packets** to each endpoint; **unhealthy** ones are removed from answers.
+Weighted routing splits traffic — but it has **no idea whether either server is actually up**. Stop one of them and Route 53 keeps sending it 50% of the traffic anyway, because nothing has told it otherwise.
 
-- **Mandatory** with Weighted / Failover / Multivalue for true high availability
-- When a server recovers, it automatically re-enters rotation
-- Lower the record **TTL** (e.g. 60s) so clients/resolvers stop caching the dead IP quickly and pick up changes fast
+> That is exactly what **health checks** fix, covered next.
+`,
+    },
+    {
+      id: "route53-health-checks",
+      title: "Route 53 – Health Checks",
+      shortDesc: "Teaching DNS to stop routing traffic to a server that is actually down",
+      visuals: ["HealthCheckDemo"],
+      content: `## The Problem Weighted Routing Doesn't Solve
 
-> **TTL (Time To Live):** how long a resolver/computer caches a record. High TTL = faster repeat lookups but slower failover. Use \`ipconfig /flushdns\` (Windows) to clear local DNS cache when testing.
+Two servers, weighted 50/50, both healthy — traffic splits evenly and everything works.
+
+**Now take one down.** Block port 80 on its security group and the site stops responding on that server.
+
+**Route 53 does not notice.** Query the record and it still hands back that server's IP roughly half the time — because nothing has ever told Route 53 the server is unreachable. The result: **half your users cannot load the site**, and DNS is cheerfully sending them to the broken half.
+
+---
+
+## Health Checks Close the Gap
+
+**Route 53 → Health checks → Create health check:**
+
+- **Name** it
+- **What to monitor:** an **endpoint** — protocol **HTTP**, the server's IP, **port 80**
+- Optional: **notifications** if it becomes unhealthy
+
+Create **one health check per server**. Status starts as **Unknown** and settles to **Healthy** within a couple of minutes once Route 53's probes get a response.
+
+---
+
+## Attaching a Health Check to a Record
+
+Each weighted record needs its own: **edit the record → Health check → select the matching one → Save.**
+
+Two servers means two health checks, each tied to its own record.
+
+---
+
+## Watching It Work
+
+With both healthy, testing the record returns both IPs as before.
+
+**Block port 80 on server one again.** Its health check flips to **Unhealthy** within a couple of minutes. From that point, **testing the record returns only the healthy server's IP** — repeatedly, with zero exceptions. Route 53 has stopped offering the broken server entirely.
+
+**Restore port 80** and the health check returns to **Healthy**; the record resumes splitting traffic across both.
+
+---
+
+## The Rule
+
+> **Health checks make a routing policy failure-aware.** Without one, Route 53 answers from a static list regardless of whether anything on it actually works. With one, unhealthy targets are silently removed from rotation until they recover.
+
+This applies well beyond weighted routing — **failover routing**, covered later in this section, depends on health checks entirely to know when to switch from primary to secondary.
+`,
+    },
+    {
+      id: "route53-geolocation",
+      title: "Route 53 – Geolocation Routing",
+      shortDesc: "Sending users to a specific server based on which country they are querying from",
+      visuals: [],
+      content: `## The Scenario
+
+A multinational company runs:
+
+- A web server in the **United States**
+- A web server in **India**
+- A web server in **Singapore**, covering everywhere else
+
+**The intent:** US visitors reach the US server, Indian visitors reach the Indian server, and everyone else — China, Vietnam, the Philippines — reaches Singapore. All under **one DNS name**.
+
+> **Geolocation routing** does exactly this, based on the **geographic location of the querying user**.
+
+---
+
+## Setting It Up
+
+Create **multiple A records with the same name**, each set to **geolocation routing**, each specifying a location:
+
+| Record | Location | IP |
+|---|---|---|
+| R1 | **India** | India server |
+| R2 | **United States** | US server |
+| R3 | **Default** | Singapore server |
+
+> **Location can be a country or a continent.** **Default** is the catch-all — every country you have not explicitly listed resolves here. Without a default record, users outside your named locations get **no answer at all**.
+
+---
+
+## Verifying From Multiple Countries
+
+Testing this yourself is awkward — you only have one location. **dnschecker.org** solves it: paste your domain and see the resolved IP **from many countries simultaneously**.
+
+Query from the US and you see the US server's IP. Query from South Africa or France and you get the **default** — Singapore. Query from India and you get the Indian server.
+
+---
+
+## Geolocation vs Latency — Do Not Confuse Them
+
+This distinction is worth being precise about, because the next topic covers latency routing and the two are easy to mix up.
+
+> **Geolocation routes by where the USER is.** It has no concept of speed — it is a fixed mapping you define, driven entirely by policy (legal requirements, content licensing, business rules), never by measurement.
+
+A US user always gets the US server under geolocation, **even if some other server would actually respond faster** for them. That is deliberate — geolocation is for cases where the routing decision is not about performance at all.
+`,
+    },
+    {
+      id: "route53-latency",
+      title: "Route 53 – Latency-Based Routing",
+      shortDesc: "Automatically sending each user to whichever region answers fastest for them",
+      visuals: [],
+      content: `## The Scenario
+
+AWS has two regions in India: **Mumbai** and **Hyderabad**. You run identical web servers in both.
+
+A user querying from **Ahmednagar** should logically reach the **Mumbai** server; a user in **Nanded** should reach **Hyderabad**. You do not want to maintain that mapping by hand.
+
+> **Latency-based routing finds the region with the lowest latency for each querying user, automatically**, and returns that region's IP.
+
+---
+
+## It Is About Latency, Not Distance
+
+> ⚠️ **Kilometres are usually a good proxy for latency — but they are not what the policy measures.**
+
+If the network path to the geographically closer region happens to have unusually high latency — congestion, a bad link, routing weirdness — a **farther** region with a genuinely faster path can be returned instead. AWS measures **actual latency between AWS regions and networks**, not straight-line distance.
+
+---
+
+## Setting It Up
+
+Create two A records, same name, both **latency routing**, each tagged with the **AWS Region** the server lives in — for example **ap-south-1 (Mumbai)** and one representing **Hyderabad**.
+
+Test with **nslookup** from different locations and each returns the IP of whichever region has the lower measured latency **from that querying location**.
+
+---
+
+## Latency vs Geolocation, Restated
+
+| | Geolocation | Latency |
+|---|---|---|
+| **Decides by** | The user's **country/continent** — a fixed mapping you define | **Measured latency** between the user and each region |
+| **Can change without you editing anything?** | ❌ No — always the same country → same server | ✅ Yes — network conditions can shift which region wins |
+| **Use it for** | Legal/content restrictions, business rules | **Pure performance** — fastest response for each user |
+
+> If your only goal is speed, **latency routing** is the right tool. If you have a policy reason a specific country must land on a specific server regardless of speed, that is **geolocation**.
+`,
+    },
+    {
+      id: "route53-geoproximity",
+      title: "Route 53 – Geoproximity Routing",
+      shortDesc: "Routing by where your RESOURCES are, and shifting the boundary between them with bias",
+      visuals: ["GeoproximityBias"],
+      content: `## An Upgrade on Latency Routing
+
+Same starting point as latency routing — servers in **Mumbai** and **Hyderabad** — but a different goal.
+
+> With latency routing, AWS decides based on **measured network performance**. With **geoproximity routing**, **you** decide, based on **geographic location — and you can deliberately shift the boundary** between regions using a value called **bias**.
+
+**Why you might want that:** business reasons that have nothing to do with network speed. Maybe Kolhapur should be served by Hyderabad even though Mumbai is closer, because of how your infrastructure or contracts are organised.
+
+---
+
+## Traffic Policies, Not Ordinary Records
+
+Geoproximity is not available as a plain record type. It requires a **traffic policy**.
+
+**Route 53 → Traffic policies → Create traffic policy:**
+
+- **Name** it
+- **Start type:** IP address (A record)
+- Add a **Geoproximity rule**
+- **Location:** by **latitude/longitude**, or the easier route — an **AWS Region** or Local Zone
+- Map each location to its resource IP — e.g. **Mumbai → server A**, **Hyderabad → server B**
+
+---
+
+## The Map and Bias
+
+The policy editor shows a **live map** of which areas resolve to which resource under the current settings. By default, geographic proximity decides the boundary — Kolhapur, being closer to Mumbai, falls on the Mumbai side.
+
+**Bias shifts that boundary.**
+
+> **Bias is a value you set per location.** Increase a location's bias and its coverage area **grows**. Decrease it and the area **shrinks**. It works either direction — shrink Mumbai's reach, or grow Hyderabad's — to move the same boundary.
+
+Adjust it and watch the map update live: reduce Mumbai's bias and Kolhapur (along with Solapur, Nanded, Akola, Nagpur) flips to Hyderabad. Set bias back to zero and the map returns to the geographic default.
+
+---
+
+## ⚠️ It Is Not Free
+
+> **Geoproximity requires a traffic policy, and Route 53 traffic policies cost roughly $50/month.**
+
+That is a real cost most of the other policies do not carry — factor it in before reaching for this one over plain latency or geolocation routing, both of which are free.
+
+---
+
+## When to Actually Use It
+
+Reach for geoproximity specifically when you need **geography-based routing with a business reason to bias the boundary away from pure distance** — not simply "route by location" (that's geolocation) and not simply "route by speed" (that's latency).
+`,
+    },
+    {
+      id: "route53-failover",
+      title: "Route 53 – Failover Routing",
+      shortDesc: "The one policy built for active-passive: a primary and a standby, not two active servers",
+      visuals: ["FailoverDemo"],
+      content: `## The Odd One Out
+
+Every routing policy covered so far is **active-active** — multiple servers all genuinely serving traffic, whether split by weight, by latency, or by location.
+
+> **Failover routing is different. It is the only Route 53 policy built for active-passive.**
+
+One server is **primary** (active), the other is **secondary** (passive/standby). Under normal conditions, **100% of traffic goes to the primary**. The secondary sits idle, ready to take over.
+
+---
+
+## Why It Needs a Health Check
+
+> **Failover cannot function without a health check on the primary.** There is no other way for Route 53 to know the primary has gone down.
+
+**Route 53 → Health checks → Create health check** for the primary server — HTTP, its IP, port 80. Wait for it to report **Healthy**.
+
+---
+
+## Creating the Failover Records
+
+Two A records, same name:
+
+- **Record 1:** primary server's IP → **Failover routing → Primary** → attach the health check
+- **Record 2:** secondary server's IP → **Failover routing → Secondary**
+
+---
+
+## ⚠️ Set TTL Low
+
+**TTL (time to live)** controls how long a resolver caches the answer before asking again.
+
+> With the default TTL, a failure can take several minutes to become visible to users — their machines and intermediate resolvers keep answering from cache long after the primary has actually failed.
+
+Set TTL to something short — **60 seconds** in the lecture's example — on both records, so a failover is visible quickly instead of only after a long cache expiry.
+
+---
+
+## Watching It Fail Over
+
+With both servers up, querying the record consistently returns the **primary's** IP — failover ignores the secondary entirely while the primary is healthy.
+
+**Block port 80 on the primary.** Its health check moves to **Unhealthy** within a couple of minutes. From then on, **the record returns the secondary's IP** — traffic moves over with zero manual action.
+
+**Restore port 80 on the primary** and, once its health check reports healthy again, the record **reverts to the primary** automatically.
+
+---
+
+## The Exam Point
+
+> **Every other Route 53 routing policy assumes active-active — multiple servers, all in rotation.** Failover is the exception: **exactly one policy that supports an active-passive pair**, and it is entirely dependent on a health check to know when to switch.
+`,
+    },
+    {
+      id: "route53-multivalue-ip-based",
+      title: "Route 53 – Multivalue Answer & IP-Based Routing",
+      shortDesc: "Returning several IPs at once for round-robin, and routing by the querier's own address",
+      visuals: ["PolicyComparisonMatrix"],
+      content: `## Multivalue Answer — More Than One IP Per Query
+
+Every policy so far returns **one IP per query**. **Multivalue answer** is different: it can return **up to eight IP addresses in a single response**.
+
+**Create multiple A records with the same name**, each set to **multivalue answer**, each with a different IP — for example three servers at **1.1.1.1**, **2.2.2.2** and **3.3.3.3**.
+
+Query it and you get **all three back**, in a rotating order — one client's first query might list 1.1.1.1 first, the next client's might lead with 2.2.2.2. The client's resolver picks which one to actually connect to, typically the first in the list.
+
+> **Health checks are optional here but genuinely useful** — attach one per record and an unhealthy server is dropped from the returned set entirely, rather than being handed out and failing on connection.
+
+**When to use it:** simple round-robin load distribution across several equivalent servers, without the percentage control of weighted routing or the single-answer behaviour of simple routing.
+
+---
+
+## IP-Based Routing — Deciding by the Querier's Address
+
+The newest of the eight policies. **The IP that comes back depends on the source IP of whoever is resolving the query** — not their country, not measured latency, their literal **source address or CIDR block**.
+
+**Real use case:** you know a particular ISP or corporate network — identified by its IP range — gets consistently better performance from one specific server. Pin that range to that server explicitly.
+
+---
+
+## Setting It Up
+
+**1 · Define CIDR collections.** **Route 53 → CIDR collections → Create CIDR collection:**
+
+- **Name** it
+- Add **locations**, each a name plus a **CIDR block** — e.g. **Gujarat → 119.0.0.0/8**, **Maharashtra → 200.0.0.0/8**
+
+**2 · Create the records.** Same name, **IP-based routing**, each tied to a **CIDR collection location**:
+
+| Record | CIDR location | IP |
+|---|---|---|
+| R1 | Gujarat (119.0.0.0/8) | Server 1 |
+| R2 | Maharashtra (200.0.0.0/8) | Server 2 |
+| R3 | **Default** | Server 3 |
+
+> As with geolocation, a **default** record catches every source IP not covered by a defined location.
+
+---
+
+## Verifying It
+
+Query from a machine whose public IP falls in **119.0.0.0/8** and the record consistently returns **Server 1's** IP. Query from outside every defined range and you land on the **default**.
+
+---
+
+## Both, Side by Side
+
+| | Multivalue Answer | IP-Based |
+|---|---|---|
+| **Decides by** | Nothing — round-robin across all healthy records | The **source IP/CIDR** of the resolver |
+| **Answers per query** | **Up to 8** | 1 |
+| **Typical use** | Simple load distribution | **ISP or network-specific** routing, session affinity |
+
+---
+
+## The Full Picture — All Eight Policies
+
+| Policy | Mode | Decides by |
+|---|---|---|
+| **Simple** | Single answer | Nothing — one fixed record |
+| **Weighted** | Active-active | A percentage split you assign |
+| **Latency** | Active-active | Measured network latency |
+| **Geolocation** | Active-active | The **user's** country/continent |
+| **Geoproximity** | Active-active | Geography **plus** a bias you control ($50/mo) |
+| **Failover** | ⚠️ **Active-passive** | A health check on the primary |
+| **Multivalue answer** | Active-active | Round-robin across up to 8 healthy IPs |
+| **IP-based** | Active-active | The **resolver's** source IP/CIDR |
+
+> **The one exam fact that ties all eight together:** every policy here is **active-active** except **failover**, which is the only one built for a primary/standby pair. That single distinction comes up constantly.
 `,
     },
     {

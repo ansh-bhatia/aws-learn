@@ -1,0 +1,26 @@
+/* ─── Route 53 routing policy comparison (prefix r532-) ──
+   .sv-card / .sv-title / .r53-title / .r53-intro / .r53-note come from Route53Visuals.css */
+
+.r532-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.r532-tab {
+  font-size: 11px; font-weight: 700; color: #b9c2cc;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 7px 11px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.r532-tab:hover { color: #e6edf3; border-color: rgba(255,255,255,0.24); }
+.r532-tab.active { color: #b88cff; border-color: rgba(140,79,255,0.6); background: rgba(140,79,255,0.15); }
+
+.r532-detail {
+  display: flex; flex-direction: column; gap: 3px;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 4px 14px;
+}
+.r532-detail-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+  padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.r532-detail-row:last-child { border-bottom: none; }
+.r532-detail-label { font-size: 10.5px; font-weight: 800; color: #6e7784; letter-spacing: 0.3px; white-space: nowrap; }
+.r532-detail-val { font-size: 12.5px; font-weight: 600; color: #e6edf3; text-align: right; }
+.r532-detail-val.warn { color: #e8cd8a; font-weight: 800; }
