@@ -254,6 +254,189 @@ Every Customer Managed (and AWS Managed) policy has its own **ARN** — a real, 
 `,
     },
     {
+      id: "iam-users-lab",
+      title: "Lab – IAM Users, Access Keys & Password Policy",
+      shortDesc: "Console vs programmatic credentials, MFA, and enforcing a strong password policy account-wide",
+      visuals: ["IAMEntities"],
+      content: `## IAM Has 3 Core Entities
+
+> **IAM entities are the core of AWS access control: User, Group, and Role.** All three work the same basic way — create the identity, then attach a policy to define what it can do. This topic covers the first: the **User**.
+
+An IAM user is a **logical identity representing one physical person** (or application) who needs AWS access — created specifically so nobody ever has to share the root account's login.
+
+---
+
+## Step 1 — Create a User With Console Access
+
+**IAM → Users → Create user** → name it (e.g. **user-1**) → enable **console access** (optional — a user could instead get only programmatic or CLI access, or a mix) → set a password → attach **AmazonEC2FullAccess** directly.
+
+Logging in as this user: full EC2 management works immediately. **Detach** the policy and refresh — the same user is now completely locked out of EC2, confirming permissions live entirely in the attached policy, not the user account itself.
+
+---
+
+## Step 2 — Access Keys for Programmatic Access
+
+Console login (username + password) only works for browser-based access. Anything programmatic — the **AWS CLI** or an **SDK** in application code — needs a different credential pair entirely.
+
+> **An Access Key ID + Secret Access Key** is what programmatic/CLI access uses instead of a password. Generate one under **user → Security credentials → Access keys → Create access key**.
+
+> ⚠️ **The secret access key is shown exactly once.** Download the CSV immediately. If it's lost, there's no way to retrieve it again — only to delete that key and generate a brand-new pair. Never share either value; anyone holding them can act as that user programmatically.
+
+---
+
+## Step 3 — Multi-Factor Authentication (MFA)
+
+> Passwords alone are crackable. **MFA adds a required second factor** — typically a time-limited code from an authenticator app — so a stolen password alone still isn't enough to log in.
+
+**User → Security credentials → Assign MFA device** → name it → choose **Authenticator app** (Google Authenticator or similar) — hardware MFA devices are also purchasable from AWS, but the authenticator app option needs no extra hardware.
+
+Scan the generated QR code with the authenticator app, then enter **two consecutive codes** (roughly a minute apart) to confirm the pairing. From then on, logging in as this user requires the password **and** the current rotating code from the app.
+
+> **Best practice: enable MFA on every IAM user, and treat it as mandatory for root** (root MFA setup is covered in the dedicated root-user-security topic).
+
+---
+
+## Step 4 — Enforce a Strong Account-Wide Password Policy
+
+**IAM → Account settings → Password policy → Edit.**
+
+- **IAM default policy:** minimum 8 characters, requires upper/lowercase + numbers + symbols, **passwords never expire**, and a password can't match the account name or email
+- **Custom policy** options: minimum length (6–128 — but ⚠️ setting it unreasonably high, e.g. 50 characters, backfires: nobody can memorize a 50-character password, so it ends up written down somewhere insecure instead — **8–12 characters with full complexity** is the realistic sweet spot), a password **expiration period** (e.g. 15 days), whether expired-password users can reset their own password or need an **administrator reset**, and **prevent password reuse** (e.g. the last 24 passwords) — this last one specifically stops someone from just alternating between two passwords every expiration cycle
+
+> ⚠️ **A new password policy only affects existing users the next time THEY change their password** — it does not retroactively force anyone with a currently-valid password to change it immediately. New users created after the policy change must follow it from day one.
+
+---
+
+## What's Next
+
+Attaching the exact same policy to every user with a similar job, one at a time, doesn't scale. The next topic — **IAM Groups** — solves exactly that.
+`,
+    },
+    {
+      id: "iam-groups-lab",
+      title: "Lab – IAM Groups",
+      shortDesc: "Attach a policy once to a group instead of once per user, and every member inherits it automatically",
+      visuals: [],
+      content: `## The Problem Groups Solve
+
+Ten users all doing the same job (say, managing EC2) each need the **same** policy attached individually. That's ten separate attach operations today — and ten separate re-attach operations the moment that job's permissions need to change.
+
+> **An IAM Group is a collection of users that share a policy attachment.** Attach a policy to the group **once**, and every current (and future) member inherits it automatically — with zero per-user policy management.
+
+---
+
+## Step 1 — Create Three Plain Users
+
+**user-1, user-2, user-3** — no policies attached to any of them individually. Confirm all three currently have zero EC2 access.
+
+---
+
+## Step 2 — Create the Group and Add Members
+
+**IAM → User groups → Create group** → name **EC2-manager** → add **user-1, user-2, user-3** as members → create.
+
+Check any member's **Groups** tab — it now shows membership in **EC2-manager**.
+
+---
+
+## Step 3 — Attach a Policy to the Group, Not the Users
+
+**EC2-manager group → Permissions → Add permissions** → attach **AmazonEC2FullAccess** directly to the **group**.
+
+Log in as **any** of the three users — all three now have full EC2 access, despite never having a policy attached to their individual user account. The permission flows entirely from group membership.
+
+---
+
+## Step 4 — Add a New Team Member Later
+
+**Create a new user, user-4**, and during creation, **add it directly to the EC2-manager group**. It inherits the group's EC2FullAccess immediately — no separate policy-attachment step was ever needed for this new hire.
+
+> This is the real payoff: onboarding a new person who does the same job as an existing team is a single "add to group" action, not a policy-attachment checklist repeated per person.
+
+---
+
+## Key Facts to Remember
+
+- **Groups have no login credentials of their own** — you cannot sign in "as" a group, only as a user who happens to belong to one
+- **A user can belong to multiple groups simultaneously**, and inherits the **union** of every group's permissions
+- **An explicit Deny anywhere still wins** — if one group grants an action and another (or a directly-attached policy) explicitly denies it, the Deny overrides, exactly as covered in the policy-evaluation logic from the customer-managed-policy lab
+- Groups still need **regular review** — membership drifts over time as people change roles, and stale group membership is a common source of over-privileged accounts in real organizations
+
+---
+
+## What's Next
+
+Users and Groups both grant **long-term** credentials — a password or access key that persists indefinitely until someone deliberately changes or revokes it. The third IAM entity, **Roles**, works completely differently: **temporary** credentials, assumed only when needed, and — as the next topic shows — the correct way to let an EC2 instance talk to another AWS service without ever hard-coding a secret key anywhere.
+`,
+    },
+    {
+      id: "iam-roles-service-lab",
+      title: "Lab – IAM Roles for AWS Services",
+      shortDesc: "The insecure way (access keys baked into an EC2 instance) vs the correct way (an assumed role) — built and compared side by side",
+      visuals: ["RoleUseCases"],
+      content: `## Why Roles Exist at All
+
+> **By default, every AWS service under your account is completely isolated from every other one** — even under the same root account, EC2 cannot reach S3, Lambda cannot reach DynamoDB, and so on, unless something explicitly authorizes that specific interaction. A Role is how that authorization is granted.
+
+> **A Role is not tied to one specific person like a User is** — it's assumed by whoever (or whatever) needs it, temporarily, then released. Credentials from an assumed role are **temporary**, unlike a User's permanent password and access keys.
+
+This lab builds the same real scenario **twice** — once the insecure way, once the correct way — so the difference is concrete, not just theoretical.
+
+---
+
+## The Scenario
+
+A web app running on an EC2 instance needs to let users upload files (photos, PDFs) which get stored in an **S3 bucket** (AWS's object storage service — covered in full detail in the Storage section; here it's just "the place uploaded files land"). By default, the EC2 instance **cannot** write to S3 — that cross-service access needs to be explicitly granted.
+
+---
+
+## Attempt 1 — The Insecure Way (Access Keys Hard-Coded)
+
+**Step 1:** Create an IAM user, **s3-access-user**, with **no console access** (it exists purely to hold programmatic credentials) → generate an **access key + secret key** for it.
+
+**Step 2:** Create an S3 bucket, e.g. **my-app-03**.
+
+**Step 3:** Create a Customer Managed policy allowing **PutObject** on that bucket's ARN specifically, and attach it to **s3-access-user**.
+
+**Step 4:** Launch an EC2 instance with a user data script that **hard-codes the access key and secret key directly in the script**, alongside the bucket name, so the running application can authenticate as s3-access-user and upload files.
+
+**Test it:** open the app, upload a file — it lands correctly in the S3 bucket. **Functionally, this works.**
+
+> ⚠️ **But it fails every real security review.** The access key and secret key sit in plain text inside the instance's user data / application code. Anyone who gains any access to that server — a misconfigured permission, a vulnerability, a careless log dump — can read the credentials directly and act as that IAM user anywhere, anytime, with no expiration. This is explicitly called out as **not** an AWS best practice.
+
+---
+
+## Attempt 2 — The Correct Way (An Assumed Role)
+
+**Step 1:** Terminate the insecure instance entirely — starting the secure version from scratch.
+
+**Step 2:** **IAM → Roles → Create role → Trusted entity: AWS service → EC2.** This tells AWS: *this role can be assumed by an EC2 instance.*
+
+**Step 3:** Attach the **exact same S3 PutObject policy** used in Attempt 1 (same bucket, same permission) — the policy itself doesn't change; only **how it's delivered** does.
+
+Name the role (e.g. **my-app-s3-access**) and create it.
+
+**Step 4:** Launch a **new** EC2 instance. This time, the user data script contains **only the bucket name — no access key, no secret key anywhere**. During launch, set **IAM instance profile** to the role just created (this can also be attached to an already-running instance afterward, if needed).
+
+> **What actually happens:** when the EC2 instance starts, it automatically **assumes** the attached role and receives **temporary security credentials** — scoped to exactly the S3 permission the role's policy grants, nothing more — with no credentials ever appearing in code, scripts, or logs.
+
+**Test it:** open the new app, upload a file — it lands in the bucket exactly as before. **Functionally identical result, with zero hard-coded secrets anywhere.**
+
+---
+
+## The Comparison That Matters
+
+| | Access Keys on EC2 | IAM Role Attached to EC2 |
+|---|---|---|
+| Credentials in code/scripts? | ✅ Yes — visible to anyone with server access | ❌ Never |
+| Credential lifetime | Permanent until manually rotated | Temporary, auto-issued, auto-renewed |
+| Result if the server is compromised | Attacker gets a reusable, long-lived credential | Attacker gets nothing extractable — the role can't be "stolen" the same way |
+| AWS best practice? | ❌ Explicitly discouraged | ✅ The recommended pattern |
+
+> This is the first of **five** IAM role use cases — granting a **service** (here, an EC2 instance) permission to act on your behalf. The remaining four — assuming a role as a **user** (same account and cross-account), **web identity federation**, **SAML 2.0 federation**, and **custom trust policies** — are covered in the next several topics.
+`,
+    },
+    {
       id: "iam-org-sso",
       title: "IAM – Reports, Organizations & SSO (Part 2)",
       shortDesc: "IAM reports, AWS Organizations + SCPs, Identity Center",
