@@ -1,0 +1,47 @@
+/* ─── Prefix list weight (prefix vpc7-) ──────────────────
+   .viz-card / .viz-title from VPCVisuals.css
+   .vpc4-intro / .vpc4-note from VPCVisuals4.css */
+
+.vpc7-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.vpc7-tab {
+  display: flex; flex-direction: column; gap: 2px; align-items: flex-start;
+  font-size: 11px; font-weight: 700; color: #b9c2cc;
+  background: #21262d; border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 8px 11px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.vpc7-tab:hover { color: #e6edf3; border-color: rgba(255,255,255,0.24); }
+.vpc7-tab.active { color: #79c0ff; border-color: rgba(46,115,184,0.65); background: rgba(46,115,184,0.15); }
+.vpc7-tab small { font-size: 9px; font-weight: 700; color: #6e7784; }
+.vpc7-tab.active small { color: #79c0ff; }
+
+.vpc7-name {
+  font-size: 11px; color: #9aa4b2; margin-bottom: 14px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  word-break: break-all;
+}
+
+.vpc7-meters { display: flex; flex-direction: column; gap: 14px; }
+.vpc7-meter {
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 13px 14px;
+}
+.vpc7-meter-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  font-size: 11.5px; color: #b9c2cc; margin-bottom: 8px;
+}
+.vpc7-meter-head b {
+  font-size: 12px; color: #5fc943; white-space: nowrap;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vpc7-meter-head b.tight { color: #e8cd8a; }
+.vpc7-meter-head b.over { color: #f0867f; }
+
+.vpc7-track { height: 10px; background: #0d1117; border-radius: 5px; overflow: hidden; }
+.vpc7-fill { display: block; height: 100%; transition: width 0.3s ease, background 0.3s; }
+.vpc7-fill.sg { background: linear-gradient(90deg, #2e73b8, #79c0ff); }
+.vpc7-fill.rt { background: linear-gradient(90deg, #3fb950, #5fc943); }
+.vpc7-fill.rt.over { background: linear-gradient(90deg, #b02a24, #f85149); }
+
+.vpc7-meter-note { font-size: 11px; color: #6e7784; line-height: 1.55; margin-top: 7px; }
+.vpc7-meter-note strong { color: #b9c2cc; }

@@ -1552,226 +1552,439 @@ Adding a fifth VPC means **one attachment and routes** — not four new peering 
 `,
     },
     {
-      id: "vpc-connectivity",
-      title: "VPC – Connectivity & Security (Part 2)",
-      shortDesc: "Peering, NACL vs SG, VPN, Direct Connect, Transit Gateway, Endpoints",
+      id: "vpc-endpoints",
+      title: "VPC – Endpoints",
+      shortDesc: "Reaching AWS services over the private network, and gateway vs interface types",
       visuals: ["VPCEndpointExplorer"],
-      content: `## VPC Part 2 — Connectivity & Security
+      content: `## The Problem
 
-Part 1 built a VPC. Part 2 covers how VPCs **connect** to each other and to on-premises, and the **two security layers** that protect them: VPC Peering, Network ACLs vs Security Groups, stateful vs stateless, VPN, Direct Connect, Transit Gateway, and VPC Endpoints (PrivateLink).
+Your EC2 instance needs to talk to **DynamoDB**. Both are AWS services — but by default that traffic **goes over the internet**.
 
----
+It leaves your instance, crosses the **internet gateway**, travels the public internet, and arrives at DynamoDB. You are sending data between two AWS services **without using the AWS private network**.
 
-## VPC Peering
-
-By default, **two VPCs cannot communicate** — even in the same AWS account. **Peering** creates a private link between them. It's flexible: it works **across accounts** and **across regions**.
-
-### How to set it up
-1. **Requester** VPC sends a peering request (specify account ID and/or region + the peer VPC ID)
-2. **Accepter** VPC accepts the request → status becomes **Active**
-3. **Add routes on BOTH sides** — each route table needs an entry pointing the *other* VPC's CIDR at the peering connection (\`pcx-…\`)
-
-### Key rules
-- The two VPCs **must have different CIDR ranges** (overlapping ranges can't be peered)
-- Peering is **not transitive**: if A↔B and A↔C are peered, B still cannot reach C — you'd need a B↔C peering too
-- Traffic uses the **Amazon private network** (no internet, no public IPs needed)
-
-> If you delete the peering connection (and its routes), communication breaks immediately.
+> Nobody wants that. Why route traffic across the public internet when **both endpoints are inside AWS**?
 
 ---
 
-## The Two Security Layers: NACL & Security Group
+## What a VPC Endpoint Does
 
-Every packet to an instance passes **two** checks:
+> **A VPC endpoint lets you privately connect your VPC to supported AWS services.**
 
-1. **Network ACL (NACL)** — protects the **entire subnet** (the *building's* security guard)
-2. **Security Group (SG)** — protects the **instance / ENI** (the *office's* security guard)
+With one in place, your instance reaches DynamoDB **directly over the AWS private network**. No internet involved.
 
-| Aspect | 🚪 Security Group | 🏢 Network ACL |
-|--------|-------------------|----------------|
-| Applies to | Instance / network interface | Entire subnet |
-| Rule evaluation | All rules at once (no order) | In order — **lowest rule # wins** |
-| Allow / Deny | **Allow only** (rest implicitly denied) | **Allow AND Deny** rules |
-| State | **Stateful** | **Stateless** |
+**What you no longer need:**
 
-- A new/custom NACL **denies all** inbound + outbound until you add rules
-- The **default** NACL allows everything (effectively "off")
-- A NACL is useless until **associated with a subnet**
+- ❌ Internet gateway
+- ❌ NAT gateway
+- ❌ VPN connection
+- ❌ Direct Connect
 
-> Block a port for a **whole subnet** → NACL. Allow a port for **one instance** → Security Group. Only NACLs can **explicitly deny** (e.g. block a single malicious IP while allowing everyone else).
+**What you gain:** secure connectivity, **high speed and low latency**, and traffic that never touches the public internet.
 
-### NACL Rule Order
-Rules are evaluated in ascending number order; the **first match wins**. To deny one IP from port 80, the DENY rule must have a **lower number** than the broad ALLOW — otherwise the ALLOW matches first and the DENY never runs.
+Endpoints are **virtual**, **horizontally scalable**, **redundant** and **highly available** — AWS handles all of that.
 
 ---
 
-## Stateful vs Stateless
+## Powered by PrivateLink
 
-This is the deepest difference between SG and NACL.
+**AWS PrivateLink** is the underlying technology. It **eliminates exposure of your data on the public internet** by keeping it on the Amazon private network.
 
-- **Stateful (Security Group):** remembers connections it initiated. When your instance sends an outbound request, the **reply is automatically allowed back in** — no inbound rule needed. Lower admin burden.
-- **Stateless (Network ACL):** remembers nothing. You must add rules for **both directions** — outbound for the request *and* inbound for the reply.
+PrivateLink provides connectivity between:
 
-> Inbound traffic *from* the internet (e.g. a user opening your website on port 80) needs an inbound rule in **both** cases. The difference is only about the **return** traffic.
+1. **Your VPC and other AWS services**
+2. **Your VPC and on-premises**
+3. **One VPC and another** — including **cross-account** access
 
----
-
-## Connecting On-Premises to AWS (Hybrid Cloud)
-
-### Site-to-Site VPN
-A tunnel over the **public internet** between your on-prem router and AWS.
-
-- Encrypted with **IPsec** (required — it's a public network)
-- Bandwidth up to **~1.25 Gbps**
-- Components: **Customer Gateway** (your side's public IP) + **Virtual Private Gateway** (attached to the VPC) + **Site-to-Site VPN connection**
-- Easy: download the ready-made router config from AWS, paste it into the router (e.g. Cisco), done
-- Don't forget the **route table entries on both sides** (AWS side and the router)
-
-### AWS Direct Connect
-A **dedicated private fibre** line — no internet at all.
-
-- **No encryption** (the private line is already safe; data travels as clear text)
-- Bandwidth up to **~100–300 Gbps**, consistent low latency
-- Provided by a partner with an **AWS edge location**; takes **30–90 days** to set up
-- Lower bandwidth cost, most private option
-
-> Exam tip: **VPN = internet + IPsec encryption**; **Direct Connect = private fibre, higher bandwidth, no encryption.**
+> The third case is what **endpoint services** are for, covered in the next topic.
 
 ---
 
-## Transit Gateway
+## ⚠️ Two Endpoint Types — Learn Which Is Which
 
-Connecting N VPCs with peering needs **N × (N−1) / 2** connections:
-- 4 VPCs → 6 peerings
-- 10 VPCs → **45** peerings 😵
+This is the exam-relevant distinction.
 
-A **Transit Gateway (TGW)** is a central **hub**. Each VPC, VPN, or Direct Connect **attaches once**, and the TGW routes traffic between them — no mesh.
+**Gateway endpoints** are supported by **exactly two services**:
 
-### How to use it
-1. Create the Transit Gateway
-2. Create a **Transit Gateway Attachment** for each VPC (pick VPC + subnet)
-3. Add **routes** in each VPC's route table pointing other VPC CIDRs at the TGW
+| Service | Endpoint type |
+|---|---|
+| **Amazon S3** | **Gateway** |
+| **DynamoDB** | **Gateway** |
+| **Everything else** | **Interface** |
 
-> All attachments must be in the **same account and region**. For cross-account/region, create **two Transit Gateways** and **peer** them.
+**Gateway endpoint** — creating one **requires a route table entry**. The endpoint is added to your VPC's route table **as a target**. Select S3 or DynamoDB in the console and it will ask you which route table to use.
+
+**Interface endpoint** — an **elastic network interface** with a **private IP from your subnet's range**, serving as the entry point for traffic to that service. **No route table entry needed**; it connects directly.
+
+| | Gateway endpoint | Interface endpoint |
+|---|---|---|
+| **Supported by** | **S3 and DynamoDB only** | All other supported services |
+| **Route table entry** | ✅ **Required** | ❌ Not needed |
+| **Implementation** | Route target | **ENI with a private IP** |
+| **Powered by** | — | **PrivateLink** |
 
 ---
 
-## VPC Endpoints & PrivateLink
+## A Third Type
 
-By default, traffic from your EC2 to another AWS service (e.g. **S3** or **DynamoDB**) goes **over the public internet** via the Internet Gateway. A **VPC Endpoint** keeps it on the **AWS private network** instead — secure, low-latency, no IGW/NAT/VPN needed.
+There is also a **Gateway Load Balancer endpoint**.
 
-**PrivateLink** is the underlying technology that connects your VPC privately to AWS services, on-prem, or other VPCs.
-
-### Two Endpoint Types
-
-| | 🚪 Gateway Endpoint | 🔌 Interface Endpoint |
-|--|---------------------|------------------------|
-| Services | **S3 & DynamoDB only** | Most other AWS services |
-| Mechanism | Target in the **route table** | ENI with a private IP |
-| Route table entry | ✅ Required | ❌ Not required |
-| Powered by | Gateway | PrivateLink |
-
-> Remember the two gateway-endpoint services: **S3** and **DynamoDB**. Everything else uses an interface endpoint. (A third type — *Gateway Load Balancer endpoint* — comes with load balancers.)
-
-### Endpoint Services (Provider → Client)
-Expose **one specific service** (e.g. an app on port 80) from a **provider VPC** to a **client VPC**, privately via PrivateLink.
-
-- Unlike **peering** (which gives full two-way access to *all* resources), endpoint services expose **only the chosen service**
-- Requires a **Network Load Balancer** (or Gateway LB) in the provider VPC
-- **Same region only** (cross-region needs peering too), and **TCP traffic only**
+> That one only makes sense once you know what a Gateway Load Balancer is — covered in the load balancing section, where AWS's four load balancer types are explained.
 `,
     },
     {
-      id: "vpc-management",
-      title: "VPC – DHCP, Flow Logs & Prefix Lists (Part 3)",
-      shortDesc: "DHCP option sets, VPC flow logs, managed prefix lists",
-      visuals: ["DHCPOptionSetDemo", "VPCFlowLogExplorer", "ManagedPrefixListDemo"],
-      content: `## VPC Part 3 — DHCP, Flow Logs & Prefix Lists
+      id: "vpc-endpoint-services",
+      title: "VPC – Endpoint Services & PrivateLink",
+      shortDesc: "Exposing one service to another VPC privately — and why this is not peering",
+      visuals: [],
+      content: `## The Scenario
 
-Three operational VPC features that make networks easier to manage and observe: **DHCP Option Sets**, **VPC Flow Logs**, and **Managed Prefix Lists**.
+Two companies, each with their own VPC in the **same region**. One is a **service provider**; the other is a **client** consuming that service.
 
----
+**By default**, the client reaches the provider's application over the **internet** — using the **public IP** of the provider's EC2 instance, through an **internet gateway**. That means latency, and arguably a security risk.
 
-## DHCP Option Sets
+> Yet **both** parties are on AWS, in the **same region**. There is no reason for that traffic to leave the AWS network.
 
-**DHCP** (Dynamic Host Configuration Protocol) auto-assigns network settings to devices — exactly like joining hotel Wi-Fi: you enter a password and instantly receive an IP, with no manual config.
-
-Every VPC has DHCP enabled, so any EC2 instance you launch gets a **private IP automatically** from its subnet's range. A **DHCP Option Set** lets you customise the *other* settings handed out.
-
-### What you can / can't change
-
-| Setting | Editable? |
-|---------|-----------|
-| IP address | 🔒 **No** — always auto-assigned from the subnet |
-| Domain name | ✅ Yes (e.g. \`cloudfox.local\`) |
-| DNS server | ✅ Yes (e.g. \`8.8.8.8\`) |
-| NTP server (time sync) | ✅ Yes |
-| NetBIOS / node type | ✅ Yes |
-
-These options matter most when you run your **own Active Directory / DNS / NTP** servers.
-
-### How to apply
-1. Create a DHCP option set with your custom domain name / DNS / etc.
-2. Attach it to the **VPC** (*Edit VPC settings → DHCP option set*) — it applies to **all subnets**, you can't set it per-subnet
-3. On the instance, run \`ipconfig /renew\` (Windows) to pick up the new values — the IP stays the same
-
-> To revert, re-attach the default option set, delete your custom one, and renew again.
+**VPC endpoint services** — PrivateLink — let the client reach the provider's instance over **private IPs** on the AWS private network.
 
 ---
 
-## VPC Flow Logs
+## ⚠️ Why This Is Not Peering
 
-Flow Logs **record the traffic** flowing in and out of your VPC — between EC2 instances, through load balancers, VPN, or Transit Gateway. They're used for **troubleshooting** and **security analysis**.
+The setup *looks* like peering: two VPCs, one reaching the other. It is a different thing.
 
-### What to capture (filter)
-- **ACCEPT** — only allowed traffic
-- **REJECT** — only traffic blocked by a Security Group / NACL (great for spotting attacks and probing)
-- **ALL** — both
+| | VPC Peering | Endpoint Services (PrivateLink) |
+|---|---|---|
+| **Exposes** | **Everything** — all resources in both VPCs | **One specific service**, on one port |
+| **Direction** | **Two-way** — each side reaches the other | Client reaches the **provider's service** |
+| **Protocols** | TCP, UDP, **any** traffic | ⚠️ **TCP only** |
+| **Requires** | Nothing extra | A **Network Load Balancer** or **Gateway Load Balancer** |
 
-### Where to send the logs
-
-| Destination | Delivery time | Best for |
-|-------------|---------------|----------|
-| **Amazon S3** | ~10–15 min | Cheap storage, archival, big-data queries (Athena) |
-| **CloudWatch Logs** | ~5 min | Analytics, queries, alerting (faster) |
-| **Kinesis Data Firehose** | near real-time | Streaming to other systems |
-
-### A log record contains
-version, account-id, **interface-id** (the ENI/NIC), **srcaddr / dstaddr**, **srcport / dstport**, protocol, and the **action** (ACCEPT/REJECT). You can use the default format or pick only the fields you want.
-
-- Attach a flow log to a **VPC, a subnet, or a single ENI**
-- Set the aggregation interval (e.g. 10 minutes) and (for S3) partition by hour/day
-- Remember: S3 delivery can take 10–15 minutes — don't panic if logs don't appear instantly
+> **Peering gives full mutual access** between two VPCs — every instance on both sides. **Endpoint services expose exactly one service**, for example an application on port 80, and nothing else.
+>
+> **Choosing between them:** need everything reachable both ways → **peering**. Need to publish one specific service → **endpoint services**.
 
 ---
 
-## Managed Prefix Lists
+## The Definition
 
-A **prefix list** is a named, reusable set of CIDR ranges. Instead of typing the same IPs into many security groups and route tables, you define them **once** and reference the list.
+> **A VPC endpoint service is like a doorway that allows you to connect to certain online services in a secure, private way** — over the Amazon private network instead of the public internet.
 
-### The problem it solves
-Say three servers (web :80, db :3306, storage :2049) each need the **same set of source CIDRs** allowed. Without a prefix list, you add every CIDR to **every** security group — and when a new data-center range appears, you edit **all** of them. With a prefix list, you add the new CIDR **once** and all referencing groups update automatically.
+Note the word **certain**. This is deliberately narrow access, not general connectivity.
 
-You can reference a prefix list from: **Security Groups, route tables, Transit Gateway route tables, Network Firewall, and Grafana network access.**
+---
 
-### Two types
+## Configuration Shape
 
-| | 👤 Customer-Managed | 🟦 AWS-Managed |
-|--|---------------------|----------------|
-| Contents | Your own CIDR ranges | Prebuilt ranges for AWS services (S3, CloudFront, DynamoDB…) |
-| Edit / delete / share | ✅ Full control, shareable across accounts | ❌ Cannot create, edit, delete, or share |
-| Updates | You maintain it | Auto-updates when AWS changes service IPs |
-| Typical use | Inbound **and** outbound | Mostly **outbound** (e.g. EC2 → CloudFront / S3) |
-| IP version | One per list (IPv4 *or* IPv6) | IPv4 and IPv6 lists exist |
+1. The provider puts a **Network Load Balancer** (or Gateway Load Balancer) in front of the service.
+2. The provider creates the **endpoint service**.
+3. The client creates a **VPC endpoint** pointing at it.
 
-> AWS-managed lists are applied to a **region** only and make sense for **outbound** rules — e.g. "let this EC2 send traffic only to CloudFront edge locations" without ever knowing their IPs.
+---
 
-### ⚠️ Weight & Limits
-A prefix list counts against rule limits by its **number of entries** ("weight"). CloudFront's list is ~**55** CIDRs:
-- A **security group** allows ~60 rules → only ~5 left after adding it
-- A **route table** allows ~50 routes → the 55-entry list **won't fit** at all
+## Three Constraints
 
-These are **soft limits** — raise them via AWS Support if needed.
+- **Region-bound.** An endpoint service is available **only in the region where you create it**. To cross regions you must combine it with **VPC peering**, which is considerably more involved.
+- **TCP only.** Peering carries any protocol; this carries **TCP**. In effect you are doing controlled port forwarding.
+- **A load balancer is required** — NLB or GWLB. It is not optional.
+`,
+    },
+    {
+      id: "vpc-dhcp-option-sets",
+      title: "VPC – DHCP Option Sets",
+      shortDesc: "Pushing your own DNS, domain name and NTP settings to every instance in a VPC",
+      visuals: ["DHCPOptionSetDemo"],
+      content: `## First, What DHCP Is
+
+**DHCP — Dynamic Host Configuration Protocol.**
+
+Your EC2 instance gets a private IP without you assigning one. That is DHCP.
+
+> **The everyday version:** you arrive at a hotel, ask for the Wi-Fi password, connect, and you are online. Nobody hands you an IP address to type in. The router runs **DHCP** and assigns one automatically — no conflicts, no manual management.
+
+**Your VPC works the same way.** Create an instance and it receives a private IP from its subnet's range automatically.
+
+**Verify it inside a Windows instance:** run **ncpa.cpl**, open the adapter's **Properties → IPv4 → Properties**, and you will see **Obtain an IP address automatically** and **Obtain DNS server address automatically**.
+
+Or from the command line, **ipconfig /all** shows the IP, **DNS server** and **default gateway** all assigned automatically.
+
+---
+
+## What a DHCP Option Set Changes
+
+You could set any of these manually on each instance — but that does not scale. A **DHCP option set** pushes them to **every instance** instead.
+
+> ⚠️ **You cannot change the IP address.** DHCP always assigns that, and it is not yours to control. Everything *else* is configurable.
+
+**The default option set** gives you a domain name like **ap-south-1.compute.internal** and **AmazonProvidedDNS**.
+
+**Create your own** — **VPC → DHCP option sets → Create** — and you can set:
+
+| Option | Use for |
+|---|---|
+| **Domain name** | e.g. **cloudfox.local** — your own internal domain |
+| **Domain name servers** | Your **own DNS**, e.g. an Active Directory server |
+| **NTP servers** | Your own time server |
+| **NetBIOS name servers** | Legacy Windows |
+| **NetBIOS node type** | Legacy Windows |
+
+> **Why the DNS option matters most:** if you run your **own Active Directory server**, every instance needs to use it for DNS. Setting that per-instance is exactly the manual work this avoids.
+>
+> **NTP** matters because consistent time across machines is assumed by many systems, and it is normally synchronised automatically against a time server.
+
+---
+
+## ⚠️ It Applies at the VPC Level
+
+> **A DHCP option set attaches to a VPC — not to a subnet.**
+
+So it applies to **every subnet** and **every instance** inside that VPC. There is no per-subnet granularity.
+
+**To apply it:** **VPC → Actions → Edit VPC settings** → select your DHCP option set → **Save**.
+
+---
+
+## The Change Is Not Immediate
+
+Check the instance and nothing has changed. Instances pick up new settings **when their lease renews**.
+
+Force it with **ipconfig /renew**.
+
+> The IP stays the same — as expected, since DHCP option sets do not control it. But the **domain name** now reads **cloudfox.local** and **ipconfig /all** shows your DNS server.
+
+**To revert:** **Edit VPC settings** → select the **default** option set → save → **delete** your custom set → run **ipconfig /renew** again, and the original **ap-south-1.compute.internal** returns.
+`,
+    },
+    {
+      id: "vpc-flow-logs",
+      title: "VPC – Flow Logs",
+      shortDesc: "Capturing accepted and rejected traffic for troubleshooting and security",
+      visuals: ["VPCFlowLogExplorer"],
+      content: `## What They Capture
+
+**VPC flow logs record the traffic going into and out of your VPC.**
+
+That covers a lot:
+
+- Traffic between **two EC2 instances** inside the VPC
+- Traffic **into** instances from outside
+- Traffic **leaving** the VPC
+- Traffic through a **load balancer**, a **VPN gateway** or a **Transit Gateway**
+
+**Two reasons you want it:**
+
+- **Troubleshooting** — see what actually reached your instance
+- **Security** — see what was attempted and refused
+
+---
+
+## Creating One
+
+**VPC → select your VPC → Actions → Create flow log:**
+
+- **Name** it
+- **Filter** — **Accept**, **Reject**, or **All**
+- **Maximum aggregation interval** — **10 minutes** or 1 minute
+- **Destination** — **S3**, **CloudWatch Logs**, or **Kinesis**
+- **Log record format** — **AWS default format**, or select only the fields you want
+- **Log file format** and **partitioning**
+
+---
+
+## Choosing the Filter
+
+| Filter | Captures | Useful for |
+|---|---|---|
+| **Accept** | Successful traffic | Confirming what is getting through |
+| **Reject** | Refused traffic | **Security** — who is probing your servers, and what a security group blocked |
+| **All** | Both | Complete picture, most volume |
+
+> **Reject** is easy to overlook and genuinely valuable — it shows attempted access that your security groups turned away. Which to use is a matter of company policy.
+
+---
+
+## S3 vs CloudWatch Logs
+
+Sending to **S3** requires the bucket's **ARN** — find it under the bucket's **Properties**. (Every AWS resource has an **ARN**, an Amazon Resource Name.)
+
+> ⚠️ **Delivery is not instant, and the two destinations differ:**
+>
+> - **S3** — **10 to 15 minutes** before logs appear
+> - **CloudWatch Logs** — about **5 minutes**
+>
+> Doing this as a lab, wait 10–15 minutes before concluding it is broken.
+
+**CloudWatch Logs is generally the better destination** — it gives you better readability, analytics tooling and easy querying.
+
+---
+
+## Reading a Log File
+
+In S3 the logs land under an **AWS logs** folder in a dated folder structure, split across **several files**.
+
+Each record contains the **account ID**, the **interface ID** (your instance's NIC), **source and destination IP**, and **port** — so you can see a request arriving on port 80 and the reverse direction alongside it.
+
+> **The practical difficulty:** enable this on a busy VPC and you get **many** files with a great deal of traffic in them. Finding a specific IP means searching through them.
+>
+> Two things help: **restrict the security group source** while testing so the logs stay small, and **use CloudWatch Logs** rather than S3 so you can query rather than grep.
+
+**Partitioning** controls this too — 24-hour partitions by default, or hourly if you generate a lot.
+
+---
+
+## Clean Up
+
+Select the flow log → **Actions → Delete**. Empty and delete the S3 bucket separately if you created one for the test.
+`,
+    },
+    {
+      id: "vpc-prefix-lists",
+      title: "VPC – Customer-Managed Prefix Lists",
+      shortDesc: "One reusable list of CIDR ranges instead of the same rules copied everywhere",
+      visuals: ["ManagedPrefixListDemo"],
+      content: `## The Problem
+
+Three servers with three different roles, each needing a different port open:
+
+| Server | Port | Security group |
+|---|---|---|
+| **Web** | 80 (HTTP) | SG-1 |
+| **Database** | 3306 (MySQL) | SG-2 |
+| **Storage** | 2049 (NFS) | SG-3 |
+
+Different ports means **three separate security groups**. Fine so far.
+
+**But the source CIDR ranges are identical for all three.** Say six ranges — your offices and data centres.
+
+So you add **six rules to SG-1**, **six to SG-2**, and **six to SG-3**. Eighteen rules, the same six addresses three times over.
+
+**Then a new data centre opens.** You must now edit **all three** security groups to add one range. With ten security groups, that is ten edits — for one change.
+
+---
+
+## The Fix
+
+Create a **prefix list** containing those CIDR ranges **once**, then reference it from each security group.
+
+Adding a new range means editing **the prefix list only**. Every security group referencing it picks up the change **automatically**.
+
+---
+
+## What a Prefix List Is
+
+> **A prefix is a set of one or more CIDR blocks.** You create a prefix list from addresses you use frequently and reference it wherever it is needed.
+
+**Where you can reference one:**
+
+- **Security groups**
+- **Route tables**
+- **Transit Gateway route tables**
+- **Network Firewall**
+- **Managed Grafana network access**
+
+---
+
+## Creating One
+
+**VPC → Managed prefix lists → Create prefix list:**
+
+- **Name** it
+- **Max entries** — the ceiling, e.g. 50
+- **Address family** — **IPv4** or **IPv6**
+- **Entries** — your CIDR ranges, each with an optional description
+
+> ⚠️ **A prefix list holds one address family only.** Choose IPv4 and you cannot add IPv6 entries to it, or vice versa.
+>
+> ⚠️ **A prefix list applies only in the region where you create it.**
+
+---
+
+## Using It
+
+**Security group → Edit inbound rules.** Instead of six separate source entries, add **one** rule: port 80, source **Prefix list**, then select yours.
+
+Six rules become one.
+
+Check the prefix list's **Associations** tab and it lists every resource referencing it.
+
+---
+
+## Versioning
+
+Modify a prefix list — say add **192.168.200.0/24** — and AWS keeps **versions**: version 1 without it, version 2 with it. You can see the history of what changed.
+
+---
+
+## Sharing
+
+**Customer-managed prefix lists can be shared with other AWS accounts.** Define your address ranges once and let other accounts in your organisation reference the same list.
+
+> The next topic covers the other kind: **AWS-managed** prefix lists, which you cannot edit at all — and which exist for a completely different purpose.
+`,
+    },
+    {
+      id: "vpc-aws-managed-prefix-lists",
+      title: "VPC – AWS-Managed Prefix Lists",
+      shortDesc: "AWS service IP ranges you reference without knowing them — and the weight trap",
+      visuals: ["PrefixListWeight"],
+      content: `## Two Kinds of Prefix List
+
+| | Customer-managed | AWS-managed |
+|---|---|---|
+| **Contains** | **Your** CIDR ranges | **AWS service** IP ranges |
+| **Create** | ✅ | ❌ |
+| **Modify** | ✅ | ❌ |
+| **Delete** | ✅ | ❌ |
+| **Share** | ✅ | ❌ |
+
+Open **Managed prefix lists** and the entries already listed are **AWS-managed** — the IP ranges for services like **DynamoDB**, **Route 53**, **S3** and **CloudFront**, in both IPv4 and IPv6 variants.
+
+> Select one and every action is **greyed out**. You can reference them; you cannot touch them.
+
+---
+
+## The Use Case
+
+You want your EC2 instance to send traffic **only to Amazon CloudFront edge locations**.
+
+**You do not know CloudFront's IP addresses** — and there are many of them, and they change.
+
+**Without an AWS-managed prefix list** you would have to find every CloudFront edge IP range and add a rule for each — then maintain that list forever.
+
+**With one**, you add a single outbound rule with the destination set to the **CloudFront origin-facing** prefix list. Done.
+
+> **And when AWS changes those IPs, the list updates automatically.** That is the real value: you are referencing a moving target by name.
+
+The same applies to sending traffic to **S3** — reference the S3 prefix list rather than hunting for endpoint addresses.
+
+---
+
+## ⚠️ Use Them Outbound
+
+> **AWS-managed prefix lists make sense in OUTBOUND rules.** "Send traffic **to** S3", "send traffic **to** CloudFront."
+>
+> Using them **inbound** does not make sense. Your **own** customer-managed lists work in either direction.
+
+You can reference them in **security group outbound rules** and in **route tables** — for example, routing VPC traffic to S3 without knowing the endpoint's addresses.
+
+---
+
+## The Weight Trap
+
+Each prefix list has a **weight** — **the number of CIDR ranges inside it**.
+
+That weight is what counts against your rule limits, **not one**.
+
+| Prefix list | Weight |
+|---|---|
+| **CloudFront origin-facing** | **55** |
+| **S3** | 1 |
+| **DynamoDB** | 1 |
+
+**Against a security group's 60-rule limit:** referencing the CloudFront list consumes **55**, leaving **five** rules for everything else.
+
+**Against a route table's 50-route limit:** a weight of **55 does not fit at all**. Adding it **errors**.
+
+> Both limits are **soft** — contact AWS support to raise them. But you have to know the interaction exists, because the failure is confusing otherwise: you added *one* rule and hit a limit.
 `,
     },
     {
@@ -2053,183 +2266,6 @@ A complete real-world build:
 `,
     },
     {
-      id: "api-gateway",
-      title: "API Gateway & Application Integration",
-      shortDesc: "Single entry point for APIs; REST/HTTP/WebSocket",
-      visuals: ["AppIntegration", "MonoMicroScaling", "SyncVsAsync", "APIGatewayConcept", "APITypes", "RestVsHttp", "WebSocketDemo", "CRUDFlow"],
-      content: `## API Gateway & Application Integration
-
-### Application Integration
-
-Connecting different applications/services so they exchange data reliably, **decoupled** and scalable. Two flavors:
-- **App-to-App** — separate systems (often different companies) coordinating, e.g. UPI app ↔ NPCI ↔ bank; Skyscanner ↔ airline.
-- **Microservice-to-Microservice** — independent services inside one app, e.g. order → cart → payment → notification. They can't share functions or a DB, so they talk via **APIs, queues, events & messages**.
-
-> ~99% of modern apps are microservices — integration is how the pieces talk. Heavily tested in SAA-C03.
-
----
-
-### Monolithic vs Microservices
-
-- **Monolithic** — one codebase/deploy/DB. A small change redeploys everything, and you must scale the **whole** app together (wasteful).
-- **Microservices** — scale each part to its own demand. Amazon sale: Browse for 100K, Cart for 10K, Checkout for 4K, Pay for only 2K → optimized cost/performance, faster deploys, tech flexibility.
-
----
-
-### Synchronous vs Asynchronous
-
-- **Synchronous (real-time)** — sender **waits** for a reply before continuing (like a phone call). Use when the next step depends on the answer. **AWS:** API Gateway, ALB.
-- **Asynchronous (no waiting)** — sender sends a message and **continues**; receiver handles it later (like WhatsApp). Use for notifications, inventory updates, retries. **AWS:** SQS, SNS, EventBridge.
-
----
-
-## API Gateway
-
-A fully managed service that's the **single entry point** for all backend APIs. Clients never hit backends directly — the gateway **secures, throttles, routes & logs** every request, then forwards to the right backend (Lambda, EC2, ECS/EKS).
-
-> 🚕 **Uber:** one gateway in front of many APIs (driver location, ride request, fare, payment, trip history, notifications) to secure them, throttle peak traffic, block suspicious requests, and manage versions.
-
----
-
-## The 4 API Types
-
-- **HTTP API** — request/response; faster & ~70% cheaper, fewer features. Simple/low-cost APIs.
-- **REST API** — request/response with the full advanced feature set. More expensive.
-- **REST API (Private)** — same as REST but VPC-only.
-- **WebSocket API** — persistent, two-way, real-time (connection stays open).
-
----
-
-## REST vs HTTP API (the exam decision)
-
-| Feature | REST | HTTP |
-|---|---|---|
-| API keys | ✅ | ❌ |
-| IAM auth | ✅ | ❌ |
-| Cognito auth | ✅ | ✅ |
-| JWT/OAuth (native) | ❌ | ✅ |
-| Throttling | ✅ advanced | ⚠️ basic |
-| WAF | ✅ direct | ⚠️ via CloudFront |
-| Request/response transform | ✅ | ❌ |
-| Input validation | ✅ | ❌ |
-| Mapping templates (VTL) | ✅ | ❌ |
-| Caching | ✅ | ❌ |
-| ALB integration | ❌ | ✅ |
-| Private API | ✅ | ❌ |
-| Cost / Speed | Expensive / slower | ~70% cheaper / faster |
-
-> Need **transform, validation, mapping templates, caching, API keys, or private API**? → **REST**. Want **cheap & fast** with JWT/OAuth or ALB? → **HTTP**. (CloudWatch logs & Lambda/HTTP integration: both.)
-
----
-
-## WebSocket API
-
-REST/HTTP close after each response; **WebSocket keeps the connection open** for continuous two-way messaging.
-
-> **Keywords → WebSocket:** "real-time", "two-way", "long-lived connection". Use cases: live chat, notifications/dashboards, gaming, collaboration (Zoom, Google Docs), delivery tracking. Supports Lambda, JWT & Cognito; **no** ALB, API keys, WAF, or caching.
-
----
-
-## CRUD & the Flow
-
-**CRUD** = Create (\`POST\` → PutItem), Read (\`GET\` → GetItem/Scan), Update (\`PUT\` → UpdateItem), Delete (\`DELETE\` → DeleteItem).
-
-A website **can't** talk to DynamoDB directly (no public access). The flow: **Website → API Gateway → Lambda (CRUD logic) → DynamoDB**. One API Gateway exposes all four CRUD endpoints with a clean URL, auth, logs & throttling.`,
-    },
-    {
-      id: "api-gateway-2",
-      title: "API Gateway – Advanced (Part 2)",
-      shortDesc: "Endpoints, TLS, resources/methods, security, canary, custom domains",
-      visuals: ["EndpointTypes", "SecurityPolicyTLS", "ResourcesMethods", "IntegrationTypes", "MethodRequestSettings", "SecurityLayers", "APIKeysUsagePlan", "CanaryDeployment", "CustomDomain"],
-      content: `## API Gateway – Advanced (Part 2)
-
-Deep dive into REST API configuration and security.
-
----
-
-## REST API Endpoint Types
-
-An API has exactly **one** endpoint type:
-- **Regional** — deployed in one region; clients hit it directly. Best for nearby users (higher latency for far users).
-- **Edge-Optimized** — fronted by **CloudFront**; users hit the nearest edge → routed to your region. Best for global users (slightly pricier).
-- **Private** — VPC-only, via a VPC interface endpoint. For internal APIs.
-
-> Need both public & VPC access? Create two APIs.
-
----
-
-## TLS Security Policy & Endpoint Access Mode
-
-**TLS** encrypts the client↔API tunnel (= HTTPS). The **security policy** sets the minimum TLS version: **1.2** (modern), **1.3** (faster/most secure — prefer it), plus **FIPS** (US gov), **PFS** (key per connection), **PQC** (quantum-safe).
-
-**Endpoint access mode** (with enhanced policies):
-- **Basic** — allow all.
-- **Strict** — blocks **domain fronting** (where the TLS **SNI** ≠ the HTTP **Host** header) and enforces the matching endpoint type. For edge-optimized, CloudFront handles this. Policies apply to the default invoke URL; custom domains have their own.
-
----
-
-## Resources & Methods
-
-REST uses a tree: **Resources** (URL paths) contain **Methods** (HTTP verbs), and **all advanced features live at the method level**.
-- Root resource \`/\` is auto-created and can't be deleted; child resources (e.g. \`/users\`, \`/users/{id}\`) live inside it.
-- Method types: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS (CORS), and **ANY** (one backend for all verbs).
-
----
-
-## Integration Types & Proxy
-
-**Integration** = where a method sends the request: **Lambda** (most popular), **HTTP** (public endpoint), **Mock** (fixed response for testing), **VPC Link** (private backends via NLB v1 / ALB v2), **AWS Service** (call S3/DynamoDB/SQS/SNS/Kinesis directly — REST supports far more than HTTP API).
-
-**Proxy integration** (Lambda/HTTP/VPC link):
-- **ON** ("courier") — forwards the full request unchanged; backend does everything. ~90% of modern APIs.
-- **OFF** ("office worker") — gateway can transform/filter request & response (for legacy backends). Configure response mode (**buffered** vs **streamed**) and an **integration timeout** (504 if backend too slow).
-
----
-
-## Method Request Settings (the security gate, before backend)
-
-- **Authorization** — **None** (public) / **AWS IAM** (SigV4) / **Cognito** (JWT) / **Lambda authorizer** (custom). Fail → 401.
-- **Request Validator** — checks the **body** (JSON payload, for POST/PUT), **query string** (e.g. \`?id=101\`, for GET), and **headers** (e.g. \`x-api-key\`).
-
----
-
-## Security — 4 Layers
-
-1. **Usage Control** — API Keys + Usage Plans (identify clients, throttle + quota).
-2. **Access Control** — Resource Policy (who/where: IP, VPC, AWS account — not auth).
-3. **Edge Protection** — AWS WAF (layer-7: SQL injection, XSS, bad bots).
-4. **Auth & Authz** — IAM / Cognito / Lambda authorizer.
-
-> Order: Resource Policy → WAF → Usage Plan → Authorizer.
-
----
-
-## API Keys & Usage Plans
-
-An **API key** (string sent as \`x-api-key\`) identifies a client; it needs a **usage plan** that sets **throttling** (rate + burst) and **quota** (per day/week/month).
-
-> **Error codes (exam):** missing/invalid key or blocked by policy → **403 Forbidden**; throttle/quota exceeded → **429 Too Many Requests**. Keys only *identify* (not authentication) and don't restrict origin. Full on REST, limited on HTTP API.
-
----
-
-## Canary Deployment
-
-Release safely: send a small % of traffic to the new version, keep the rest on stable, watch metrics, then promote or roll back. Configured at the **stage** level, works with **Lambda aliases** (not versions), **REST API only**.
-
----
-
-## Custom Domain & Routing Modes
-
-Use your own domain (e.g. \`api.company.com\`) — HTTPS-only, needs an **ACM certificate** matching the domain (edge → **us-east-1**; regional → same region) and a DNS record (**Alias** for Route 53, **CNAME** for external).
-
-**Routing modes:**
-- **API Mapping only** — simple path-based (e.g. \`/user\` → API/stage). REST/HTTP/WebSocket.
-- **Routing Rules only** — conditional on path **+ headers** (e.g. \`/user\` + \`x-env:dev\`), with **priority** (lower = higher). REST only.
-- **Rules → Mapping** — rules first, fall back to mappings (add conditions without breaking existing setup).
-
-> **mTLS** (mutual TLS) — custom domains only (regional); verifies the **client's** certificate too. For high-security APIs.`,
-    },
-    {
       id: "elb",
       title: "ELB – Elastic Load Balancing",
       shortDesc: "Distribute traffic across targets",
@@ -2427,6 +2463,183 @@ The **Classic Load Balancer (CLB)** was built for the old **EC2-Classic** networ
 
 > CLB lacks path/host routing, WebSockets, and container support (you'd need one CLB per rule). It **won't appear in the SAA-C03 exam**, but may come up in interviews. For anything new, use **ALB** (Layer 7) or **NLB** (Layer 4).
 `,
+    },
+    {
+      id: "api-gateway",
+      title: "API Gateway & Application Integration",
+      shortDesc: "Single entry point for APIs; REST/HTTP/WebSocket",
+      visuals: ["AppIntegration", "MonoMicroScaling", "SyncVsAsync", "APIGatewayConcept", "APITypes", "RestVsHttp", "WebSocketDemo", "CRUDFlow"],
+      content: `## API Gateway & Application Integration
+
+### Application Integration
+
+Connecting different applications/services so they exchange data reliably, **decoupled** and scalable. Two flavors:
+- **App-to-App** — separate systems (often different companies) coordinating, e.g. UPI app ↔ NPCI ↔ bank; Skyscanner ↔ airline.
+- **Microservice-to-Microservice** — independent services inside one app, e.g. order → cart → payment → notification. They can't share functions or a DB, so they talk via **APIs, queues, events & messages**.
+
+> ~99% of modern apps are microservices — integration is how the pieces talk. Heavily tested in SAA-C03.
+
+---
+
+### Monolithic vs Microservices
+
+- **Monolithic** — one codebase/deploy/DB. A small change redeploys everything, and you must scale the **whole** app together (wasteful).
+- **Microservices** — scale each part to its own demand. Amazon sale: Browse for 100K, Cart for 10K, Checkout for 4K, Pay for only 2K → optimized cost/performance, faster deploys, tech flexibility.
+
+---
+
+### Synchronous vs Asynchronous
+
+- **Synchronous (real-time)** — sender **waits** for a reply before continuing (like a phone call). Use when the next step depends on the answer. **AWS:** API Gateway, ALB.
+- **Asynchronous (no waiting)** — sender sends a message and **continues**; receiver handles it later (like WhatsApp). Use for notifications, inventory updates, retries. **AWS:** SQS, SNS, EventBridge.
+
+---
+
+## API Gateway
+
+A fully managed service that's the **single entry point** for all backend APIs. Clients never hit backends directly — the gateway **secures, throttles, routes & logs** every request, then forwards to the right backend (Lambda, EC2, ECS/EKS).
+
+> 🚕 **Uber:** one gateway in front of many APIs (driver location, ride request, fare, payment, trip history, notifications) to secure them, throttle peak traffic, block suspicious requests, and manage versions.
+
+---
+
+## The 4 API Types
+
+- **HTTP API** — request/response; faster & ~70% cheaper, fewer features. Simple/low-cost APIs.
+- **REST API** — request/response with the full advanced feature set. More expensive.
+- **REST API (Private)** — same as REST but VPC-only.
+- **WebSocket API** — persistent, two-way, real-time (connection stays open).
+
+---
+
+## REST vs HTTP API (the exam decision)
+
+| Feature | REST | HTTP |
+|---|---|---|
+| API keys | ✅ | ❌ |
+| IAM auth | ✅ | ❌ |
+| Cognito auth | ✅ | ✅ |
+| JWT/OAuth (native) | ❌ | ✅ |
+| Throttling | ✅ advanced | ⚠️ basic |
+| WAF | ✅ direct | ⚠️ via CloudFront |
+| Request/response transform | ✅ | ❌ |
+| Input validation | ✅ | ❌ |
+| Mapping templates (VTL) | ✅ | ❌ |
+| Caching | ✅ | ❌ |
+| ALB integration | ❌ | ✅ |
+| Private API | ✅ | ❌ |
+| Cost / Speed | Expensive / slower | ~70% cheaper / faster |
+
+> Need **transform, validation, mapping templates, caching, API keys, or private API**? → **REST**. Want **cheap & fast** with JWT/OAuth or ALB? → **HTTP**. (CloudWatch logs & Lambda/HTTP integration: both.)
+
+---
+
+## WebSocket API
+
+REST/HTTP close after each response; **WebSocket keeps the connection open** for continuous two-way messaging.
+
+> **Keywords → WebSocket:** "real-time", "two-way", "long-lived connection". Use cases: live chat, notifications/dashboards, gaming, collaboration (Zoom, Google Docs), delivery tracking. Supports Lambda, JWT & Cognito; **no** ALB, API keys, WAF, or caching.
+
+---
+
+## CRUD & the Flow
+
+**CRUD** = Create (\`POST\` → PutItem), Read (\`GET\` → GetItem/Scan), Update (\`PUT\` → UpdateItem), Delete (\`DELETE\` → DeleteItem).
+
+A website **can't** talk to DynamoDB directly (no public access). The flow: **Website → API Gateway → Lambda (CRUD logic) → DynamoDB**. One API Gateway exposes all four CRUD endpoints with a clean URL, auth, logs & throttling.`,
+    },
+    {
+      id: "api-gateway-2",
+      title: "API Gateway – Advanced (Part 2)",
+      shortDesc: "Endpoints, TLS, resources/methods, security, canary, custom domains",
+      visuals: ["EndpointTypes", "SecurityPolicyTLS", "ResourcesMethods", "IntegrationTypes", "MethodRequestSettings", "SecurityLayers", "APIKeysUsagePlan", "CanaryDeployment", "CustomDomain"],
+      content: `## API Gateway – Advanced (Part 2)
+
+Deep dive into REST API configuration and security.
+
+---
+
+## REST API Endpoint Types
+
+An API has exactly **one** endpoint type:
+- **Regional** — deployed in one region; clients hit it directly. Best for nearby users (higher latency for far users).
+- **Edge-Optimized** — fronted by **CloudFront**; users hit the nearest edge → routed to your region. Best for global users (slightly pricier).
+- **Private** — VPC-only, via a VPC interface endpoint. For internal APIs.
+
+> Need both public & VPC access? Create two APIs.
+
+---
+
+## TLS Security Policy & Endpoint Access Mode
+
+**TLS** encrypts the client↔API tunnel (= HTTPS). The **security policy** sets the minimum TLS version: **1.2** (modern), **1.3** (faster/most secure — prefer it), plus **FIPS** (US gov), **PFS** (key per connection), **PQC** (quantum-safe).
+
+**Endpoint access mode** (with enhanced policies):
+- **Basic** — allow all.
+- **Strict** — blocks **domain fronting** (where the TLS **SNI** ≠ the HTTP **Host** header) and enforces the matching endpoint type. For edge-optimized, CloudFront handles this. Policies apply to the default invoke URL; custom domains have their own.
+
+---
+
+## Resources & Methods
+
+REST uses a tree: **Resources** (URL paths) contain **Methods** (HTTP verbs), and **all advanced features live at the method level**.
+- Root resource \`/\` is auto-created and can't be deleted; child resources (e.g. \`/users\`, \`/users/{id}\`) live inside it.
+- Method types: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS (CORS), and **ANY** (one backend for all verbs).
+
+---
+
+## Integration Types & Proxy
+
+**Integration** = where a method sends the request: **Lambda** (most popular), **HTTP** (public endpoint), **Mock** (fixed response for testing), **VPC Link** (private backends via NLB v1 / ALB v2), **AWS Service** (call S3/DynamoDB/SQS/SNS/Kinesis directly — REST supports far more than HTTP API).
+
+**Proxy integration** (Lambda/HTTP/VPC link):
+- **ON** ("courier") — forwards the full request unchanged; backend does everything. ~90% of modern APIs.
+- **OFF** ("office worker") — gateway can transform/filter request & response (for legacy backends). Configure response mode (**buffered** vs **streamed**) and an **integration timeout** (504 if backend too slow).
+
+---
+
+## Method Request Settings (the security gate, before backend)
+
+- **Authorization** — **None** (public) / **AWS IAM** (SigV4) / **Cognito** (JWT) / **Lambda authorizer** (custom). Fail → 401.
+- **Request Validator** — checks the **body** (JSON payload, for POST/PUT), **query string** (e.g. \`?id=101\`, for GET), and **headers** (e.g. \`x-api-key\`).
+
+---
+
+## Security — 4 Layers
+
+1. **Usage Control** — API Keys + Usage Plans (identify clients, throttle + quota).
+2. **Access Control** — Resource Policy (who/where: IP, VPC, AWS account — not auth).
+3. **Edge Protection** — AWS WAF (layer-7: SQL injection, XSS, bad bots).
+4. **Auth & Authz** — IAM / Cognito / Lambda authorizer.
+
+> Order: Resource Policy → WAF → Usage Plan → Authorizer.
+
+---
+
+## API Keys & Usage Plans
+
+An **API key** (string sent as \`x-api-key\`) identifies a client; it needs a **usage plan** that sets **throttling** (rate + burst) and **quota** (per day/week/month).
+
+> **Error codes (exam):** missing/invalid key or blocked by policy → **403 Forbidden**; throttle/quota exceeded → **429 Too Many Requests**. Keys only *identify* (not authentication) and don't restrict origin. Full on REST, limited on HTTP API.
+
+---
+
+## Canary Deployment
+
+Release safely: send a small % of traffic to the new version, keep the rest on stable, watch metrics, then promote or roll back. Configured at the **stage** level, works with **Lambda aliases** (not versions), **REST API only**.
+
+---
+
+## Custom Domain & Routing Modes
+
+Use your own domain (e.g. \`api.company.com\`) — HTTPS-only, needs an **ACM certificate** matching the domain (edge → **us-east-1**; regional → same region) and a DNS record (**Alias** for Route 53, **CNAME** for external).
+
+**Routing modes:**
+- **API Mapping only** — simple path-based (e.g. \`/user\` → API/stage). REST/HTTP/WebSocket.
+- **Routing Rules only** — conditional on path **+ headers** (e.g. \`/user\` + \`x-env:dev\`), with **priority** (lower = higher). REST only.
+- **Rules → Mapping** — rules first, fall back to mappings (add conditions without breaking existing setup).
+
+> **mTLS** (mutual TLS) — custom domains only (regional); verifies the **client's** certificate too. For high-security APIs.`,
     },
   ],
 };
