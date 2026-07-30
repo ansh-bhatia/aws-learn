@@ -2215,120 +2215,245 @@ Create **before** cluster creation (or it fails):
 > Batch (managed job scheduler) vs Lambda (15-min limit, event-driven). Heavy/long batch jobs → **AWS Batch**.`,
     },
     {
-      id: "auto-scaling",
-      title: "Auto Scaling",
-      shortDesc: "Automatically add/remove EC2 instances to match demand",
-      visuals: ["ScalingTypes", "ASGLaunchTemplate", "CapacityControls", "ScalingOptions", "DynamicScalingSim", "MaintenancePolicy", "TerminationPolicy", "ScalingTimers"],
-      content: `## Auto Scaling
+      id: "asg-scaling-fundamentals",
+      title: "Auto Scaling – Vertical vs Horizontal Scaling",
+      shortDesc: "Bigger server vs more servers, and why AWS Auto Scaling only ever does the second one",
+      visuals: ["ScalingTypes"],
+      content: `## What Scaling Solves
 
-**Auto Scaling** automatically adjusts the number of EC2 instances to match demand — adding servers when traffic spikes and removing them when it drops. Think of an e-commerce sale (Amazon Great Indian Sale, Flipkart Big Billion Days): traffic surges, then settles.
+**Scaling** means adjusting compute capacity to match changing demand. Picture an e-commerce sale — Amazon's Great Indian Sale, Flipkart's Big Billion Days: normal traffic is 10,000 users/minute, then a sale pushes it to 50,000 within a minute. Capacity has to grow to match, and shrink back once the sale ends — otherwise users get a slow, broken experience, or you're paying for capacity nobody is using.
 
 ---
 
-## Scaling Fundamentals
+## Vertical Scaling — Bigger Server
 
-**Scaling** = adjusting compute capacity to meet changing demand. Two kinds:
+Add more resources — CPU, RAM, storage, networking — to the **same** machine.
+
+**Worked example:** a server with 2 GB RAM handles 10 concurrent users. Traffic jumps to 100 users → bump RAM to 4 GB. Traffic jumps again to 500 → bump to 16 GB. Each increase is called **scale up**. When the sale ends and 16 GB sits mostly idle, dropping back down to 4 GB (or lower) is **scale down**.
+
+> ⚠️ **AWS Auto Scaling does NOT support vertical scaling.** There's a hard ceiling — at some point no bigger instance size exists, and you hit a bottleneck no amount of budget can fix.
+
+---
+
+## Horizontal Scaling — More Servers
+
+Instead of growing one server, add **more identical servers** running the same application. One server (10 users) becomes two, then three as demand grows — this growth is called **scale out**. Shrinking back down — three servers to two, two to one — is **scale in**.
+
+> **This is exactly what AWS Auto Scaling automates.** Companies like Amazon, Flipkart, Swiggy, and Zomato — anyone serving millions of users — rely on horizontal scaling because it has no hard ceiling: keep adding servers as long as demand keeps growing.
+
+---
+
+## Side by Side
 
 | | Vertical Scaling | Horizontal Scaling |
-|--|------------------|--------------------|
-| What changes | Make **one server bigger** (more CPU/RAM) | Add/remove **whole servers** |
+|---|---|---|
+| What changes | One server gets **bigger** | **More** identical servers |
 | Terms | **scale up** / **scale down** | **scale out** / **scale in** |
-| Limit | Hits a hardware ceiling (bottleneck) | Virtually unlimited |
-| AWS Auto Scaling | ❌ Not supported | ✅ **This is what it does** |
-
-> AWS Auto Scaling is **horizontal** — it adds/removes EC2 instances, giving better fault tolerance and availability.
+| Ceiling | Hits a hardware limit | Effectively unlimited |
+| AWS Auto Scaling | ❌ Not supported | ✅ **This is the entire service** |
 
 ---
 
-## The Two Building Blocks
+## The Promise of Auto Scaling
 
-### Launch Template
-A **blueprint** for each instance Auto Scaling creates: AMI (OS), instance type (e.g. t2.micro), key pair, security group, EBS volume, and a **user-data script** (e.g. to auto-install a web server). Standardises every instance.
+> If you could just describe *how many* servers you want at any given time, and let AWS handle creating and destroying instances automatically to match — that's Auto Scaling. It fully automates the scale-out/scale-in decision so nobody has to watch a dashboard and click buttons at 2am during a flash sale.
 
-### Auto Scaling Group (ASG)
-Manages a fleet of instances **as one unit**, spread across Availability Zones. It uses the launch template to spin up identical servers and enforces your capacity settings.
+The next topic builds the two pieces every Auto Scaling setup needs: a **Launch Template** and an **Auto Scaling Group**.
+`,
+    },
+    {
+      id: "asg-launch-template-lab",
+      title: "Lab – Launch Templates for Auto Scaling",
+      shortDesc: "The reusable instance blueprint that tells an Auto Scaling Group exactly what to build",
+      visuals: ["ASGLaunchTemplate"],
+      content: `## The Problem a Launch Template Solves
 
----
+Say a web app runs on one EC2 instance during weekdays, but weekends bring a traffic surge requiring three. Auto Scaling can create those extra instances — but it needs to know **what kind** of instance to create: which AMI, which instance type, which key pair, which security group, and how to configure it once it boots.
 
-## Capacity: Min / Desired / Max
+> **A Launch Template is a saved, reusable configuration for everything an EC2 instance needs at launch.** Create it once; every instance Auto Scaling spins up afterward is built from it — identical, consistent, no manual re-configuration each time.
 
-| Setting | Meaning |
-|---------|---------|
-| **Desired** | How many instances you want right now |
-| **Minimum** | The floor Auto Scaling always maintains — terminate an instance and it's **recreated** (fault tolerance) |
-| **Maximum** | The ceiling — desired can never exceed it |
-
-> **Manual scaling** = you change desired yourself. Setting it below current count → **scale in** (instances terminated); above → **scale out** (instances launched).
->
-> ⚠️ Terminating instances individually won't get rid of them — the ASG recreates up to *minimum*. To remove everything, **delete the Auto Scaling Group**.
+A Launch Template isn't exclusive to Auto Scaling — it can be used for any regular EC2 launch too, but its main purpose here is giving an Auto Scaling Group a blueprint to work from.
 
 ---
 
-## The 4 Scaling Options
+## Building One
 
-### 1. Manual Scaling
-You set min/desired/max by hand. Best for **infrequent, known events** (e.g. a game release at a fixed time).
+**EC2 → Launch Templates → Create launch template.**
 
-### 2. Scheduled Scaling
-Scale at a **known date/time**. For predictable recurring patterns — weekends, end-of-month/quarter, a sale with fixed dates. (e.g. Fri 6pm → desired 4; Mon 9am → desired 1.)
+- **Name:** e.g. **LT4ASG** (spaces aren't allowed) — **version 1**
+- **AMI:** Amazon Linux 2023 (or your preferred OS)
+- **Instance type:** **t2.micro** (free tier)
+- **Key pair:** select an existing one, so you can log in later if needed
+- **Subnet:** ⚠️ leave this **unselected** — the Auto Scaling Group decides subnets/AZs when it's created, not the template
+- **Security group:** create new, e.g. **web-SG**, allowing the traffic your app needs (e.g. all traffic while learning, or scoped to HTTP/SSH in production)
+- **EBS volume:** default is fine unless your app needs more
+- **Advanced details → User data:** paste a script that installs a web server automatically, so every instance the ASG creates is immediately ready to serve traffic with no manual setup
 
-### 3. Dynamic Scaling (Reactive)
-React to **live CloudWatch metrics** — handles sudden, uncertain spikes. Three policy types:
-- **Simple** — one threshold (e.g. CPU 50–60% → add 1)
-- **Step** — multiple thresholds → different amounts (50–60% → +1, 60–70% → +2)
-- **Target Tracking** — set a target (e.g. 60% CPU) and AWS **self-optimises** how many to add/remove ⭐ recommended
-
-Metrics: average CPU, network in/out, or ALB request count per target.
-
-### 4. Predictive Scaling (Proactive, ML)
-Uses **machine learning on ≥3 weeks of history** to forecast traffic and **pre-launch** capacity. Can run **forecast-only** or **forecast-and-scale**. Combine with dynamic scaling: predictive (proactive) + dynamic (reactive) = best coverage.
-- **Pre-launch buffer:** launch instances N minutes before the forecast spike (e.g. forecast 10am → launch 9:55am)
-- **Max capacity buffer:** provision a % above forecast (forecast 10 → +20% → 12 instances)
+Click **Create launch template**.
 
 ---
 
-## Instance Maintenance Policy
+## What Happens Next
 
-When you update the launch template (e.g. swap the AMI) and run an **instance refresh**, this controls how old instances are replaced:
+The template alone doesn't launch anything. The **Auto Scaling Group** is the piece that actually reads this template and decides *when* and *how many* instances to create from it — including which subnets and Availability Zones to spread them across, since that choice deliberately lives at the ASG level, not the template level.
 
-| Policy | Behaviour | Trade-off |
-|--------|-----------|-----------|
-| **Terminate and Launch** | Kill old first, then launch new | Capacity dips below desired; **never pay extra** (cost-first) |
-| **Launch Before Terminating** | Launch new first, then kill old | Capacity briefly exceeds desired (pay more); **zero downtime** (availability-first) |
-| **Custom Behavior** | You set min % and max % healthy yourself | Full control — ideal for large fleets |
+> Keeping subnet selection out of the Launch Template is what lets the **same** template be reused across differently-scoped Auto Scaling Groups later — one blueprint, many possible fleets.
+`,
+    },
+    {
+      id: "asg-manual-scaling-lab",
+      title: "Lab – Manual Scaling & Fault Tolerance",
+      shortDesc: "Min/desired/max capacity, the delete-and-it-comes-back demo, and the honest way to tear an ASG down",
+      visuals: ["CapacityControls"],
+      content: `## What This Lab Proves
 
----
-
-## Termination Policy
-
-On **scale in**, which instance dies? The **default policy** runs this funnel:
-
-1. **Balance across AZs** — target the AZ with the most instances
-2. **Scale-in protection** — skip any instance you've protected
-3. **Oldest launch template** — prefer instances on the older template
-4. **Closest to next billing hour** — terminate the one with least wasted paid time
-5. **Random** — tiebreaker
-
-**Other built-in policies:** OldestInstance, NewestInstance (test instances), OldestLaunchTemplate, ClosestToNextInstanceHour, AllocationStrategy (for mixed spot/on-demand fleets).
-
-**Custom termination policy** — backed by a **Lambda function** for full control: graceful app shutdown, pre-termination backups, tag-based selection, custom metrics, or notifying external systems.
-
-> **Scale-in protection** lets you mark a specific instance so Auto Scaling never terminates it during scale in.
+Manual scaling means **you** change the numbers by hand — no automation deciding for you. It's the simplest scaling option, and the best way to see exactly how an Auto Scaling Group enforces capacity.
 
 ---
 
-## The 3 Timers
+## Step 1 — Launch Template
 
-| Timer | Purpose | Default |
-|-------|---------|---------|
-| **🔥 Warm-up** | New instance's metrics are ignored until it's ready — prevents premature scaling (dynamic step & target-tracking only) | optional |
-| **❄️ Cooldown** | Mandatory wait after a scaling action before the next — lets the group stabilise | 300s |
-| **🩺 Health-check grace** | Delay before health checks start on a new instance — gives the app time to boot | 300s |
+Create one (or reuse the previous lab's): Amazon Linux 2023, t2.micro, a key pair, a new **web-server-SG** allowing **HTTP (80)** and **SSH (22)** from anywhere, default EBS, and a user data script installing Apache with a simple test page.
 
-**Worked example** — scale-out at **12:00**, warm-up 5 min, cooldown 10 min, grace 3 min:
-- **12:03** — health checks begin (grace period ends)
-- **12:05** — instance metrics start counting (warm-up ends)
-- **12:15** — next scaling action allowed (cooldown ends, measured from 12:05)
+---
+
+## Step 2 — Create the Auto Scaling Group
+
+**EC2 → Auto Scaling Groups → Create Auto Scaling group.**
+
+- Name: **first-ASG**
+- Launch template: the one above
+- VPC: default VPC, spanning **both** ap-south-1a and ap-south-1b
+- Load balancer: **No** (attaching one comes in a later topic)
+- Health checks: leave at default for now
+
+### The three numbers that matter most
+
+- **Minimum capacity: 0**
+- **Desired capacity: 0**
+- **Maximum capacity: 5**
+
+> **Desired** is how many instances you want *right now*. **Minimum** is the floor Auto Scaling always maintains. **Maximum** is the ceiling — desired can never exceed it. Setting all three to 0/0/5 here means: create the group, but don't launch anything yet.
+
+Skip automatic scaling and any maintenance policy for this lab — the goal is to isolate manual scaling. **Create Auto Scaling group.**
+
+---
+
+## Step 3 — Set Desired Capacity to 1
+
+Checking EC2 instances right now shows **zero** — matching desired capacity of 0.
+
+Edit the ASG: set **minimum = 1**, keep **maximum = 5**, and **desired = 1**. Click **Update**.
+
+Within moments, Auto Scaling launches exactly **one** instance from the launch template. Open its public IP once it's running — the user data script has it serving already.
+
+---
+
+## Step 4 — Prove Fault Tolerance
+
+**Manually terminate that instance** from the EC2 console.
+
+> ⚠️ **Watch what happens: Auto Scaling immediately launches a replacement.** The group's minimum is 1, so Auto Scaling enforces that floor regardless of *why* the instance count dropped — a crash, a manual termination, anything. This is the fault-tolerance guarantee an ASG gives you for free.
+
+---
+
+## Step 5 — Scale Out Manually
+
+Edit the ASG's desired capacity: **1 → 2**. A second instance launches — the same launch template and user data mean it's immediately serving the exact same website with zero manual setup. Bump desired to **3** — a third instance appears. Each increase is a **scale out**.
+
+> ⚠️ Desired capacity is always clamped between minimum and maximum. Try setting desired to **6** when maximum is **5**, and the console rejects it outright — you cannot exceed the ceiling you set.
+
+---
+
+## Step 6 — Scale In Manually
+
+Edit desired capacity back down: **3 → 2**. Auto Scaling picks one instance and terminates it — a **scale in**. This is the manual mirror of Step 5: you decide the number, Auto Scaling makes reality match it.
+
+---
+
+## ⚠️ The Trap: Terminating Instances Doesn't Delete the ASG
+
+If you terminate the *instances* directly (rather than editing desired capacity) while the group's desired capacity is still, say, 2, **Auto Scaling will launch two brand-new replacements** — because from its point of view, capacity dropped below desired and it's doing its job. Log out thinking you've cleaned up, and you'll come back to find instances running (and billing) again.
+
+> **To actually remove everything: go to the Auto Scaling Group itself, Actions → Delete.** Deleting the ASG terminates every instance it manages and stops it from ever recreating them. Terminating instances one by one while the ASG survives is not a cleanup step — it's a no-op that costs you a few minutes and possibly more billing.
+
+---
+
+## When to Use Manual Scaling
+
+> Manual scaling is the most basic scaling option — you specify a change to minimum, maximum, or desired capacity for an **infrequent event with a known trigger**, like a new game release going live for download at a specific time. When you know exactly when demand will change but it doesn't recur on a schedule, manual scaling is the simplest tool that fits.
+
+For anything that repeats predictably — like every weekend — the next topic covers **Scheduled Scaling** instead.
+`,
+    },
+    {
+      id: "asg-schedule-scaling-lab",
+      title: "Lab – Scheduled Scaling",
+      shortDesc: "Scaling actions triggered by date and time instead of a human clicking a button",
+      visuals: ["ScalingOptions"],
+      content: `## When Manual Scaling Isn't Enough
+
+Manual scaling works for one-off events, but weekend traffic surges happen **every** week. Doing that by hand every Friday and Monday is tedious and error-prone.
+
+> **Scheduled scaling performs scaling actions automatically as a function of date and time** — for any pattern you can predict in advance: weekend surges, end-of-month/quarter processing, or a sale with fixed start and end dates. E-commerce platforms know their Big Billion Days sale starts and ends on specific dates, so they schedule the capacity increase and decrease to match exactly.
+
+---
+
+## Step 1 — Launch Template and ASG
+
+Reuse (or recreate) a launch template, then create an Auto Scaling Group: minimum **1**, maximum **5**, desired **1**, spanning two AZs, no load balancer, no automatic scaling configured yet. Confirm one instance launches to match desired capacity.
+
+---
+
+## Step 2 — Find the Automatic Scaling Options
+
+On the ASG, open the **Automatic scaling** tab. Three configuration options live here:
+
+- **Dynamic scaling policies** (covered next topic)
+- **Predictive scaling policies** (covered after that)
+- **Scheduled actions** ← this lab
+
+---
+
+## Step 3 — Create a Scale-Out Schedule
+
+**Create scheduled action:**
+
+- Name: **SA1**
+- **Min: 1, Max: 5, Desired: 4** — the capacity this action sets when it fires
+- **Recurrence:** run **once**, or on a repeating pattern (every 30 minutes, hourly, daily) — recurring schedules accept standard **cron** syntax for full flexibility
+- **Timezone:** e.g. **Asia/Kolkata**, so the trigger time matches your actual local sale hours, not UTC
+- **Start time:** a few minutes in the future, for testing
+
+Click **Create**. Nothing changes yet — the action is scheduled, not immediate.
+
+---
+
+## Step 4 — Watch It Fire
+
+At the scheduled time, the action disappears from the scheduled-actions list (a one-time action removes itself once triggered) and the ASG's desired capacity jumps to **4**. Checking EC2 shows three new instances launching alongside the original one — every one of them immediately serving traffic, because they all share the same launch template and user data script.
+
+> This capacity increase is a **scale out** — exactly the same mechanism as manual scaling, just **triggered by a clock instead of a human**.
+
+---
+
+## Step 5 — Schedule the Scale-In
+
+Create a second scheduled action, **SA2**, a few minutes later: **Min: 1, Max: 5, Desired: 1**, run once, same timezone.
+
+When it fires, Auto Scaling terminates instances down to the new desired capacity of 1 — a **scale in** — automatically, with no one watching a clock.
+
+---
+
+## Cleanup
+
+> ⚠️ Same trap as manual scaling: deleting instances directly while the ASG's desired capacity is still >0 makes it launch replacements. **Delete the Auto Scaling Group itself** to tear everything down cleanly — this removes every instance it manages in one action.
+
+---
+
+## Where This Fits Among the Scaling Options
+
+Scheduled scaling is **proactive** — you already know the trigger time. It complements (and often combines with) **Dynamic Scaling**, which reacts to live metrics for traffic spikes you *can't* predict in advance — covered next.
 `,
     },
   ],
