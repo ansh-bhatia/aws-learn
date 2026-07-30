@@ -1131,10 +1131,431 @@ That single behaviour removes a great deal of rule-writing, and it is the main r
 `,
     },
     {
+      id: "vpc-vpn",
+      title: "VPC – Site-to-Site VPN",
+      shortDesc: "Connecting on-premises to AWS over the internet with an encrypted tunnel",
+      visuals: ["HybridConnectivity"],
+      content: `## Why a Networking Topic Belongs in an AWS Course
+
+Recall the three cloud types — **public**, **private** and **hybrid** — and that **hybrid is the most popular**, because you take advantage of both.
+
+Hybrid means **connecting your on-premises infrastructure to AWS**. There are **two ways** to do that:
+
+1. **Over fiber optic cable** — that is **Direct Connect**, covered shortly.
+2. **Over the internet** — that is **site-to-site VPN**, covered here.
+
+---
+
+## The Problem VPN Solves
+
+Forget AWS for a moment. You have a **Mumbai** branch and a **Hyderabad** branch. Each has computers behind a router, using **private IPs**. Each router has a connection to the internet, so each has a **public IP**.
+
+**What works:** public IP to public IP. Two public addresses can always reach each other, whether the branches are in Mumbai and Hyderabad or Mumbai and Japan.
+
+**What does not work:** **private IP to private IP**. A computer in Mumbai cannot reach a computer in Hyderabad directly.
+
+> Because of NAT on the router, a private IP can reach a **public** IP — that is ordinary internet access. But **private to private across two sites is not possible**.
+
+And private-to-private is exactly what you want: every Mumbai machine able to reach every Hyderabad machine.
+
+---
+
+## The Solution — a Tunnel
+
+Establish a **tunnel between the two routers**, using their public IPs. Configure it once on each router, and communication between the sites becomes **seamless**.
+
+> **The computers are entirely unaware of it.** The tunnel exists between the routers; the machines behind them simply find that the other site is now reachable.
+
+**That tunnel is a site-to-site VPN.**
+
+---
+
+## Applying It to AWS
+
+Replace the Hyderabad branch with a **VPC**.
+
+Your on-premises office in Mumbai on one side, an AWS VPC on the other, joined by a **site-to-site VPN**. Now:
+
+- Every office computer can reach every **EC2 instance** in the VPC.
+- Office machines can store data in **EFS** or **FSx** running in AWS.
+
+All over **private IPs**, with **no instance exposed to the internet**.
+
+---
+
+## "But How Do I Configure the AWS Router?"
+
+This is the usual worry, and it turns out to be misplaced.
+
+> AWS provides a **simple graphical interface** for the AWS side — and, as the lab shows, it **generates a ready-made configuration file for your own router**, which you paste in.
+
+The traffic is **encrypted with IPsec**, because it crosses the public internet.
+
+> The next topic builds one end to end.
+`,
+    },
+    {
+      id: "vpc-vpn-lab",
+      title: "Lab – Site-to-Site VPN to On-Premises",
+      shortDesc: "Customer gateway, virtual private gateway, the generated router config, and routes both ways",
+      visuals: [],
+      content: `## The Setup
+
+**On the AWS side:** a VPC using **192.168.10.0/24**, one **private** subnet, two EC2 instances with **no public IPs** and **no internet gateway**.
+
+**On the on-premises side:** a **Cisco router** with a **static public IP**, and a local network of **192.168.123.0/24**.
+
+> ⚠️ **The two networks must use different ranges.** Same range on both sides and the routing cannot work — the same constraint as VPC peering.
+
+**Start a continuous ping** to an instance's private IP before you begin. It fails, as expected — there is no connection yet. Leaving it running means you see the exact moment the tunnel comes up.
+
+---
+
+## The Three Pieces
+
+Under **VPC → Virtual private network** there are three things to create, in order:
+
+| # | Component | Represents |
+|---|---|---|
+| **1** | **Customer gateway** | **Your** router — its public IP |
+| **2** | **Virtual private gateway** | The **AWS** end, attached to your VPC |
+| **3** | **Site-to-site VPN connection** | The tunnel joining the two |
+
+---
+
+## Step 1 — Customer Gateway
+
+**Customer gateways → Create customer gateway:**
+
+- **Name** it
+- **BGP ASN:** leave the default — this lab uses **static routing**, not BGP
+- **IP address:** your **on-premises router's public IP**
+- Certificate and device name are optional
+
+Create — it is immediately **available**.
+
+---
+
+## Step 2 — Virtual Private Gateway
+
+**Virtual private gateways → Create virtual private gateway:**
+
+- **Name** it
+- **ASN:** default
+
+It is created **Detached**. Select it → **Actions → Attach to VPC** → choose your VPC.
+
+> Same pattern as the internet gateway: create, then attach. Wait for **Attached** before continuing — it takes a minute or two.
+
+---
+
+## Step 3 — Site-to-Site VPN Connection
+
+**Site-to-site VPN connections → Create VPN connection:**
+
+- **Name** it
+- **Target gateway type:** **Virtual private gateway** → select yours
+- **Customer gateway:** **Existing** → select yours
+- **Routing options:** **Static** — dynamic BGP is more complex and unnecessary here
+- **Static IP prefixes:** your **on-premises** range, **192.168.123.0/24**
+
+Create, and wait for the state to become **Available**.
+
+---
+
+## Step 4 — The Part That Makes This Easy
+
+Configuring IPsec on a Cisco router by hand is genuinely involved. You do not have to.
+
+Select the VPN connection → **Download configuration**. AWS lists **vendors, platforms and software versions**. Pick yours — check the router with **show version** if unsure — and download.
+
+> If your device is not listed, you can still configure it manually. But for a supported device, AWS hands you a complete config.
+
+**Open the file, select all, copy, and paste it into the router.** The whole tunnel configuration applies without typing a single command.
+
+Verify on the router with **show ip interface brief** — **two tunnels**, both **up**.
+
+> AWS builds **two tunnels** for redundancy. On the AWS side one may show **up** and the other **down** at first; the second follows within a few minutes.
+
+---
+
+## Step 5 — Routes on Both Sides
+
+The tunnels are up and the ping **still fails**.
+
+> The AWS network knows nothing about **192.168.123.0**, and your office network knows nothing about **192.168.10.0**. Neither side has been told.
+
+**On AWS — Route Tables → Routes → Edit routes → Add route:**
+
+- **Destination:** **192.168.123.0/24** — the on-premises range
+- **Target:** **Virtual private gateway**
+
+**On the router**, add the mirror route for **192.168.10.0/255.255.255.0** via the tunnels.
+
+**The ping starts replying.**
+
+---
+
+## What You Have
+
+Any machine in the office can now reach any instance in the VPC over private IPs. Ten office computers would all work the same way — and the same tunnel carries traffic to **EFS** or **FSx** for storing on-premises data in AWS.
+
+> ⚠️ This lab needs a **real router and a static public IP**, so it is not reproducible at home. Understanding the four steps — customer gateway, virtual private gateway, VPN connection, routes both ways — is what matters.
+`,
+    },
+    {
+      id: "vpc-direct-connect",
+      title: "VPC – Direct Connect",
+      shortDesc: "A private fiber link to AWS: far more bandwidth, no internet, and no encryption",
+      visuals: [],
+      content: `## Why Not Just Use VPN?
+
+Site-to-site VPN works, but it runs **over the internet**, which brings two limitations:
+
+- **Security** — the public internet, which is why VPN **must** use **IPsec**.
+- **Bandwidth** — a VPN connection tops out at about **1.25 Gbps**.
+
+**Direct Connect** offers up to **300 Gbps**.
+
+---
+
+## What Direct Connect Is
+
+> **A cloud service providing connectivity between your on-premises infrastructure and AWS — without the internet.**
+
+It is the **alternative to site-to-site VPN**, connecting your **data centre**, **office** or **co-location** to AWS over a dedicated private link.
+
+---
+
+## How the Link Is Assembled
+
+1. A **virtual private gateway** attached to your **VPC**.
+
+   > ⚠️ **Not** a VPN gateway. A separate component.
+
+2. That connects to a **Direct Connect gateway**.
+3. Which connects, over **private fiber**, to an **AWS edge location**.
+4. A **third-party service provider** runs fiber from that edge location **to your premises**.
+
+So AWS partners with providers who already have presence at their edge locations, and the provider delivers the physical link to your door.
+
+---
+
+## Ordering One
+
+**Direct Connect → Create connection** offers a wizard with three resiliency levels:
+
+| Option | What you get |
+|---|---|
+| **Maximum resiliency** | Two AWS Direct Connect locations **and** two of your data centre locations — for full DR |
+| **High resiliency** | Redundancy, but without the second Direct Connect gateway |
+| **Development and test** | **Lowest** availability |
+
+Then choose **bandwidth (1 Gbps to 300 Gbps)** and your **location**.
+
+> **Location determines your options.** Choose Mumbai and you see the providers present there; choose Bangalore and the list is shorter. The provider must have an **AWS edge location** presence nearby.
+
+Dual connectivity runs on the order of **$4.39/month** plus provider charges.
+
+> **No lab for this one** — provisioning a Direct Connect link takes **30 to 90 days**. Once it exists, using it is simple.
+
+---
+
+## Benefits
+
+- **Reduced bandwidth cost** — no internet bandwidth to pay for
+- **Consistent network performance** — dedicated fiber, not shared internet
+- **Compatible with all AWS services** — it terminates in your VPC, so everything reachable from the VPC is reachable
+- **Private connectivity** — no internet at all, so far more secure
+- **Elastic** — ask the provider for more bandwidth as you need it
+
+---
+
+## ⚠️ The Exam Point: Encryption
+
+This gets asked directly.
+
+| | Site-to-Site VPN | Direct Connect |
+|---|---|---|
+| **Travels over** | The **public internet** | **Private fiber** |
+| **Encryption** | ✅ **IPsec — required** | ❌ **None — data is clear text** |
+| **Max bandwidth** | ~**1.25 Gbps** | Up to **300 Gbps** |
+| **Time to set up** | Minutes | **30–90 days** |
+| **Cost** | Lower | Higher |
+
+> The logic: VPN **must** encrypt because it crosses a public network. Direct Connect is a **private** link, so **AWS does not encrypt it** — the traffic is clear text. Needing both speed *and* encryption means running a VPN **over** Direct Connect.
+`,
+    },
+    {
+      id: "vpc-transit-gateway",
+      title: "VPC – Transit Gateway",
+      shortDesc: "One hub replacing a mesh of peering connections and per-VPC gateways",
+      visuals: ["TransitGatewayMesh", "PeeringMathCalculator"],
+      content: `## What It Is
+
+> **A transit gateway is a network transit hub used to interconnect your VPCs and your on-premises infrastructure.**
+
+Everything covered so far connects **two** things:
+
+- **Peering** — VPC to VPC
+- **VPN** — on-premises to VPC, over the internet
+- **Direct Connect** — on-premises to VPC, over fiber
+
+**Transit Gateway centralises all of it.** It can connect:
+
+1. **One or more VPCs**
+2. **VPN connections**
+3. **Direct Connect**
+4. **Another transit gateway** — via peering
+
+---
+
+## Why the Mesh Fails
+
+Peering is strictly **point to point**. Peer A↔B and A↔C, and **B still cannot reach C**. You need that connection too.
+
+**The number of peering connections for a full mesh:**
+
+> **n × (n − 1) ÷ 2**
+
+| VPCs | Peering connections |
+|---|---|
+| **3** | 3 × 2 ÷ 2 = **3** |
+| **4** | 4 × 3 ÷ 2 = **6** |
+| **10** | 10 × 9 ÷ 2 = **45** |
+
+Three is fine. Four is tedious. **Ten means 45 connections** to create and maintain.
+
+---
+
+## And Gateways Multiply Too
+
+It is not only peering.
+
+> ⚠️ **A VPN gateway attaches to exactly one VPC.**
+
+So connecting your on-premises network to two VPCs means **two VPN gateways** — one per VPC — even though you have a single **customer gateway** on your side. Direct Connect has to be attached per VPC as well.
+
+Combine 45 peering connections with a gateway per VPC and the design becomes unmanageable.
+
+---
+
+## The Hub
+
+With a transit gateway there is **one** central hub. Attach each **VPC**, each **VPN** and each **Direct Connect** to it **once**, then route traffic between them.
+
+| | Without Transit Gateway | With Transit Gateway |
+|---|---|---|
+| **10 VPCs fully meshed** | **45** peering connections | **10** attachments |
+| **On-premises to 10 VPCs** | **10** VPN gateways | **1** VPN attachment |
+| **Management** | Decentralised | **Centralised** |
+
+---
+
+## ⚠️ The Scope Constraint
+
+> **Everything attached to a transit gateway must be in the same AWS account and the same region.**
+
+Need to span **regions** or **accounts**? Create **a transit gateway in each**, then **peer the transit gateways** — that is the fourth connection type listed above.
+`,
+    },
+    {
+      id: "vpc-transit-gateway-lab",
+      title: "Lab – Transit Gateway Across Four VPCs",
+      shortDesc: "One hub, four attachments, and four route tables replacing six peering connections",
+      visuals: [],
+      content: `## The Setup
+
+Four VPCs in **ap-south-1**, in **one account**:
+
+| VPC | CIDR | Contains |
+|---|---|---|
+| **VPC-A** | 192.168.10.0/24 | server-A |
+| **VPC-B** | 192.168.20.0/24 | server-B |
+| **VPC-C** | 192.168.30.0/24 | server-C |
+| **VPC-D** | 192.168.40.0/24 | server-D |
+
+Each has **one private subnet** with **one Amazon Linux instance**. **No internet gateway, no public IPs, no route table entries.** Security groups allow all traffic so nothing else can be blamed for a failed test.
+
+> Connecting these four with peering would need **six** connections — 4 × 3 ÷ 2. This lab uses **one** transit gateway instead.
+
+---
+
+## Reaching a Private Instance
+
+With no public IPs, use an **EC2 Instance Connect Endpoint** in VPC-A: **VPC → Endpoints → Create endpoint** → type **EC2 Instance Connect Endpoint** → VPC-A → default security group → its subnet.
+
+Connect to **server-A** through it, then **ping server-B, C and D** by private IP. **All fail** — the VPCs are isolated, exactly as expected.
+
+---
+
+## Step 1 — Create the Transit Gateway
+
+**VPC → Transit gateways → Create transit gateway:**
+
+- **Name tag** it
+- Leave the defaults — the advanced options concern multi-account and multi-region setups
+- Create, and wait for **Available**
+
+---
+
+## Step 2 — Attach All Four VPCs
+
+**Transit gateway attachments → Create transit gateway attachment**, once per VPC:
+
+- **Name** it clearly, e.g. **A-tgw**
+- **Transit gateway:** the one you just created
+- **Attachment type:** **VPC** — the same screen also offers **VPN**, **Peering connection** and **Direct Connect**
+- **VPC:** VPC-A, and select its subnet
+
+Repeat for **B**, **C** and **D**.
+
+> **Name these carefully.** Four near-identical attachments are easy to confuse, and clear names prevent mistakes in the next step.
+
+Wait until all four attachments show **Available**.
+
+---
+
+## Step 3 — Routes in Every VPC
+
+Ping again and it **still fails**. The attachments exist, but nothing tells each VPC where to send traffic.
+
+> Each VPC's route table knows only its **own** local range. All four need routes to the other three.
+
+**In VPC-A's route table → Edit routes → Add route**, three times:
+
+| Destination | Target |
+|---|---|
+| 192.168.20.0/24 | Transit gateway |
+| 192.168.30.0/24 | Transit gateway |
+| 192.168.40.0/24 | Transit gateway |
+
+**Then repeat in B, C and D**, each adding routes to the other three ranges. Twelve routes in total.
+
+> Compare with peering, where you would maintain **six connections plus their routes**. Here every route points at the **same** hub.
+
+---
+
+## Step 4 — Verify
+
+From **server-A**, ping **server-B**, **server-C** and **server-D** — all reply.
+
+From **server-B**, ping C and D — those work too. **Every VPC reaches every other VPC through the single hub.**
+
+---
+
+## What This Scales To
+
+Adding a fifth VPC means **one attachment and routes** — not four new peering connections. Adding on-premises means **one VPN or Direct Connect attachment** to the same hub, rather than a gateway per VPC.
+
+> Multi-account or multi-region setups need a transit gateway in each and **peering between them**, which is more involved — but the single-region, single-account pattern here is what the exam expects.
+`,
+    },
+    {
       id: "vpc-connectivity",
       title: "VPC – Connectivity & Security (Part 2)",
       shortDesc: "Peering, NACL vs SG, VPN, Direct Connect, Transit Gateway, Endpoints",
-      visuals: ["HybridConnectivity", "TransitGatewayMesh", "VPCEndpointExplorer"],
+      visuals: ["VPCEndpointExplorer"],
       content: `## VPC Part 2 — Connectivity & Security
 
 Part 1 built a VPC. Part 2 covers how VPCs **connect** to each other and to on-premises, and the **two security layers** that protect them: VPC Peering, Network ACLs vs Security Groups, stateful vs stateless, VPN, Direct Connect, Transit Gateway, and VPC Endpoints (PrivateLink).
@@ -2006,34 +2427,6 @@ The **Classic Load Balancer (CLB)** was built for the old **EC2-Classic** networ
 
 > CLB lacks path/host routing, WebSockets, and container support (you'd need one CLB per rule). It **won't appear in the SAA-C03 exam**, but may come up in interviews. For anything new, use **ALB** (Layer 7) or **NLB** (Layer 4).
 `,
-    },
-    {
-      id: "direct-connect",
-      title: "Direct Connect",
-      shortDesc: "Dedicated network connection to AWS",
-      content: `## Direct Connect
-
-**AWS Direct Connect (DX)** is a **dedicated, private fibre connection** from your data center to AWS — bypassing the public internet for **consistent low latency, higher bandwidth, and lower data-transfer cost**.
-
-- Takes weeks to provision (physical link via a DX location).
-- For **hybrid cloud, large/steady data transfer, latency-sensitive** workloads.
-- **VPN over DX** adds encryption (DX itself is private but not encrypted).
-
-> DX = private/consistent but slow to set up & costly. **Site-to-Site VPN** = quick, cheap, over the internet. Need a backup for DX → a VPN.`,
-    },
-    {
-      id: "transit-gateway",
-      title: "Transit Gateway",
-      shortDesc: "Connect VPCs and on-premise networks",
-      content: `## Transit Gateway
-
-**AWS Transit Gateway (TGW)** is a **network hub** that connects many **VPCs** and **on-prem** networks through a single gateway — replacing a messy full mesh of VPC peering connections.
-
-- **Hub-and-spoke** routing; supports thousands of VPCs.
-- Connects VPCs, **Site-to-Site VPN**, and **Direct Connect**; can route across **regions** (peering).
-- Centralizes routing, security inspection, and simplifies management.
-
-> Exam: "connect **many VPCs** / hybrid network at scale without complex peering" → **Transit Gateway**.`,
     },
   ],
 };

@@ -114,6 +114,7 @@ import {
   IGWRouteFlow,
 } from "./visuals/VPCVisuals4";
 import { NATPlacementQuiz } from "./visuals/VPCVisuals5";
+import { PeeringMathCalculator } from "./visuals/VPCVisuals6";
 import {
   DHCPOptionSetDemo,
   VPCFlowLogExplorer,
@@ -660,6 +661,7 @@ const VISUAL_MAP = {
   ReservedIPExplainer,
   IGWRouteFlow,
   NATPlacementQuiz,
+  PeeringMathCalculator,
   DNSResolutionFlow,
   FQDNAnatomy,
   DNSRecordTypes,

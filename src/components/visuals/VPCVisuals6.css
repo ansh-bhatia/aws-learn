@@ -1,0 +1,57 @@
+/* ─── Transit Gateway / peering math (prefix vpc6-) ──────
+   .viz-card / .viz-title from VPCVisuals.css
+   .vpc4-intro / .vpc4-note from VPCVisuals4.css */
+
+.vpc6-slider-wrap { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.vpc6-slider-label { font-size: 12px; color: #b9c2cc; }
+.vpc6-slider-label b { color: #79c0ff; font-family: var(--font-mono, ui-monospace, monospace); }
+.vpc6-slider-wrap input[type="range"] { width: 100%; accent-color: #1F6FEB; }
+
+.vpc6-stage {
+  display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center;
+  background: #161b22; border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px; padding: 14px;
+}
+.vpc6-mesh { width: 156px; height: 156px; flex-shrink: 0; }
+.vpc6-edge { stroke: rgba(255,153,0,0.45); stroke-width: 1.1; }
+.vpc6-node { fill: #21262d; stroke: rgba(46,115,184,0.75); stroke-width: 1.6; }
+.vpc6-node-label {
+  fill: #e6edf3; font-size: 11px; font-weight: 800; text-anchor: middle;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.vpc6-calc { text-align: center; }
+.vpc6-formula {
+  font-size: 12.5px; font-weight: 700; color: #9aa4b2;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vpc6-sub {
+  font-size: 11px; color: #6e7784; margin-top: 3px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vpc6-result {
+  font-size: 40px; font-weight: 800; color: #ffb84d; line-height: 1.1; margin-top: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+.vpc6-unit { font-size: 10.5px; font-weight: 700; color: #6e7784; letter-spacing: 0.3px; }
+.vpc6-verdict {
+  display: inline-block; font-size: 11px; font-weight: 800; margin-top: 9px;
+  color: #5fc943; background: rgba(63,185,80,0.12);
+  border-radius: 6px; padding: 5px 11px;
+}
+.vpc6-verdict.bad { color: #f0867f; background: rgba(248,81,73,0.12); }
+
+.vpc6-table { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.vpc6-row {
+  display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 120px;
+  background: #1b2027; border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 8px; padding: 10px 12px;
+  transition: border-color 0.2s, background 0.2s;
+}
+.vpc6-row.hi { border-color: rgba(255,153,0,0.5); background: rgba(255,153,0,0.09); }
+.vpc6-row b { font-size: 12px; color: #e6edf3; }
+.vpc6-row span { font-size: 11px; color: #b9c2cc; }
+
+@media (max-width: 620px) {
+  .vpc6-stage { grid-template-columns: 1fr; justify-items: center; }
+}
