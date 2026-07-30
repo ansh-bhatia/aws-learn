@@ -2456,5 +2456,202 @@ When it fires, Auto Scaling terminates instances down to the new desired capacit
 Scheduled scaling is **proactive** — you already know the trigger time. It complements (and often combines with) **Dynamic Scaling**, which reacts to live metrics for traffic spikes you *can't* predict in advance — covered next.
 `,
     },
+    {
+      id: "asg-dynamic-scaling-lab",
+      title: "Lab – Dynamic Scaling",
+      shortDesc: "Simple, step, and target-tracking policies reacting to live CPU load via CloudWatch",
+      visuals: ["DynamicScalingSim"],
+      content: `## When Neither Manual Nor Scheduled Fits
+
+Manual and scheduled scaling both assume you **know** when demand will change. But a sudden, unplanned traffic spike — no known trigger, no known time — needs something reactive.
+
+> **Dynamic scaling defines a policy that watches a live metric and reacts automatically** — for example, "add capacity when average CPU utilization stays above 60% for a sustained period." It requires a **CloudWatch alarm** behind the scenes, since that's what actually detects the threshold being crossed.
+
+---
+
+## Step 1 — A Launch Template That Can Generate Load
+
+Create a launch template (**limit-ASG-template**, Amazon Linux, t2.micro, key pair, a new **limit-SG** allowing HTTP + SSH) with a special user data script this time: one that installs a small utility letting you **artificially spike CPU load on demand** from a web page — purely so the scaling policy has something real to react to during testing.
+
+Create an Auto Scaling Group from it: desired **1**, min **1**, max **5**, across two AZs, no load balancer. Confirm the instance launches and — opening its public IP — that the load-generator page loads with CPU utilization sitting at **0%**.
+
+---
+
+## Step 2 — The Three Dynamic Scaling Policy Types
+
+On the ASG's **Automatic scaling** tab → **Create dynamic scaling policy**:
+
+| Policy | How it decides | Example |
+|---|---|---|
+| **Simple** | **One** threshold, one fixed action | CPU between 50–60% → add 1 instance |
+| **Step** | **Multiple** thresholds, different actions per band | 50–60% → +1; 60–70% → +2 |
+| **Target Tracking** | You set a target; AWS **self-optimizes** how many instances to add/remove | Target: 60% average CPU |
+
+> **Target tracking is the recommended default** — instead of you working out exact thresholds and step amounts, you just declare the target and AWS continuously adjusts capacity to chase it.
+
+---
+
+## Step 3 — Configure a Target Tracking Policy
+
+- **Metric type:** Average CPU Utilization (also available: network in/out bytes, ALB request count per target, or a custom metric — pick whichever reflects your actual bottleneck, e.g. memory for a database server)
+- **Target value:** **60%**
+- **Instance warm-up:** the time a brand-new instance needs before its metrics count toward the average — default **300 seconds (5 minutes)**. Without this, a freshly-booted instance still installing its OS could skew the average and trigger a premature second scale-out.
+
+Click **Create**.
+
+---
+
+## Step 4 — Trigger a Scale-Out
+
+Open the running instance's load-generator page and push CPU to **100%**. The ASG detail page still shows desired capacity **1** at first — target tracking reacts to the **average over time**, not an instant spike, and the warm-up window means the *next* scaling decision also waits.
+
+After roughly the warm-up period (~5–6 minutes in practice), desired capacity flips to **2**, and a second instance appears — inheriting the same launch template, same load-generator page. This is the policy autonomously deciding "average CPU is above my 60% target — add capacity" with no human involved.
+
+---
+
+## Step 5 — Trigger a Scale-In
+
+Cancel the artificial load on both instances so CPU utilization drops back near **0%**. Watch the ASG detail page: it may briefly show desired capacity ticking up before settling, if load was still elevated during the last evaluation window — but once CPU stays low, desired capacity drops back to **1**, and Auto Scaling terminates the extra instance automatically.
+
+> This full loop — load up, wait for warm-up, watch scale-out, cancel load, watch scale-in — is target tracking working exactly as designed: continuously comparing the live average against your 60% target and adjusting capacity to match, with zero manual intervention either direction.
+
+---
+
+## Cleanup
+
+Delete the Auto Scaling Group directly (not the individual instances) to remove everything created during this lab.
+
+---
+
+## Where This Sits
+
+Dynamic scaling is **reactive** — it only acts once the metric has already crossed the threshold. The next topic, **Predictive Scaling**, adds a **proactive** layer on top: forecasting demand *before* it arrives using machine learning, instead of waiting for CPU to already be hot.
+`,
+    },
+    {
+      id: "asg-predictive-scaling",
+      title: "Predictive Scaling",
+      shortDesc: "Machine learning forecasts tomorrow's traffic and pre-launches capacity ahead of the spike",
+      visuals: [],
+      content: `## Reactive vs Proactive
+
+Dynamic scaling is **reactive** — it waits for CPU (or another metric) to actually cross a threshold before adding capacity, which means there's always some lag between the spike starting and new instances coming online.
+
+> **Predictive scaling is proactive: it uses a machine learning model trained on your historical traffic to forecast future demand, then pre-launches capacity ahead of the predicted spike** — instead of waiting for it to already be happening.
+
+The model needs **at least 3 weeks of historical data** to produce a useful forecast. Because building and validating that history takes real time, this topic covers the **configuration options** in depth rather than a live before/after demo — setting one up properly is a longer-term process than a single lab session can show.
+
+> Predictive scaling works *alongside* dynamic and scheduled scaling, not instead of them — combining a proactive forecast with a reactive safety net covers both predictable and unpredictable demand.
+
+---
+
+## Creating a Predictive Scaling Policy
+
+**ASG → Automatic scaling → Create predictive scaling policy.**
+
+### 1. Scale Based On Forecast (on/off)
+
+- **On:** the policy actively adjusts your ASG's instance count based on the forecast — full proactive automation
+- **Off (forecast-only):** the model produces a demand forecast for your own visibility, but takes **no scaling action** — useful for validating the forecast's accuracy before trusting it to actually change capacity
+
+### 2. Metric
+
+The metric the model analyzes historically to build its forecast — typically **CPU utilization** for an application server, but could be **memory** for a database server, **network I/O**, or **ALB request count per target**, depending on what actually reflects your workload's real bottleneck.
+
+### 3. Target Utilization
+
+The utilization level you want to maintain as the "comfortable idle" operating point — commonly **50%**. Above this, the forecast calls for more instances; below it, fewer. This percentage should reflect your own application's actual headroom needs, not a universal default.
+
+### 4. Pre-Launch Instances (Additional Setting)
+
+Because this is proactive, you can tell it to launch new instances **ahead of** the predicted spike, not at the moment it arrives.
+
+> **Worked example:** the forecast predicts a spike at **10:00 AM**. Setting the pre-launch buffer to **5 minutes** (the default) means instances actually launch at **9:55 AM** — already warmed up and ready by the time the real traffic arrives. Maximum advance is 60 minutes.
+
+### 5. Buffer: Maximum Capacity Above Forecast
+
+An extra safety margin on top of whatever the forecast says you need.
+
+> **Worked example:** the forecast says **10 instances** are needed. Setting a **20%** buffer provisions **12** instances (10 + 20% of 10 = 12) — a cushion against the forecast being slightly under, without you having to guess a fixed extra number yourself.
+
+---
+
+## Why Combine Predictive + Dynamic
+
+> Predictive scaling anticipates the *pattern* — recurring daily/weekly traffic shapes it has learned from history. Dynamic scaling catches whatever the forecast **didn't** see coming — a genuine one-off spike with no historical precedent. Running both together means predictable load is handled proactively (instances are already warm when traffic arrives) while unpredictable load still gets a reactive safety net.
+`,
+    },
+    {
+      id: "asg-maintenance-policy-lab",
+      title: "Lab – Instance Maintenance Policy",
+      shortDesc: "Terminate-and-launch vs launch-before-terminating vs custom — replacing a fleet's AMI without downtime or overpaying",
+      visuals: ["MaintenancePolicy"],
+      content: `## The Problem This Solves
+
+An Instance Maintenance Policy controls **how** an Auto Scaling Group replaces instances during operations like an AMI update, an unhealthy-instance replacement, or rebalancing across AZs. The clearest way to see it is to actually change a fleet's operating system and watch each policy handle the swap differently.
+
+---
+
+## Step 1 — Baseline Setup
+
+Create a launch template (**Amazon Linux**, t2.micro, key pair, default security group), **version 1**. Create an ASG from it: **desired 2, min 2, max 2**, spanning two AZs, **instance maintenance policy: No policy** for now. Confirm two Amazon Linux instances launch.
+
+---
+
+## Step 2 — Create a New Template Version (Switch the AMI)
+
+Edit the launch template → **create template version 2** → change the AMI from **Amazon Linux to Ubuntu**. Update the ASG to point at **version 2** of the template.
+
+> Changing the template alone does nothing to the two instances already running — they were built from version 1 and stay exactly as they are until something explicitly tells the ASG to replace them. That "something" is an **instance refresh**.
+
+---
+
+## Step 3 — Policy 1: Terminate and Launch (Cost-First)
+
+**ASG → Instance maintenance policy → Terminate and launch.**
+
+- **Minimum healthy percentage: 50%** — with 2 desired instances, that means **1** instance must stay running at all times
+- **Maximum healthy percentage:** stays at **100% (2)** — capacity is **never allowed to exceed** the desired count
+
+**Start instance refresh.** Watch the sequence: **terminate** one old (Amazon Linux) instance first, **then launch** its Ubuntu replacement, wait for it to be healthy, **then** terminate the second old instance and launch its replacement.
+
+> ⚠️ **You never pay for more than 2 instances at any point** — this policy prioritizes cost control over availability. The trade-off: capacity briefly dips to 1 instance while each replacement happens.
+
+---
+
+## Step 4 — Policy 2: Launch Before Terminating (Availability-First)
+
+Switch the launch template back to **version 1** (Amazon Linux) first, so there's a real AMI change to refresh again. Then set:
+
+**Instance maintenance policy → Launch before terminating.**
+
+- **Minimum healthy percentage: 100%** — both existing instances **stay running** throughout
+- **Maximum healthy percentage: 200%** — capacity is allowed to **temporarily double** (up to 4 instances)
+
+**Start instance refresh.** This time: **two new** instances launch first (on the current template version) *while both old ones keep running* — so briefly there are **4** instances total — and only once the two new ones are healthy does it terminate the two old ones.
+
+> ⚠️ **You pay for up to 4 instances during the transition**, but there is **zero capacity dip** — this policy prioritizes availability over cost. This is the trade-off callout worth memorizing for the exam: terminate-and-launch is cost-first with a capacity dip; launch-before-terminate is availability-first with a temporary cost spike.
+
+---
+
+## Step 5 — Policy 3: Custom Behavior (Full Control)
+
+The first two policies each hard-code one side of the trade-off — terminate-and-launch **won't let you exceed** the desired count; launch-before-terminate **won't let minimum healthy drop** below 100%. Custom Behavior removes both restrictions:
+
+> **You set the minimum and maximum healthy percentages independently, however you want** — e.g. 75% minimum and 150% maximum, splitting the difference between the two presets. For large fleets where neither built-in policy's rigid trade-off fits, this is the one with real flexibility.
+
+---
+
+## What to Remember
+
+| Policy | Min healthy | Max healthy | Trade-off |
+|---|---|---|---|
+| **Terminate and Launch** | Below 100% allowed | Capped at desired (100%) | Cost-controlled, capacity dips |
+| **Launch Before Terminating** | Locked at 100% | Can exceed desired (e.g. 200%) | Zero downtime, costs more briefly |
+| **Custom Behavior** | You choose | You choose | Full control for large/complex fleets |
+
+> Don't forget to delete the Auto Scaling Group when finished, to remove every instance it created across both policy tests.
+`,
+    },
   ],
 };
