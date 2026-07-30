@@ -2840,5 +2840,115 @@ As an application's requirements change, a custom policy's logic lives entirely 
 > A custom termination policy is a real, occasionally-asked interview and exam topic — but actually building one is a deliberate architectural choice for teams with genuine requirements the built-ins can't express, not something most ASGs need day to day. Understanding **why** it exists and what problems it solves is what matters; you don't need a working Lambda function in hand to answer the exam-style question correctly.
 `,
     },
+    {
+      id: "asg-timers",
+      title: "Auto Scaling – The 3 Timers",
+      shortDesc: "Warm-up, cooldown, and health-check grace — worked through with an exact minute-by-minute example",
+      visuals: ["ScalingTimers"],
+      content: `## Why Timers Matter
+
+Every Auto Scaling Group configuration involves **three** distinct timers, each solving a different timing problem. They come up often enough in the exam and in interviews that the exact worked example below is worth memorizing, not just the definitions.
+
+---
+
+## Timer 1 — Warm-Up Time
+
+> **The period a new instance needs to initialize before it's ready to handle requests.** During warm-up, the instance is technically "in service," but its metrics are **excluded** from the aggregate group metrics dynamic scaling policies rely on.
+
+**Why it exists:** dynamic scaling makes decisions from live metrics (CPU, network bytes, etc.). A brand-new instance still booting or running its user data script would report misleadingly low (or erratic) numbers — counting it immediately could trigger a premature, wrong scaling decision.
+
+> ⚠️ **Warm-up only applies to Step Scaling and Target Tracking** dynamic scaling policies. It's **irrelevant** to manual scaling and scheduled scaling, since neither of those relies on live metrics at all — there's nothing for a fresh instance's numbers to distort.
+
+**Where to set it:** per-policy, while creating a Step Scaling or Target Tracking policy — or set a **default instance warm-up** at the ASG level (**Details → Advanced configurations**) that every new dynamic policy inherits unless overridden.
+
+---
+
+## Timer 2 — Cooldown Period
+
+> **A mandatory wait after any scaling activity (scale-out or scale-in) before another scaling activity can begin.** Default: **300 seconds (5 minutes)**.
+
+**Why it exists:** without it, a scale-out could trigger, the new instance could take a few minutes to actually start absorbing load, and — before the group's metrics reflect that relief — another scale-out could fire on top of it. Cooldown gives the group time to **stabilize at its new size** before evaluating whether to scale again, preventing this kind of runaway over-reaction to a temporary spike or dip.
+
+**Where to set it:** **ASG → Details → Advanced configurations → Default cooldown.**
+
+---
+
+## Timer 3 — Health Check Grace Period
+
+> **The delay before Auto Scaling starts running health checks on a newly launched instance.** Default: **300 seconds (5 minutes)**, starting the moment the instance enters the **InService** state.
+
+**Why it exists:** an application often needs time to finish installing and start responding correctly — time that goes *beyond* the OS simply finishing its boot. Without a grace period, Auto Scaling could health-check the instance too early, see it "failing," and terminate a perfectly healthy instance that just needed more startup time.
+
+**Where to set it:** **ASG → Details → Advanced configurations → Health check grace period.**
+
+---
+
+## Worked Example — All Three Together
+
+**Setup:** target tracking on CPU utilization, target **50%**. Scale-out triggers above **70%** CPU, scale-in at **30%**. Configured timers: **warm-up = 5 min**, **cooldown = 10 min**, **health-check grace = 3 min**. A scale-out event fires at **12:00 PM**.
+
+**Q1 — When do the new instance's metrics start counting toward the group average?**
+> Warm-up is 5 minutes → the new instance launched at 12:00 PM starts being counted in aggregate CPU calculations at **12:05 PM**.
+
+**Q2 — When is the earliest the next scaling action (in or out) is allowed?**
+> Cooldown is 10 minutes, measured from the scaling event (12:00 PM, or effectively once the instance is added — the exam convention counts from the event itself) → the next scaling action can happen no earlier than **12:10–12:15 PM** depending on how the cooldown start is anchored in the specific scenario. (Some phrasings measure cooldown from when warm-up ends, i.e. 12:05 + 10 min = **12:15 PM** — always check which anchor point a specific exam question specifies.)
+
+**Q3 — When do health checks begin on the new instance?**
+> Grace period is 3 minutes → health checks begin at **12:03 PM**, giving the app 3 minutes to finish starting before it could be marked unhealthy.
+
+---
+
+## Quick Reference
+
+| Timer | Question it answers | Applies to | Default |
+|---|---|---|---|
+| **Warm-up** | When does a new instance's data start counting toward scaling metrics? | Step & Target Tracking dynamic policies only | Optional, no default until set |
+| **Cooldown** | How long must the group wait before scaling again? | Any scaling method | 300s |
+| **Health-check grace** | How long before health checks start on a new instance? | Any scaling method | 300s |
+`,
+    },
+    {
+      id: "asg-vs-elb",
+      title: "Auto Scaling vs Elastic Load Balancer",
+      shortDesc: "Two services, one job each — scaling capacity vs distributing traffic across it",
+      visuals: [],
+      content: `## Two Different Jobs
+
+Having covered both services fully, it's worth being explicit about **where one stops and the other starts** — a distinction the exam tests directly.
+
+> **Auto Scaling changes how many EC2 instances exist. Elastic Load Balancing decides how traffic gets spread across whichever instances currently exist.** Neither one can do the other's job.
+
+---
+
+## What Auto Scaling Does
+
+- **Scales horizontally** — adds instances under load (**scale out**), removes them when load drops (**scale in**)
+- Driven by whichever policy you've configured: **manual**, **scheduled**, or one of the three **dynamic** policy types (simple, step, target tracking), optionally layered with **predictive** scaling
+- The *entire* focus is **capacity** — how many EC2 instances should exist right now
+
+> **What it does NOT do:** distribute incoming traffic across those instances. Even with 5 healthy instances running, Auto Scaling has no mechanism to route a single incoming request to any particular one of them.
+
+---
+
+## What Elastic Load Balancing Does
+
+- Acts as the **single point of contact** for all incoming traffic — clients only ever talk to the load balancer, never directly to an instance
+- **Automatically routes traffic across a dynamically changing number of instances** — the "dynamically changing" part is exactly what Auto Scaling is responsible for producing
+- **Health-checks** every registered target continuously, and only sends traffic to instances currently reporting healthy
+
+> **What it does NOT do:** decide to launch or terminate instances. A load balancer has no opinion on capacity — it only ever works with whatever fleet already exists at any given moment.
+
+---
+
+## How They Work Together
+
+1. **Auto Scaling** decides a new instance is needed (any policy) → launches it from the launch template
+2. The new instance registers with the **target group** attached to the load balancer
+3. The **load balancer** health-checks it — once healthy, it starts receiving a share of traffic
+4. Later, if **Auto Scaling** decides to scale in, the terminated instance is simply removed from the target group, and the load balancer stops sending it traffic
+
+> Neither service could deliver a production-grade elastic web tier alone: Auto Scaling without a load balancer means capacity that clients have no reliable single way to reach; a load balancer without Auto Scaling means a fixed, hand-managed fleet behind it. **Together, they form the standard building block of a scalable, self-healing compute tier** — this exact combination is precisely what the course's first capstone project is about to bring together end to end.
+`,
+    },
   ],
 };
