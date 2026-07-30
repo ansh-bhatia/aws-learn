@@ -6,96 +6,251 @@ export default {
   color: "#DD344C",
   topics: [
     {
-      id: "iam",
-      title: "IAM – Identity & Access Management",
-      shortDesc: "Manage users, roles, and permissions",
-      visuals: ["RootVsIAMUser", "PolicyTypes", "PolicyEvaluation", "IAMEntities", "RoleUseCases", "AssumeRoleFlow", "RootBestPractices"],
-      content: `## IAM – Identity & Access Management
+      id: "iam-intro",
+      title: "IAM – Why It Exists",
+      shortDesc: "Root user vs IAM users, and creating your first scoped account",
+      visuals: ["RootVsIAMUser"],
+      content: `## The Scenario
 
-**IAM** is the web service that securely controls **who can access what** in your AWS account, by managing users, their permissions, and credentials.
+A company moves its infrastructure to AWS. Whoever creates the AWS account becomes the **root user** — and root has **unrestricted** permission over absolutely everything: every service, billing, support plans, all of it.
 
-> Scenario: a company moves to AWS. The Chief Tech Officer creates the account and becomes the **root user**. Instead of sharing root, they create scoped IAM users — an "EC2 mastermind" and a "VPC visionary" — each able to manage only their own area.
+As the company grows, root alone can't manage everything — an "EC2 specialist" and a "networking specialist" get hired to help. The tempting-but-wrong move: **share the root account's login** with them.
+
+> **Sharing root is a serious security problem.** If an instance gets terminated unexpectedly, there's no way to tell *which* of several people using the same login did it. Multiple people sharing one identity destroys accountability entirely.
+
+---
+
+## The Fix: IAM
+
+> **IAM (Identity and Access Management) is the web service that securely controls who can access what in your AWS account** — by managing users, their permissions, and their credentials.
+
+Instead of sharing root, create a separate **IAM user** for each person, each with their own username and password, and each scoped to only the services their job actually requires.
 
 ---
 
 ## Root User vs IAM User
 
-| | 👑 Root User | 👤 IAM User |
-|--|------------|------------|
-| Login | Account **email** + password | Sign-in URL + username/password |
-| Permissions | **Unrestricted** (everything) | **None by default** — you attach policies |
-| Can it be deleted/restricted? | No | Yes |
-| Use | Rarely; lock down with MFA | Daily work, scoped to the job |
-
-> Create an **account alias** so the sign-in URL hides your 12-digit account ID. IAM usernames are **not** case-sensitive.
+| | Root User | IAM User |
+|---|---|---|
+| Created | Automatically, the moment the AWS account is created | Created deliberately, by root or an admin |
+| Login | Account **email** + password | A dedicated sign-in URL + username/password |
+| Default permissions | **Unrestricted** — everything | **None at all** — permissions must be explicitly attached |
+| Region-locked? | No | No, by default — a new user can create resources in **any** region unless explicitly restricted |
 
 ---
 
-## IAM Policies
+## Step 1 — Create an IAM User
 
-A **policy** (JSON document) defines *who can do what on which resources*. Attach policies to users, groups, and roles. Three types:
+**IAM → Users → Create user.**
 
-| Type | Created by | Reusable? | Editable? | Notes |
-|------|-----------|-----------|-----------|-------|
-| **AWS Managed** | AWS | ✅ | ❌ | Ready-made (e.g. \`AmazonEC2FullAccess\`), auto-updated; may grant related-service access you didn't intend |
-| **Customer Managed** | You | ✅ | ✅ | Fine-grained (target specific resource ARNs), versioned; max **6,144 chars** |
-| **Inline** | You | ❌ | ✅ | Embedded in **one** entity (1-to-1); deleted with it; **no ARN** |
+- Username: e.g. **EC2-mastermind** (usernames are **not** case-sensitive)
+- Enable **AWS Management Console access**, set a custom password (a real deployment would let the user set their own password at first login rather than assigning a fixed one)
+- **Skip attaching any permissions for now** — the next three topics cover the three ways to grant them
 
-### Policy Evaluation Logic
-1. **Default = Deny** — if nothing allows the action, it's denied (implicit deny)
-2. **Explicit Allow** — a matching Allow grants access
-3. **Explicit Deny wins** — a Deny overrides any Allow
-
-> Test policies without logging in as the user via the **IAM Policy Simulator**.
+Create the user, then note its dedicated **sign-in URL** — this is what the new user logs in with, not the root email login.
 
 ---
 
-## IAM Entities
+## Step 2 — Log In as the New User
 
-### 👤 Users
-Represent one human/app with **permanent** credentials.
-- **Console access:** username + password
-- **Programmatic access:** Access Key ID + Secret Access Key (CLI/SDK) — the secret is shown **once**, store it safely
-- Secure with **MFA** and an account **password policy** (length, complexity, expiry, prevent reuse — applies to new users immediately, existing users at next password change)
+> ⚠️ **AWS won't allow two different logins in the same browser session simultaneously.** Log in as the new IAM user in an **incognito window** (or a different browser entirely) while staying logged in as root elsewhere.
 
-### 👥 Groups
-A collection of users with a similar role. Attach a policy to the **group once** → all members inherit it. Add a new teammate to the group and they instantly get the permissions. (Groups have no login; a user can be in multiple groups; a Deny anywhere still blocks.)
-
-### 🎭 Roles
-Grant **temporary** credentials to whoever **assumes** them — users, apps, or AWS services. No long-term keys. Credentials come from **STS** (15 min – 12 hrs, default 1 hr).
+Once logged in: this user can do **nothing** yet. Attempting to view EC2 instances or create a VPC returns an authorization error — a brand-new IAM user starts with **zero** permissions by default.
 
 ---
 
-## The 5 Role Use Cases
+## Step 3 — Set Up an Account Alias
 
-1. **AWS Service** — let a service act for you. e.g. an **EC2 instance assumes a role to write to S3** — the secure alternative to hard-coding access keys in your app.
-2. **AWS Account (Assume Role)** — an IAM user temporarily "switches" into a role for occasional access, **same or another account**.
-3. **Web Identity** — sign in with **Google / Facebook / Amazon** (OAuth 2.0 + OpenID Connect, **JWT** tokens). For millions of app users — no IAM user each.
-4. **SAML 2.0 Federation** — corporate **single sign-on** via Active Directory Federation Services (**XML** assertions, not JWT).
-5. **Custom Trust Policy** — hand-craft exactly **who** can assume the role and **under what conditions** (MFA required, source-IP range, time window, department/group).
+By default, the sign-in URL exposes your raw **12-digit account ID** — not ideal to share around or have appear in a URL bar.
+
+**IAM → Dashboard → Create an alias** (e.g. your company name). The sign-in URL becomes a friendly, memorable name instead of the numeric account ID, with no functional difference otherwise.
 
 ---
 
-## Assume Role (STS)
+## What's Next
 
-Assuming a role swaps your identity for **temporary STS credentials** (default 1 hr, auto-renews). While assumed, you have **only the role's** permissions; switch back to regain your own.
+This user exists and can log in, but is functionally useless until it has permissions. The next three topics cover exactly that — the three distinct **types of IAM policy** used to grant access, starting with the one AWS provides ready-made.
+`,
+    },
+    {
+      id: "iam-aws-managed-policies-lab",
+      title: "Lab – AWS Managed Policies",
+      shortDesc: "Ready-made, AWS-maintained permissions — fast to apply, but with a hidden related-service side effect",
+      visuals: ["PolicyTypes"],
+      content: `## What a Policy Actually Is
 
-- **Same account:** e.g. developer *Amit* has daily EC2 access but assumes an *S3-temp-access* role only when needed.
-- **Cross account:** Company B (**trusted**) assumes a role in Company A (**trusting**) to use A's resources — e.g. *Photo Magic* edits *Cloud Store*'s S3 images. **Never create IAM users for outside partners** — let them assume a role.
+> **An IAM policy is a JSON document that defines who is allowed to do what, on which AWS resources.** It can be written directly in JSON, or built through a visual editor that generates the same JSON underneath. Policies attach to **users, groups, or roles** — this lab attaches directly to users.
 
-**Trust relationship:** the role's **trust policy** names who may assume it (a user ARN or another account ID); the caller needs a policy allowing \`sts:AssumeRole\`.
-
-**Why it beats sharing keys:** temporary credentials (expire ~1 hr), centralized management, every assumption **audited in CloudTrail**, and optional **MFA**.
+There are **three** types of IAM policy: **AWS Managed**, **Customer Managed**, and **Inline**. This topic covers the first.
 
 ---
 
-## Root User Best Practices
+## What Makes a Policy "AWS Managed"
 
-1. **Enable MFA** (mandatory) — a second factor (6-digit code from Google Authenticator) on top of the password, so a stolen password alone can't log in
-2. **Don't use root for daily work** — use IAM users/roles
-3. **No root access keys** — delete them; use roles
-4. **Least privilege** — grant only what each identity needs
-5. **Audit with CloudTrail**
+> **AWS Managed policies are pre-built, ready-to-use policies created and maintained by AWS itself** — designed for common use cases across a wide range of services, attachable to any number of users/groups/roles, and **automatically updated by AWS** as new related permissions or services emerge, with zero manual maintenance required.
+
+Find them under **IAM → Policies** — they're listed alongside customer-managed ones but are visibly not editable.
+
+---
+
+## Step 1 — Create Two Users
+
+**EC2-mastermind** and **VPC-visionary** — both plain IAM users, console access enabled, **no permissions attached yet**. Confirm both can log in but can do nothing (the now-familiar "not authorized" errors on any action).
+
+---
+
+## Step 2 — Attach EC2FullAccess to EC2-mastermind
+
+Select **EC2-mastermind → Permissions → Add permissions → Attach policies directly** → search **AmazonEC2FullAccess** → attach.
+
+Log in as EC2-mastermind: EC2 actions now work fully — launching an instance, managing security groups, everything.
+
+---
+
+## Step 3 — The Hidden Side Effect
+
+> ⚠️ **This same user can also manage VPC resources — internet gateways, NAT gateways — despite never being granted any VPC permission directly.** AmazonEC2FullAccess includes permissions for services **EC2 depends on**, since managing an instance inherently involves its networking configuration. This is the defining trade-off of managed policies: convenient breadth, at the cost of not always knowing exactly what you've granted.
+
+---
+
+## Step 4 — Attach AmazonVPCFullAccess to VPC-visionary
+
+Same steps, different policy. Logging in as VPC-visionary: full VPC management works, and — interestingly — EC2's **networking-adjacent** actions (like viewing Elastic IPs) partially work too, while anything requiring actual **instance type selection** correctly fails. The boundary of "related services" isn't always intuitive from the policy name alone.
+
+---
+
+## Benefits vs Limitations
+
+| Benefits | Limitations |
+|---|---|
+| Simple — ready to attach immediately | **No resource-level targeting** — can't scope to specific instances, only whole services |
+| Maintained and auto-updated by AWS | **Not editable** — permissions are exactly what AWS wrote, nothing more or less |
+| Reusable across any number of entities | Grants related-service access **implicitly**, which can be more than intended |
+| Written following AWS's own best practices | Full dependence on AWS's update schedule, not yours |
+
+> **Worked limitation:** wanting EC2-mastermind to manage only **2 of 4** EC2 instances, or to be able to launch but never terminate — AWS Managed policies simply cannot express either restriction. That precision requires writing your **own** policy — a **Customer Managed policy**, covered next.
+`,
+    },
+    {
+      id: "iam-customer-managed-policies-lab",
+      title: "Lab – Customer Managed Policies",
+      shortDesc: "Resource-scoped, fully custom JSON permissions — plus the exact rules for how Allow and Deny interact",
+      visuals: ["PolicyEvaluation"],
+      content: `## Why Write Your Own Policy
+
+AWS Managed policies can't restrict access to **specific** resources or **specific** actions within a service. When the requirement is genuinely that precise — e.g. "this user manages exactly 2 of my 3 EC2 instances, and can never terminate anything" — only a **Customer Managed policy** can express it.
+
+> **A Customer Managed policy is created and maintained entirely by you**, attachable to any number of users/groups/roles, requiring **manual updates** as requirements change, but offering **fine-grained, resource-level control** plus **versioning and rollback**.
+
+---
+
+## Step 1 — The Scenario
+
+Three EC2 instances exist: **server-1, server-2, server-3**. The goal: **EC2-mastermind** can **start, stop, and terminate only server-1 and server-2** — never server-3, and no other EC2 action beyond those three.
+
+First, attach **AmazonEC2ReadOnlyAccess** (an AWS Managed policy) so the user can at least **see** instance details — confirm read access works, but stopping or starting anything still fails, exactly as expected.
+
+---
+
+## Step 2 — Build the Custom Policy
+
+**IAM → Policies → Create policy** → **Visual editor** (or switch to **JSON** directly — for anything beyond the simplest policy, JSON is usually faster once you're comfortable with the structure; AI tools like ChatGPT are genuinely useful for drafting the JSON correctly).
+
+- **Service:** EC2
+- **Actions:** search and select **StartInstances**, **StopInstances**, **TerminateInstances** — **Allow**
+- **Resources:** ⚠️ do **not** leave this as "All resources" — that would defeat the entire purpose. **Add ARN** for each of the two target instances specifically (region **ap-south-1**, plus each instance's ID), so the policy applies **only** to server-1 and server-2
+
+Name it **mastermind-EC2-policy** and create it. Viewing its JSON afterward shows the standard shape: **Version**, **Effect: Allow**, **Action** (the three verbs), **Resource** (the two specific instance ARNs).
+
+---
+
+## Step 3 — Attach and Test
+
+Attach **mastermind-EC2-policy** to **EC2-mastermind** (in addition to the read-only policy already attached — policies **stack**, they don't replace each other).
+
+Testing as EC2-mastermind: **stop server-1** ✅, **stop server-2** ✅, **terminate server-1** ✅ — but **stop server-3** and **terminate server-3** both fail with "not authorized," exactly matching the resource-scoped ARNs in the policy.
+
+---
+
+## Step 4 — Test Without Logging In: the Policy Simulator
+
+Repeatedly logging in and out as the test user to check every scenario is slow. **IAM → Policy simulator** lets you check any user's effective permissions instantly:
+
+Select the user, the service (EC2), and the action (e.g. **TerminateInstances**) → run against **all resources (wildcard)** → result: **Deny** (correctly — the policy only allows two specific instances, not "all"). Run again scoped to **server-2's specific ARN** → result: **Allow**.
+
+> No login switching required — the simulator evaluates the exact same logic AWS applies at request time.
+
+---
+
+## Policy Evaluation Logic (Critical to Memorize)
+
+1. **Default is Deny** — if no policy explicitly allows an action, it's denied. A user with zero policies attached can do literally nothing.
+2. **Explicit Allow grants access** — any matching Allow statement, from any attached policy, permits the action.
+3. **Explicit Deny always wins** — a Deny statement, anywhere in any attached policy, overrides every Allow, no matter how permissive.
+
+**Proven directly:** attach **AmazonEC2FullAccess** (broad Allow) to EC2-mastermind alongside a small custom policy that **explicitly denies** every EC2 action on one specific instance's ARN. Result: the user can do virtually anything to any *other* instance, but is completely blocked on that one specific instance — the narrow Deny beats the broad Allow every time.
+
+---
+
+## The Size Limit
+
+> ⚠️ **A single Customer Managed policy cannot exceed 6,144 characters** (including whitespace), measured in its JSON representation. For genuinely large permission sets, this means splitting logic across multiple policies rather than one giant document.
+
+---
+
+## What's Left
+
+Customer Managed policies solve resource-level precision — but they're still separate, reusable objects, attachable to many entities. The third and final policy type, **Inline policies**, takes the opposite approach: permissions welded permanently to exactly one entity.
+`,
+    },
+    {
+      id: "iam-inline-policies-lab",
+      title: "Inline Policies",
+      shortDesc: "A 1-to-1 policy with no ARN, deleted automatically the moment its one entity is deleted",
+      visuals: [],
+      content: `## The Defining Difference
+
+AWS Managed and Customer Managed policies are both **standalone objects** — created once, then attached to (and detached from) any number of users, groups, or roles without the policy itself ever being deleted.
+
+> **An Inline policy is the opposite: it's embedded directly inside exactly one IAM entity**, with a strict **1-to-1 relationship**. The JSON syntax and permission logic work identically to a Customer Managed policy — only **how it's created and attached** differs.
+
+---
+
+## Proving the Reusability Difference
+
+Create a Customer Managed policy (**my-managed-policy**) and attach it to **user-1**. Attach the **exact same policy** to **user-2** as well — no problem at all; it's the same standalone object, referenced by two different entities.
+
+Now try to create an **Inline** policy the same way — via **IAM → Policies → Create policy**. It's not possible: inline policies can **only** be created from directly inside a specific user, group, or role's own page, never as an independent object in the policy list.
+
+**Create one properly:** select a user → **Permissions → Add permissions → Create inline policy** → write it (JSON or visual editor — identical syntax to any other policy) → name it, e.g. **inline-for-testing** → save.
+
+> This inline policy will **never appear in the main Policies list** — it exists only attached to this one user, invisible anywhere else.
+
+---
+
+## What Happens When the Entity Is Deleted
+
+**Delete the user carrying the inline policy.** The policy disappears along with it — permanently, with no way to recover or reuse it.
+
+**Delete a user carrying a Customer Managed policy instead.** The user is gone, but the policy **survives** in the Policies list — simply showing zero attachments now, ready to be attached to some other entity later if needed.
+
+> This is the core practical distinction: **Customer/AWS Managed policies outlive the entities they're attached to; Inline policies do not.**
+
+---
+
+## No ARN
+
+Every Customer Managed (and AWS Managed) policy has its own **ARN** — a real, independently-addressable resource. An Inline policy has **none** — because it isn't independently addressable at all; it only ever exists as part of its one entity's own ARN.
+
+---
+
+## When Inline Actually Makes Sense
+
+- **A specific, one-off job need** — e.g. a department head needs one extra permission that should never accidentally end up reused by anyone else. An inline policy structurally **cannot** be reused, which is itself the safety feature.
+- **Short-term or project-based access** — a contractor or a short project where the user account itself is getting deleted in days anyway. Using a Customer Managed policy here just leaves an orphaned, unused policy cluttering the account's policy list after cleanup; inline policy cleans up automatically.
+- **Compliance requirements** — some organizations mandate inline policies specifically *because* they can't be detached and reattached elsewhere, which is a meaningful audit and security property in stricter environments.
+
+> No separate hands-on lab is needed here beyond what's shown above — the actual permission-writing and evaluation logic is **identical** to Customer Managed policies (same JSON, same Allow/Deny/resource-ARN rules from the previous topic). The only thing that differs is the lifecycle: **1-to-1, no ARN, deleted with its entity.**
 `,
     },
     {
