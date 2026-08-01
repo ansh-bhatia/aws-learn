@@ -1050,10 +1050,282 @@ Identifies **policies and roles granting permissions that have never been utiliz
 `,
     },
     {
+      id: "aws-organizations-intro",
+      title: "AWS Organizations – Why Multiple Accounts",
+      shortDesc: "The 10 reasons companies run many AWS accounts, and the free service that manages them centrally",
+      visuals: ["AWSOrganizations"],
+      content: `## First: Why Would Anyone Want Multiple AWS Accounts?
+
+AWS Organizations only makes sense once a company has **more than one** AWS account — so the real starting question is why that happens at all.
+
+| # | Reason |
+|---|---|
+| 1 | **Isolation / blast radius** — separate accounts per department mean a problem in one doesn't touch the others |
+| 2 | **Cost visibility** — see exactly which department or project is spending what, making budgeting and ROI tracking straightforward |
+| 3 | **Regulatory compliance** — different accounts can follow different rules, useful for companies spanning multiple countries or industries |
+| 4 | **Control and delegated administration** — different rules and different administrators per account |
+| 5 | **Separation of environments** — dev, test, and production stay genuinely separate instead of sharing one account |
+| 6 | **Disaster recovery** — backups living in a separate account survive problems affecting the primary |
+| 7 | **Growth** — new accounts get added as the company expands, keeping structure intact |
+| 8 | **Organization** — each project or business unit's resources live in their own tidy space |
+| 9 | **Per-account tuning** — each account configured exactly for its specific job, project, or team |
+| 10 | **Safe experimentation** — R&D happens in a separate account with no risk to production data |
+
+---
+
+## What AWS Organizations Is
+
+> **AWS Organizations consolidates and manages multiple AWS accounts centrally** — simplifying account management, billing, and compliance enforcement across every account, with central configuration and resource sharing.
+
+> ⚠️ **It is completely free** — no additional charge for the service itself. And it's only useful if you genuinely have **multiple** accounts; for a single-account company there's nothing to organize.
+
+---
+
+## The Main Use Cases
+
+- **Central management and governance** across all accounts from one place
+- **Automated account creation** — new AWS accounts can be created directly from the organization
+- **Organizational Units (OUs)** — group accounts into a hierarchy for structured management
+- **Service Control Policies (SCPs)** — apply restrictions at the organization, OU, or account level
+- **Consolidated Billing** — one bill for every account
+
+---
+
+## The Two That Matter Most
+
+> **Consolidated Billing** and **Service Control Policies** are the two headline benefits, and both are heavily tested.
+
+**Consolidated Billing** combines billing across every account into a single payment process — replacing the complexity of paying each account separately. It also **pools usage across accounts**, which can qualify the organization for **volume discounts** it wouldn't reach account-by-account.
+
+**Service Control Policies** are organization-wide guardrails restricting what accounts are permitted to do — covered in depth two topics from here.
+
+> The next topic builds an organization hands-on and shows consolidated billing switching on automatically the moment an account joins.
+`,
+    },
+    {
+      id: "aws-organizations-lab",
+      title: "Lab – Building an Organization & Consolidated Billing",
+      shortDesc: "Inviting an existing account into an organization, and watching consolidated billing enable itself",
+      visuals: [],
+      content: `## The Setup
+
+Two separate AWS accounts exist. One becomes the **management account** (the main account that runs the organization and pays the bills); the other joins as a **member account**.
+
+---
+
+## Step 1 — Create the Organization
+
+From the **management account**: open **AWS Organizations → Create an organization**.
+
+The result is a **root** containing a single account — the management account itself, labelled as such.
+
+---
+
+## Step 2 — Add an Account
+
+**Add an AWS account** offers two paths:
+
+| Option | When to use it |
+|---|---|
+| **Create an AWS account** | Building the org structure from scratch. ⚠️ **No credit card details needed** — the management account is responsible for payment. Only a root email address is required. |
+| **Invite an existing AWS account** | An account already exists and should join. Identify it by **root email address** or **account ID**. |
+
+This lab uses **invite an existing account** — enter the target account's root email, add a message, and **send invitation**.
+
+---
+
+## Step 3 — Accept From the Other Side
+
+The invited account's **root user** receives an email: *"Your AWS account has been invited to join an AWS organization."*
+
+> ⚠️ Open the acceptance link in a **different browser** (or incognito) — the management account is already signed in, and AWS won't let two accounts be signed in simultaneously in the same browser session.
+
+Signed in as the invited account's root user, **accept** the invitation. Back in the management account, refreshing AWS Organizations now shows the member account inside the root.
+
+---
+
+## Step 4 — Consolidated Billing Is Already On
+
+> **Nothing needs to be enabled** — consolidated billing activates automatically the moment an account joins the organization.
+
+Verify it: **management account → Billing and Cost Management → Billing preferences** — both the management account and the newly-joined member account are listed, billing together.
+
+---
+
+## Step 5 — Organizational Units
+
+For applying policies to groups of accounts rather than one at a time:
+
+**Select the root → Actions → Create new organizational unit** → name it (e.g. **sandbox** or **R&D-department**).
+
+Then move an account into it: **select the account → Actions → Move** → choose the destination OU.
+
+The hierarchy is now **Root → OU → account**, which is exactly the structure Service Control Policies apply across.
+
+---
+
+## What's Still Off
+
+Checking **Policies** in the organization: **Service Control Policies are disabled by default**. Enabling and using them is the subject of the next two topics — the concept and evaluation logic first, then the hands-on application.
+`,
+    },
+    {
+      id: "aws-scp-concepts",
+      title: "Service Control Policies – Evaluation Logic",
+      shortDesc: "Guardrails that only ever restrict, never grant — and the layered rules deciding what survives",
+      visuals: ["SCPSimulator"],
+      content: `## What an SCP Is (and Is Not)
+
+> **Service Control Policies are rules controlling what accounts in an organization CAN and CANNOT do.** The single most important fact: **an SCP never grants permission.** It only ever **restricts** what IAM has already granted.
+
+Key properties:
+
+- **Exclusive to AWS Organizations** — SCPs only exist once an organization is enabled
+- Applied at **Root**, **OU**, or **individual account** level, inheriting downward
+- ⚠️ **They affect member accounts only — including those accounts' root users — and never the management account**
+- ⚠️ **A user with no IAM permission still has no access**, even if an SCP allows everything. IAM grants; SCP filters.
+
+**Enabling them:** **AWS Organizations → Policies → Service control policies → Enable** (disabled by default).
+
+---
+
+## The Default Policy
+
+On enabling SCPs, a policy named **FullAWSAccess** is automatically attached to **everything** — the root, every OU, and every account. Checking its **Targets** tab confirms this.
+
+> Any OU or account created later **also** gets FullAWSAccess attached automatically. This default is what makes enabling SCPs a no-op until you deliberately add restrictions — the guardrails start wide open.
+
+---
+
+## The Golden Rule for Allow
+
+> **A service is usable only if it is allowed at EVERY level of the hierarchy** — Root **and** OU **and** account. A single level missing that permission blocks it entirely.
+
+**Worked example — allow succeeds:** Root = FullAWSAccess, OU = FullAWSAccess, Account = FullAWSAccess → full access. ✅
+
+**Worked example — allow fails:** Root = FullAWSAccess, OU = **no policy attached**, Account = FullAWSAccess → **no access**.
+
+> ⚠️ **A level with NO policy attached counts as an implicit deny.** "Nothing attached" does not mean "inherit whatever the parent said" — it means blocked.
+
+**Worked example — narrowing:** Root = FullAWSAccess, OU = **Allow EC2 only**, Account = **Allow EC2 only** → the result is **EC2 access only**. FullAWSAccess at the root includes EC2, so EC2 survives all three levels; everything else is filtered out at the OU.
+
+---
+
+## The Golden Rule for Deny
+
+> **An explicit Deny at ANY level wins, overriding every Allow above or below it.**
+
+**Worked example — deny at the account:** Root = FullAWSAccess, OU = FullAWSAccess, Account = FullAWSAccess **+ Deny S3 + Deny EC2** → that account keeps everything **except** S3 and EC2.
+
+**Worked example — deny at the OU:** Root = FullAWSAccess, OU = FullAWSAccess **+ Deny S3**, Accounts beneath = FullAWSAccess → **every account under that OU** loses S3, regardless of their own policies.
+
+**Worked example — deny beats allow:** Root = FullAWSAccess, OU = **Allow S3**, Account = **Deny S3** → **no S3**. The Deny wins outright, and since nothing else survived the OU's narrow Allow, that account ends up with **no service access at all**.
+
+---
+
+## The Complete Evaluation Rule
+
+Combining both halves — an action succeeds only when:
+
+1. It is **allowed at every level** of the SCP hierarchy (Root → OU → account), **and**
+2. It is **not explicitly denied** at any level, **and**
+3. The **IAM policy in the account also allows it**
+
+> **The exam-ready phrasing: an action must be allowed by the IAM policy AND not explicitly denied by any SCP.** Both conditions, always — SCPs and IAM are filters applied in series, not alternatives.
+
+---
+
+## The Mental Shortcut
+
+Think of each level as a filter narrowing what passes through. **Allow needs unanimous agreement across all levels. Deny needs only one objection anywhere.** No policy attached at a level is an objection.
+`,
+    },
+    {
+      id: "aws-scp-lab",
+      title: "Lab – Applying Service Control Policies",
+      shortDesc: "Proving SCPs restrict but never grant, then denying S3 at an OU and EC2 at an account",
+      visuals: [],
+      content: `## Building the Hierarchy
+
+From the management account, create the organization and **invite a second account** (call it **account-A**), accepting the invitation from that account's root user in a separate browser.
+
+Then build a three-level hierarchy: **create an OU named sandbox** under the root, and **move account-A into it** — giving **Root → sandbox OU → account-A**.
+
+Finally, **Policies → Service control policies → Enable**, which attaches **FullAWSAccess** to the root, the OU, and the account automatically.
+
+---
+
+## Step 1 — Prove SCPs Do Not Grant Permission
+
+In **account-A**, create an IAM user (**user-A-admin**) with console access and **no policies attached at all**.
+
+Log in as that user and try anything — EC2, S3, Lambda. **Everything fails**, despite FullAWSAccess SCPs being attached at all three levels.
+
+> ⚠️ **This is the point of the exercise.** FullAWSAccess as an SCP allows the *account* to use those services, but grants the *user* nothing. **SCPs control permission; IAM assigns it.**
+
+Now attach **AdministratorAccess** (an IAM policy) to user-A-admin. Refresh — EC2, S3, and Lambda all work. The IAM policy is what actually granted access; the SCPs merely didn't block it.
+
+---
+
+## Step 2 — Create Two Restrictive Policies
+
+**Policies → Service control policies → Create policy:**
+
+**deny-S3-access** — Effect **Deny**, Action: **every S3 action** (the S3 service with an action wildcard), Resource: **every bucket** (a resource wildcard).
+
+**deny-EC2-access** — Effect **Deny**, Action: **every EC2 action**, Resource: **all resources**.
+
+> These are ordinary JSON policy documents — the same structure as IAM policies from earlier in this section. The difference is entirely in **where they attach** and **what they do** (restrict, never grant).
+
+Neither is attached to anything yet.
+
+---
+
+## Step 3 — Deny S3 at the OU Level
+
+**Select the sandbox OU → Policies → Attach → deny-S3-access.**
+
+The OU now carries **FullAWSAccess + deny-S3-access**.
+
+**Test as user-A-admin:**
+- **EC2** → still works ✅
+- **Lambda** → still works ✅
+- **S3** → attempting to create a bucket **fails** ❌
+
+> Note what just happened: **user-A-admin holds AdministratorAccess in IAM** — full permission on everything. The SCP at the **OU level** overrode it anyway. This is exactly why SCPs are called guardrails: an account admin cannot grant themselves past them.
+
+Because the policy sits on the OU, **every account under that OU** loses S3 — not just this one.
+
+---
+
+## Step 4 — Deny EC2 at the Account Level
+
+**Select account-A → Policies → Attach → deny-EC2-access.**
+
+Account-A now inherits FullAWSAccess + deny-S3 (from the OU) and adds deny-EC2 directly.
+
+**Test again as user-A-admin:** the EC2 console now returns an API error, and launching an instance is impossible.
+
+---
+
+## The Final State
+
+| Level | Policies attached | Effect on account-A |
+|---|---|---|
+| **Root** | FullAWSAccess | Everything permitted |
+| **sandbox OU** | FullAWSAccess + **deny-S3** | S3 blocked for every account in the OU |
+| **account-A** | FullAWSAccess + **deny-EC2** | EC2 additionally blocked, this account only |
+
+**Net result:** user-A-admin has **AdministratorAccess in IAM**, yet can use **neither S3 nor EC2** — while other services still work.
+
+> This is the whole SCP model in one screen: **IAM decides what a user may do; SCPs decide the outer boundary the account can never exceed**, applied at whichever level of the hierarchy makes sense — one OU-level policy covering many accounts, or a targeted account-level restriction for one.
+`,
+    },
+    {
       id: "iam-org-sso",
       title: "IAM – Reports, Organizations & SSO (Part 2)",
       shortDesc: "IAM reports, AWS Organizations + SCPs, Identity Center",
-      visuals: ["AWSOrganizations", "SCPSimulator", "IdentityCenterSSO"],
+      visuals: ["IdentityCenterSSO"],
       content: `## IAM Part 2 — Reports, Organizations & SSO
 
 Building on IAM fundamentals: the security **reports** IAM produces, managing many accounts with **AWS Organizations** + **SCPs**, and single sign-on via **IAM Identity Center**.
