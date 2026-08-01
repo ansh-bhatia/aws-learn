@@ -2445,10 +2445,258 @@ These two words get used interchangeably, and choosing the wrong storage class u
 `,
     },
     {
+      id: "s3-versioning",
+      title: "Lab – S3 Versioning & Recovering Deleted Files",
+      shortDesc: "Delete markers, restoring a deleted object, and the one-way switch you can never fully undo",
+      visuals: ["Versioning"],
+      content: `## What Versioning Changes
+
+> **Versioning keeps multiple versions of an object in the same bucket.** It is enabled at the **bucket** level, and it is **disabled by default** on every new bucket.
+
+The reason it matters most: with versioning on, **deleted files can be recovered**.
+
+---
+
+## Without Versioning — Overwrites Destroy Data
+
+Create a bucket leaving versioning **disabled**. Upload **file1.txt** containing "hello". Now edit the local file to say "world" and upload it again under the same name.
+
+Opening the object: it contains **"world"**. The original is **gone** — overwritten, with no way back.
+
+---
+
+## With Versioning — Overwrites Preserve History
+
+Create a second bucket and enable versioning (**Properties → Bucket Versioning → Edit → Enable**, either at creation or afterwards).
+
+Upload **file1.txt** ("hello"), then re-upload it modified ("world").
+
+The object list still shows one file containing "world" — the **current version**. But toggle **Show versions** on, and **both** versions appear, each with its own **Version ID**. Opening the older one still returns **"hello"**.
+
+> The current version is what you get by default; previous versions remain retrievable underneath it.
+
+---
+
+## Deleting Without Versioning
+
+Selecting an object and deleting it prompts you to type **"permanently delete"**. That wording is literal — the object is gone, unrecoverable.
+
+---
+
+## ⚠️ Deleting WITH Versioning — the Delete Marker
+
+Deleting an object in a versioned bucket prompts you to type only **"delete"** — a different, gentler confirmation.
+
+The object disappears from the normal view, but nothing was actually destroyed:
+
+> **S3 adds a new, zero-byte version called a delete marker, and makes it the current version.** Your real object becomes a **previous (non-current) version**, sitting untouched underneath.
+
+Toggling **Show versions** reveals both: the original file, and the **delete marker** at 0 bytes.
+
+---
+
+## Restoring a Deleted Object
+
+The restore procedure is counterintuitive the first time:
+
+> **Delete the delete marker.** Removing the current version (the marker) promotes the previous version back to current — and the file reappears.
+
+**Steps:** enable **Show versions** → select the **delete marker** → **Delete** → confirm with "permanently delete". Toggle Show versions off, and the original object is back in the normal list with its content intact.
+
+---
+
+## Permanently Deleting Instead
+
+To genuinely destroy an object in a versioned bucket, delete the **actual version**, not the marker:
+
+**Show versions → select the real object version** (it has a real size, e.g. 1.1 MB, unlike the 0-byte marker) → **Delete** → **"permanently delete"**. That version is now unrecoverable.
+
+> This leaves the **delete marker** behind as a harmless leftover. It occupies **0 bytes and costs nothing**, so it can be ignored — or cleaned up automatically via a lifecycle rule, covered in the lifecycle topics.
+
+---
+
+## ⚠️ Three Facts Worth Memorizing
+
+1. **Versioning cannot be disabled once enabled — only suspended.** The Edit dialog offers **Suspend**, never "Disable". Suspending stops *new* versions being created, but every existing version is retained.
+2. **It integrates with lifecycle rules** — rules can act separately on current and non-current versions.
+3. ⚠️ **You pay for every version.** Versioning itself is free, but each retained version consumes storage you are billed for — an old, heavily-modified object can quietly cost several times what its current version suggests.
+`,
+    },
+    {
+      id: "s3-lifecycle-filters",
+      title: "S3 Lifecycle Rules – Filtering Which Objects Apply",
+      shortDesc: "Prefix, tag and size filters — including the empty-prefix trick for root-level objects only",
+      visuals: ["LifecycleRules"],
+      content: `## What Lifecycle Rules Automate
+
+Storage class can be set **manually** in two places: when uploading an object (**Properties → Storage class**), or afterwards via **Object actions → Edit storage class**.
+
+> Manual works for one object. It does not work for **50,000**. **Lifecycle rules automate storage-class transitions and deletion based on an object's age** — moving data toward cheaper classes as it cools, with no ongoing effort.
+
+**A typical intent:** frequently accessed for 30 days → move to Standard-IA → after 90 days → cheaper still → eventually archive → eventually delete.
+
+**Where:** **bucket → Management → Create lifecycle rule.**
+
+---
+
+## The Filtering Decision
+
+The first real choice in creating a rule is **which objects it applies to**.
+
+**Apply to all objects in the bucket** is offered (and requires an acknowledgement checkbox) — but in real use that is rarely what you want, since different data in one bucket usually has different access patterns.
+
+Three filter types are available:
+
+---
+
+## Filter 1 — Prefix
+
+S3's structure is genuinely **flat**; "folders" are a convenience built from object key prefixes.
+
+Uploading a file into a "folder" named **USA** produces an object whose actual key is **USA/us_files.txt** — the folder name is simply part of the key.
+
+**So a prefix filter targets a folder:**
+
+| Prefix | Matches |
+|---|---|
+| **USA/** | Every object inside the USA folder |
+| **India/** | Every object inside India |
+| **India/Gujarat/** | Only objects inside that nested folder |
+
+> The trailing slash acts as a delimiter, keeping the match scoped to that folder rather than anything merely *starting* with those characters.
+
+### ⚠️ The Root-Only Trick
+
+A bucket containing three folders **and** three loose files at the root — how do you target **only the loose files**, excluding every folder?
+
+> **Enter two double-quote characters as the prefix.** That empty-string prefix matches only objects at the **root** of the bucket, excluding everything inside any folder.
+
+---
+
+## Filter 2 — Object Tags
+
+Objects can be tagged at upload time (**Upload → Tags**), e.g. key **logs**, value **s3logs**.
+
+A lifecycle rule can then filter on **Add tag** with the same key/value — and **only tagged objects** are affected, regardless of which folder they sit in.
+
+> Supplying only the **key** (no value) matches every object carrying that key, whatever its value — useful when the value varies but the category doesn't.
+
+---
+
+## Filter 3 — Object Size
+
+Filter by a **minimum and/or maximum** object size, specified in bytes, KB, MB or GB. Objects between those bounds are affected.
+
+> Practical for policies that only make sense on large objects — since IA and archive classes have **minimum billable sizes (128 KB)**, transitioning tiny objects into them can cost more than leaving them alone.
+
+---
+
+## Combining Them
+
+Filters can be combined within one rule, and a bucket can carry **multiple rules** — one per prefix or data category — so a single bucket holding mixed data types can age each type on its own schedule.
+
+> The next topic builds a complete rule: a full transition chain across five storage classes, then expiration and permanent deletion.
+`,
+    },
+    {
+      id: "s3-lifecycle-transitions",
+      title: "Lab – Building a Lifecycle Transition Chain",
+      shortDesc: "Standard through Deep Archive over ten years, then expiring and permanently deleting the leftovers",
+      visuals: [],
+      content: `## The Target Journey
+
+A complete data lifecycle, automated end to end:
+
+| Age | Action |
+|---|---|
+| **Day 0** | Object uploaded → **S3 Standard** |
+| **30 days** | → **Standard-IA** |
+| **90 days** | → **One Zone-IA** |
+| **365 days** (1 year) | → **Glacier Flexible Retrieval** |
+| **3 years** | → **Glacier Deep Archive** |
+| **10 years** | **Expire** the object |
+
+---
+
+## Current vs Non-Current Versions
+
+Before building it, one distinction matters — because lifecycle rules treat them **separately**.
+
+In a versioned bucket with **Show versions** enabled, versions marked with an **L indicator are previous (non-current)** versions; the unmarked one is the **current** version.
+
+> Lifecycle rules offer parallel actions for each: **"Move current versions of objects between storage classes"** and **"Move non-current versions..."** — identical mechanics, applied to different sets of versions.
+
+---
+
+## Step 1 — Create the Rule
+
+**Management → Create lifecycle rule** → name it (e.g. **rule-1**) → choose a filter, or **Apply to all objects in the bucket** with the acknowledgement.
+
+Five rule actions are offered; this lab uses the **current version** transition action.
+
+---
+
+## Step 2 — Build the Transition Chain
+
+Select **Move current versions of objects between storage classes**, then add each transition with its **days after object creation**:
+
+| Transition to | Days |
+|---|---|
+| Standard-IA | **30** |
+| One Zone-IA | **90** |
+| Glacier Flexible Retrieval | **365** |
+| Glacier Deep Archive | **1095** (3 years) |
+
+> ⚠️ **Standard → Standard-IA requires a minimum of 30 days.** The console rejects a smaller value outright. (Transitions from Standard directly to Glacier classes are not subject to that same 30-day floor.)
+
+Note the day counts are **cumulative from object creation**, not from the previous transition — 90 means 90 days old, i.e. 60 days after landing in Standard-IA.
+
+The console renders a preview timeline confirming each step, then **Create rule**.
+
+---
+
+## Step 3 — Expiration
+
+Editing the rule, enable **Expire current versions of objects** → **3650** days (10 years).
+
+> ⚠️ **"Expire" does not mean "permanently delete."** In a **versioned** bucket, expiring the current version just adds a **delete marker** and demotes the object to non-current — **the data still exists and you are still billed for it.**
+
+---
+
+## Step 4 — Actually Removing the Data
+
+To genuinely reclaim the storage, add the companion action:
+
+**Permanently delete non-current versions of objects** → **1** day after becoming non-current.
+
+The full sequence: at **day 3650** the object expires (becomes non-current), and at **day 3651** it is permanently deleted.
+
+> ⚠️ **This second action is only necessary because versioning is enabled.** On a non-versioned bucket, "expire current version" alone genuinely deletes the object.
+
+---
+
+## Step 5 — Cleaning Up Delete Markers
+
+The final rule option handles the leftovers from the versioning topic: **Delete expired object delete markers or incomplete multipart uploads**.
+
+Delete markers left behind after permanently deleting an object are harmless (0 bytes, no cost) but accumulate as clutter across thousands of objects.
+
+> ⚠️ **Enabling "Expire current versions of objects" makes the delete-marker option unavailable** — the console blocks setting both, because the expiration action already handles marker cleanup. If you want to configure marker cleanup with its own timing, the expiration action must be off.
+
+The **incomplete multipart uploads** half of that option cleans up partial uploads that never finished — covered in the multipart upload topic later in this section.
+
+---
+
+## Why This Matters
+
+> Each step down the chain is a real cost reduction, applied automatically with zero ongoing effort. Combined with correct storage-class selection, lifecycle rules are the single largest lever on an S3 bill — which is exactly why the transitions, the 30-day minimum, and the expire-vs-delete distinction all appear regularly in exam scenarios.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
-      visuals: ["Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
+      visuals: ["AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
       content: `## S3 – Simple Storage Service (Part 1)
 
 **Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
