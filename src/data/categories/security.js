@@ -1322,97 +1322,163 @@ Account-A now inherits FullAWSAccess + deny-S3 (from the OU) and adds deny-EC2 d
 `,
     },
     {
-      id: "iam-org-sso",
-      title: "IAM – Reports, Organizations & SSO (Part 2)",
-      shortDesc: "IAM reports, AWS Organizations + SCPs, Identity Center",
+      id: "iam-identity-center-concepts",
+      title: "IAM Identity Center (SSO)",
+      shortDesc: "One login across many AWS accounts — the successor to AWS Single Sign-On",
       visuals: ["IdentityCenterSSO"],
-      content: `## IAM Part 2 — Reports, Organizations & SSO
+      content: `## The Problem It Solves
 
-Building on IAM fundamentals: the security **reports** IAM produces, managing many accounts with **AWS Organizations** + **SCPs**, and single sign-on via **IAM Identity Center**.
+A company with three AWS accounts and one employee who needs access to all three faces an awkward reality with plain IAM:
 
----
+> **An IAM user exists inside exactly one account.** User X in account 1 cannot log into account 2 or account 3 — so X needs **three separate IAM users and three separate passwords**, one per account.
 
-## Tasks That Require the Root User
+Multiply that across a workforce and it becomes genuinely unmanageable.
 
-Most work should use IAM users/roles, but a few actions **only** the root user can do:
-- Change account settings (email, root password) & **close** the account
-- Restore IAM user permissions (if fully denied)
-- Configure **AWS Shield Advanced**, alternate billing contacts
-- Change payment method, cancel/transfer support plans
-- Request service-limit increases, sign up for GovCloud
+> **IAM Identity Center (the successor to AWS Single Sign-On) solves this: create the user ONCE, outside any individual account, and grant them access to whichever accounts they need — with a single username and password.**
 
-> For everyday work, create an **admin IAM user** (attach the \`AdministratorAccess\` managed policy) and leave root locked away.
-
-### Root security best practices (continued)
-- **Delete/rotate root access keys** — ideally root has **no** access keys at all
-- **Secure the account's email** (it can reset the root password)
-- Use an **account alias** so the sign-in URL doesn't expose the 12-digit account ID
+**The familiar analogy:** a single Google account signs you into Gmail, Drive, and YouTube — three unrelated services, one login. Identity Center does the same across AWS accounts.
 
 ---
 
-## The 3 IAM Reports
+## Key Terminology
 
-| Report | Shows | Scope | Format | Region |
-|--------|-------|-------|--------|--------|
-| **Credential Report** | Every user's password/MFA/access-key status | All IAM users | Downloadable **CSV** | Global |
-| **Access Advisor** | Which services an entity's policies allow + last-accessed time | Users/groups/roles | In-console (real-time) | Global |
-| **Access Analyzer** | Resources shared **externally** + **unused** permissions | Resources/policies | In-console findings | **Per-region** |
+**Workforce identity** — a user who needs access to **multiple** AWS accounts. (Someone who only ever needs one account doesn't need Identity Center; a plain IAM user in that account is fine.)
 
-- **Credential Report** → auditing/compliance (find users without MFA, stale keys)
-- **Access Advisor** → least privilege (revoke services never used)
-- **Access Analyzer** → detect unintended external exposure (public S3, cross-account roles). External findings are **free**; unused-access findings are **paid**. Unlike the rest of IAM, it's **per-region**, not global.
+**Identity source** — where Identity Center gets its user information from. Three options:
 
----
+| Source | What it is |
+|---|---|
+| **Identity Center directory** | AWS's own built-in directory — simplest, no external system needed |
+| **Active Directory** | An existing corporate AD, so employees use credentials they already have |
+| **External identity provider** | Any **SAML 2.0**-compliant IdP (e.g. Google Workspace, Okta) |
 
-## AWS Organizations
+> ⚠️ **Only one identity source can be active at a time** — Identity Center does not federate several directories simultaneously.
 
-Centrally manage **multiple AWS accounts** (separate accounts for departments, prod/test, billing, compliance, DR, experiments…). Free.
+**Permission set** — a collection of permissions defining what a user can do **in a given account**. Built from AWS managed policies, customer managed policies, or inline policies — the same policy concepts from earlier in this section, just packaged for assignment across accounts.
 
-### Structure
-- **Root** → **Organizational Units (OUs)** → **accounts**
-- One **management account** (the main one) + **member accounts**
-- Add accounts by **creating new** ones (no card — management account pays) or **inviting existing** ones (invited root accepts)
-
-### Two headline benefits
-1. **Consolidated Billing** — one bill across all accounts, easier tracking, and pooled usage can earn **volume discounts** (enabled automatically when an account joins)
-2. **Service Control Policies (SCPs)** — org-wide guardrails (below)
+**Multi-account permissions** — the mapping that ties it together: **user → permission set → account**. The same user can hold a *different* permission set in each account.
 
 ---
 
-## Service Control Policies (SCPs)
+## ⚠️ AWS Organizations Is a Prerequisite
 
-SCPs are **guardrails** that **limit** what accounts can do — they **never grant** permissions (IAM still does that). Key facts:
-- Apply at **Root / OU / Account** levels (inherited downward)
-- Affect **member accounts only** (incl. their root user) — **not** the management account
-- A default **\`FullAWSAccess\`** SCP is attached everywhere out of the box
+> **Identity Center requires AWS Organizations.** Every account you want to manage access for must already be inside the organization — which is exactly why the previous topics built one first.
 
-### Evaluation logic
-1. A service is allowed only if it's **allowed at EVERY level** down the hierarchy
-2. An **explicit Deny always wins** (overrides any allow)
-3. A level with **no SCP = implicit deny**
-4. The final result also requires the **IAM policy to allow** the action
+**Enabling it:** **IAM Identity Center → Enable**, done **per region** (choose one close to your users). Two modes are offered:
 
-> Example: attach \`Deny S3\` at the OU → every account beneath it loses S3, even if their IAM admin allows it. Attach \`Deny EC2\` at one account → only that account loses EC2.
+- **Enable with AWS Organizations** — the real option, unlocking multi-account permissions
+- **Enable for this account only** — testing only; no multi-account management
 
 ---
 
-## IAM Identity Center (SSO)
+## Auditing
 
-The successor to **AWS Single Sign-On**. For **workforce users** who need **multiple AWS accounts** — like one Google login for Gmail + Drive + YouTube. Sign in **once** to reach many accounts. Requires **AWS Organizations**.
+All API calls made to IAM Identity Center are logged in **CloudTrail**, the same as the rest of IAM — so sign-ins and permission assignments remain fully auditable.
 
-### Without it
-User X needs a **separate IAM user + password in every account** — hard to manage.
+> The next topic builds the whole thing end to end: one user, two accounts, and a **different permission set in each**.
+`,
+    },
+    {
+      id: "iam-identity-center-lab",
+      title: "Lab – IAM Identity Center",
+      shortDesc: "One user, two accounts, different permissions in each — EC2 here, S3 there",
+      visuals: [],
+      content: `## The Target Scenario
 
-### With Identity Center
-Create the user **once**; assign **permission sets** per account. e.g. User X → **EC2 FullAccess in Account 1** and **S3 FullAccess in Account 2**.
+One workforce user, **xyz**, needs access to two AWS accounts with **different** permissions in each:
 
-### Key terms
-- **Workforce identity** — a user needing multiple accounts
-- **Identity source** — where users live: built-in **Identity Center directory**, **Active Directory**, or a **SAML 2.0** IdP (one source at a time)
-- **Permission set** — a bundle of permissions (e.g. \`EC2FullAccess\`) assigned per user, per account
-- **Multi-account permissions** — map user → permission set → account
+| Account | Permission the user gets |
+|---|---|
+| **Cloud Fox Hub** (management account) | **EC2 full access** |
+| **account-A** (member account) | **S3 full access** |
 
-> Sign-in is via the SSO portal (MFA enforced); all activity is logged in **CloudTrail**.
+> Critically, **xyz is not created inside either account's IAM** — the user is created once, in Identity Center itself.
+
+---
+
+## Step 1 — Prerequisite: AWS Organizations
+
+From the management account: **AWS Organizations → invite account-A** by its root email → accept the invitation from account-A's root user (in a separate browser) → confirm both accounts appear in the organization.
+
+---
+
+## Step 2 — Enable Identity Center
+
+From the **management account**: **IAM Identity Center → Enable**, choosing a region near your users (e.g. Mumbai) and the **AWS Organizations** option.
+
+Check **Settings → Identity source** — it defaults to **Identity Center directory** (AWS's own). It can be changed to Active Directory or an external SAML 2.0 provider; this lab keeps the built-in directory.
+
+---
+
+## Step 3 — Create the Workforce User
+
+**Users → Add user:**
+
+- Username **xyz**, plus an **email address** (required — the account cannot be created without one)
+- Display name, then **Next** → skip group membership → **Add user**
+
+> AWS generates a **one-time password** on creation. Copy it, along with the **portal URL** and username — the portal URL is what the user signs in through, and it is not the normal AWS console login page.
+
+---
+
+## Step 4 — Create Two Permission Sets
+
+**Permission sets → Create permission set → Custom permission set** (predefined sets exist, but this scenario needs specific ones):
+
+- Attach **AmazonEC2FullAccess** (an AWS managed policy) → name it **EC2-full-access** → create
+- Repeat with **AmazonS3FullAccess** → name it **S3-full-access** → create
+
+> Permission sets accept **AWS managed, customer managed, or inline** policies — identical options to IAM itself. For narrower access (specific instances or buckets), a custom policy works here exactly as it did earlier in this section. A **session duration** can also be set.
+
+---
+
+## Step 5 — Assign User → Permission Set → Account
+
+This is the step that actually wires everything together.
+
+**AWS accounts → select Cloud Fox Hub → Assign users or groups** → choose user **xyz** → **Next** → select permission set **EC2-full-access** → **Submit**.
+
+---
+
+## Step 6 — Test the First Account
+
+Open the **portal URL** in a separate browser. Sign in as **xyz** with the one-time password.
+
+> ⚠️ **MFA setup is mandatory before first sign-in completes** — pair an authenticator app by scanning the QR code and entering the generated code, then set a permanent password.
+
+Once in, the portal lists **Cloud Fox Hub** with **EC2-full-access** available. Opening it:
+
+- **EC2** works fully — instances can be launched ✅
+- **S3** is denied — no bucket access at all ❌
+
+Only account-A's entry is absent, because no assignment exists for it yet.
+
+---
+
+## Step 7 — Assign the Second Account
+
+Back in the management account: **AWS accounts → select account-A → Assign users or groups** → user **xyz** → permission set **S3-full-access** → **Submit**.
+
+---
+
+## Step 8 — Verify Both, With Different Permissions
+
+Refresh the portal as **xyz**. Both accounts now appear:
+
+| Account shown in portal | Access granted |
+|---|---|
+| **Cloud Fox Hub** | EC2 full access |
+| **account-A** | S3 full access |
+
+Signing into **account-A**: creating an S3 bucket succeeds ✅, while EC2 returns an API error and instance launch is impossible ❌ — the exact mirror image of the first account.
+
+---
+
+## What This Demonstrates
+
+> **One user, one set of credentials, one sign-in portal — with genuinely different permissions per account.** No IAM user was created in either account, and adding a third account later means one more assignment, not another user to provision and another password for someone to manage.
+
+This is why Identity Center is the standard answer for **workforce users needing multiple AWS accounts**, while plain IAM users remain correct for someone working in only one.
 `,
     },
     {
