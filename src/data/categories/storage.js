@@ -2061,10 +2061,151 @@ You now have both shared-storage stories complete:
 `,
     },
     {
+      id: "s3-object-storage-fundamentals",
+      title: "Object Storage – How S3 Stores Data",
+      shortDesc: "One file equals one object, why that beats blocks at scale, and where object storage is the wrong choice",
+      visuals: ["ObjectVsBlock"],
+      content: `## Three Storage Families, Three Services
+
+The course has already covered two: **EBS is block storage**, **EFS is file storage**. **S3 is object storage** — a genuinely different method of storing data, not just a different product.
+
+> **Object storage stores data as distinct objects, each with its own unique identifier and metadata, in a flat environment.** Every file you upload becomes exactly one object.
+
+---
+
+## Object vs Block — the Core Difference
+
+| | Object storage (S3) | Block storage (EBS) |
+|---|---|---|
+| **How a file is stored** | The whole file is **one object**, whatever its size | The file is **split into many blocks** |
+| **Managing 1 million files** | 1 million objects | Potentially **10 million blocks** |
+| **Access method** | Each object has its **own URL** — reachable directly over HTTP | Must be **attached and mounted** to a computer first |
+| **Structure** | Flat, each object independent | Block-level, managed by a filesystem |
+
+> **The access difference is the headline advantage.** An EBS volume's contents have no URL and no IP — you attach the volume to an instance, mount it, and reach files through that machine. **Every S3 object is directly addressable by URL**, with nothing to mount.
+
+---
+
+## Why That Design Wins at Scale
+
+- **Simple management of huge file counts** — one file is one object, so a million files is a million things to track, not ten million blocks
+- **Each object carries its own metadata**, which stays manageable precisely because the file isn't fragmented
+- **Direct retrieval from anywhere** over the internet, no infrastructure in between
+- **Effectively unlimited capacity** — S3 will not refuse more data
+
+---
+
+## ⚠️ Where Object Storage Is the Wrong Choice
+
+Object storage is not universally better — it has real limitations that map directly to exam scenarios:
+
+- **Higher latency** — access goes through HTTP calls, which is inherently slower than a mounted block or file volume
+- **Inefficient for enormous numbers of tiny files** — with a 1 KB file, the **metadata overhead can exceed the data itself**
+- **Not built for frequent modification** — updating an object generally means **rewriting the whole object**, not patching part of it
+- **Legacy application compatibility** — older applications expecting a mounted filesystem often can't address object storage directly
+
+> **The rule of thumb:** static data that is written once and read many times → object storage. Data being **constantly modified** — an active database, real-time transaction processing — → block or file storage (EBS/EFS) instead.
+
+---
+
+## Where It Fits Perfectly
+
+- **Large media files** — photos, videos, big documents
+- **Backup and archival** — it handles enormous volumes cheaply, and is far cheaper than EBS
+- **Global content distribution** — pairs naturally with a CDN, since objects are already URL-addressable
+- **Growing modern applications** — capacity expands without architectural change
+
+> **A useful mental test:** a photo uploaded to a social network is essentially never edited afterwards — written once, read constantly. That is the object-storage pattern exactly, and it's why **Dropbox, Netflix, Pinterest, Shopify, and iCloud** all run on object storage.
+`,
+    },
+    {
+      id: "s3-introduction",
+      title: "S3 – Features, Consistency & Creating a Bucket",
+      shortDesc: "The 11-nines durability claim, the consistency model, what you actually pay for, and the bucket naming rules",
+      visuals: ["S3Features"],
+      content: `## Why S3 Matters
+
+**Amazon S3 was the first service AWS ever launched**, and remains one of its most popular. Solid S3 knowledge is essentially mandatory for any AWS exam or interview.
+
+---
+
+## The Headline Numbers
+
+| Feature | Figure |
+|---|---|
+| **Availability** | **99.99%** — across a full year, the service may be unavailable for at most roughly **9 hours** |
+| **Durability** | **11 nines (99.999999999%)** — the probability of losing a stored object is vanishingly small |
+| **Object size** | **0 bytes up to 5 TB** per object |
+| **Total capacity** | **Virtually unlimited** |
+
+> Availability and durability are **different guarantees**: availability is whether you can *reach* your data right now; durability is whether the data still *exists*. S3's durability figure is dramatically stronger than its availability figure.
+
+---
+
+## The Feature Set
+
+- **Storage classes** — different tiers for different access patterns; using them correctly is one of the biggest cost levers in AWS
+- **Lifecycle management** — automatically transition or delete objects over time (e.g. a compliance rule to keep invoices 3 years, then delete)
+- **Versioning** — keep multiple versions of the same object, which also makes deleted files recoverable
+- **Encryption** — **on by default** for new uploads as of 2024, with several key-management options
+- **Event notifications** — trigger something (e.g. a Lambda function) when an object is uploaded or deleted
+- **Management and monitoring** — integrates with CloudWatch and the wider AWS tooling
+
+---
+
+## ⚠️ The Consistency Model (Exam Favourite)
+
+> **Read-after-write consistency for PUTs of NEW objects** — the instant an upload completes, that object is immediately visible to everyone.
+>
+> **Eventual consistency for overwrite PUTs and DELETEs** — overwriting or deleting an existing object takes time to propagate, so a read immediately afterwards may still return the old state.
+
+The distinction to memorize: **brand-new object → immediately consistent. Overwrite or delete → eventually consistent.**
+
+---
+
+## What You Actually Pay For
+
+A common misconception is that S3 charges only for storage. There are **four** cost dimensions:
+
+1. **Storage** — the volume of data held
+2. **Requests** — each request made against the data (small, but not zero)
+3. **Storage management** — features layered on top
+4. **Data transfer**
+
+---
+
+## Good Fits vs Bad Fits
+
+**Well suited to:** images, PDFs, videos · backup and archive · static website hosting · big data analytics · log file storage · machine learning datasets · IoT device data · content distribution · mobile and gaming application assets
+
+> ⚠️ **Not suited to** anything needing **low-latency access, frequent updates, or transactional support** — active databases and real-time processing systems belong on **EBS or EFS**.
+
+---
+
+## Creating a Bucket
+
+Everything in S3 starts with a **bucket**. **S3 → Create bucket**, then choose a **region near your users** (e.g. Asia Pacific Mumbai for Indian users).
+
+### ⚠️ Bucket Naming Rules
+
+Bucket names follow DNS-label conventions, and the console rejects violations immediately:
+
+- **Globally unique** — across *all* AWS accounts worldwide, not just yours. Common names like "bucket-1" or "my-bucket" are long gone.
+- **3 to 63 characters**
+- **Lowercase letters, numbers, dots and hyphens only** — no uppercase, no other special characters
+- **Must begin and end with a letter or number**
+- **Must not be formatted like an IP address**
+
+Server-side **encryption is enabled by default** on creation — no action needed to get it.
+
+> The global-uniqueness rule catches everyone the first time: a name is not "taken in your account," it's taken **on the entire internet**, which is why real bucket names tend to include a company name or random suffix.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
-      visuals: ["ObjectVsBlock", "S3Features", "StorageClasses", "ExpressOneZone", "Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
+      visuals: ["StorageClasses", "ExpressOneZone", "Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
       content: `## S3 – Simple Storage Service (Part 1)
 
 **Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
