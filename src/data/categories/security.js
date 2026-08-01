@@ -864,10 +864,196 @@ By default, the IAM user sign-in URL contains the account's raw **12-digit accou
 `,
     },
     {
+      id: "iam-credential-report",
+      title: "IAM Credential Report",
+      shortDesc: "One downloadable CSV listing every user's password, MFA, and access-key status",
+      visuals: ["IAMReports"],
+      content: `## Why IAM Produces Reports at All
+
+IAM is fundamentally a **security** service — it decides who can access what. In a corporate environment, that means periodically having to **prove** what access exists, for **auditing** and **compliance** purposes.
+
+> **IAM offers 3 distinct reports**: the **Credential Report**, **Access Advisor**, and **Access Analyzer**. Each answers a genuinely different question, and knowing which one answers which is a recurring exam theme.
+
+This topic covers the first.
+
+---
+
+## What the Credential Report Tells You
+
+> **The Credential Report gives a complete overview of every IAM user's credential status in the account** — as a single downloadable **CSV** file.
+
+**Where:** **IAM → Dashboard → Credential report → Download report** (also under **Access reports → Credential report**).
+
+For every IAM user, the CSV includes:
+
+- The user's **ARN** and **creation time**
+- **Password status** — enabled or not, **last used**, **last changed**, **next rotation** due
+- **MFA status** — whether multi-factor authentication is active for that user
+- **Access key details** — whether each key is active, **when it was last rotated**, and **when it was last used**
+
+---
+
+## What It's Actually Used For
+
+- **Auditing and compliance** — a single artifact showing the account's credential posture at a point in time, which is exactly what an auditor asks for
+- **Finding users without MFA** — instead of clicking into ten separate user pages, scan one column
+- **Finding stale credentials** — access keys that haven't been rotated in a long time, or haven't been used at all, are visible immediately
+- **Last activity** — how long since each user last accessed AWS services
+
+---
+
+## Key Facts
+
+| Property | Detail |
+|---|---|
+| **Scope** | **All IAM users** in the account |
+| **Covers** | Users only — not groups or roles |
+| **Format** | Downloadable **CSV** (opens directly in Excel) |
+| **Frequency** | Generated **on demand** from the console |
+| **Region** | **Global** — not per-region |
+| **Cost** | **Free**, included with IAM |
+
+> The defining characteristic to remember: **credential status, all users, downloadable CSV**. The next report answers a completely different question — not "what credentials exist" but "what permissions are actually being used."
+`,
+    },
+    {
+      id: "iam-access-advisor",
+      title: "IAM Access Advisor",
+      shortDesc: "Which services an entity can reach, and when it last actually used them — the tool for enforcing least privilege",
+      visuals: [],
+      content: `## The Question This Report Answers
+
+The Credential Report says what credentials exist. **Access Advisor** answers something different:
+
+> **Which AWS services can this entity actually reach, and when did it last use each one?** That "last accessed" timestamp is what makes it the practical tool for enforcing the **principle of least privilege** — if a permission has never been used, it probably shouldn't be granted.
+
+---
+
+## Where to Find It
+
+Unlike the Credential Report, there's **no file to download**. Access Advisor is built directly into the console:
+
+**IAM → Users (or Groups, or Roles) → select the entity → Access Advisor tab.**
+
+> ⚠️ **It works on all three IAM entities** — users, groups, **and** roles — unlike the Credential Report, which covers users only.
+
+---
+
+## Watching It Update in Real Time
+
+Take a user with only **AmazonS3FullAccess** attached. Its Access Advisor tab shows a short list — S3 and S3 Object Lambda.
+
+Now attach **AmazonEC2FullAccess** to the same user and revisit the tab: the allowed-service count jumps to **seven**, now including **EC2**, **EC2 Auto Scaling**, **CloudWatch**, **Elastic Load Balancing**, and even **IAM** itself.
+
+> This is the same hidden related-service breadth from the AWS-Managed-Policies topic, but now **visible and measurable** — Access Advisor shows exactly what a broad managed policy actually granted, rather than leaving you to infer it from the policy name.
+
+Each listed service also shows **when it was last accessed** (or "not accessed in the tracking period" for permissions never exercised).
+
+---
+
+## Using It to Tighten Policies
+
+The workflow is straightforward: look for services the entity is **allowed** to use but has **never actually accessed**, then revoke those permissions — narrowing a broad policy toward what the role genuinely needs.
+
+> This is precisely how you move from a convenient-but-overly-broad AWS Managed policy toward a tight Customer Managed policy: let Access Advisor show you the real usage pattern first, then write the narrower policy around it.
+
+---
+
+## Key Facts
+
+| Property | Detail |
+|---|---|
+| **Scope** | IAM **users, groups, and roles** |
+| **Shows** | Services allowed + **last accessed** timestamp |
+| **Format** | **In-console** — no download |
+| **Frequency** | **Real-time**, viewable anytime |
+| **Region** | **Global** |
+| **Cost** | **Free** |
+
+> Defining characteristic: **which services, last used when, for any entity, in-console**. The third report shifts perspective again — away from your own entities entirely, toward who **outside** the account can reach your resources.
+`,
+    },
+    {
+      id: "iam-access-analyzer",
+      title: "IAM Access Analyzer",
+      shortDesc: "Finding resources exposed to external accounts and permissions nobody uses — and the one IAM feature that's per-region",
+      visuals: [],
+      content: `## The Question This Report Answers
+
+The first two reports look **inward** — your credentials, your entities' usage. Access Analyzer looks **outward and at waste**:
+
+> **Access Analyzer identifies (1) resources shared with entities OUTSIDE your AWS account or organization, and (2) permissions that were granted but are never actually used.**
+
+**Where:** **IAM → Access reports → Access Analyzer.**
+
+---
+
+## ⚠️ The Per-Region Exception
+
+> **IAM is a global service** — create a user, and it can operate in any region; the IAM dashboard shows "Global" with region selection greyed out.
+>
+> **Access Analyzer is the exception: analyzers are created PER REGION.** Opening Access Analyzer, the region selector becomes active — you create an analyzer in each region where resources you want analyzed actually live.
+
+This is a genuinely distinctive fact worth memorizing, precisely because it contradicts the "IAM is global" rule that holds everywhere else.
+
+---
+
+## Finding Type 1 — External Access Findings
+
+Generated when a resource is reachable by an entity **outside** your account or organization. Examples of what surfaces here:
+
+- An **S3 bucket** with public access enabled
+- An **IAM role** configured for **cross-account access**
+- A **KMS key** shared with an external account
+- An **SQS queue** or **Lambda function** exposed externally
+
+**Creating one:** **Access Analyzer → Create analyzer → External access analysis** → create. Results appear within a minute or two.
+
+**Reading a finding:** each shows the **resource ARN** (e.g. the cross-account role built earlier in this section), and the **external principal** — the outside account ID that can reach it. Compare that principal against your own account ID to confirm it genuinely is external.
+
+Each finding can then be marked as **intended** (this cross-account access is deliberate — archive it) or acted on (**this shouldn't exist — remove the role or bucket policy**).
+
+---
+
+## Finding Type 2 — Unused Access Findings
+
+Identifies **policies and roles granting permissions that have never been utilized**.
+
+> Unused permissions are a real attack surface: a role granted for a one-off test months ago, still active and still over-permissioned, is exactly what an attacker looks for. Removing them shrinks what a compromise could reach.
+
+**Creating one:** **Create analyzer → Unused access analysis.**
+
+---
+
+## ⚠️ The Pricing Split (Exam-Relevant)
+
+| Finding type | Cost |
+|---|---|
+| **External access findings** | **Free** |
+| **Unused access findings** | **Paid** — approximately **$0.20 per IAM user or role, per month** |
+
+> The free/paid split is worth remembering — it's an easy distinguishing detail for a question asking which Access Analyzer capability incurs cost.
+
+---
+
+## The Three Reports Side by Side
+
+| | Credential Report | Access Advisor | Access Analyzer |
+|---|---|---|---|
+| **Answers** | What credentials exist and their status | Which services an entity can use, and last used when | What's exposed externally + what permissions go unused |
+| **Scope** | IAM **users** only | Users, **groups, and roles** | **Resources** and policies |
+| **Format** | Downloadable **CSV** | **In-console**, real-time | **In-console** findings |
+| **Region** | Global | Global | ⚠️ **Per-region** |
+| **Cost** | Free | Free | External: free · Unused: **paid** |
+
+> **Exam shortcuts:** "audit every user's MFA and key status" → **Credential Report**. "revoke permissions nobody uses / enforce least privilege" → **Access Advisor**. "find publicly-shared buckets or unintended cross-account access" → **Access Analyzer** (and remember it's the per-region one).
+`,
+    },
+    {
       id: "iam-org-sso",
       title: "IAM – Reports, Organizations & SSO (Part 2)",
       shortDesc: "IAM reports, AWS Organizations + SCPs, Identity Center",
-      visuals: ["IAMReports", "AWSOrganizations", "SCPSimulator", "IdentityCenterSSO"],
+      visuals: ["AWSOrganizations", "SCPSimulator", "IdentityCenterSSO"],
       content: `## IAM Part 2 — Reports, Organizations & SSO
 
 Building on IAM fundamentals: the security **reports** IAM produces, managing many accounts with **AWS Organizations** + **SCPs**, and single sign-on via **IAM Identity Center**.
