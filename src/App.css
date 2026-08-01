@@ -635,6 +635,8 @@ a { color: var(--aws-orange); }
   color: #c4ccd6;
 }
 .topic-content blockquote strong { color: var(--aws-orange-2); }
+.topic-content blockquote p { margin: 0; }
+.topic-content blockquote p + p { margin-top: 10px; }
 .topic-content pre {
   background: #0b0e14;
   border: 1px solid var(--border);

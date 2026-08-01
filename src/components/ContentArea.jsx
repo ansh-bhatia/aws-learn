@@ -944,9 +944,28 @@ function renderMarkdown(text) {
     } else if (line.startsWith("# ")) {
       elements.push(<h1 key={i}>{inlineFormat(line.slice(2))}</h1>);
     }
-    // Blockquote
-    else if (line.startsWith("> ")) {
-      elements.push(<blockquote key={i}>{inlineFormat(line.slice(2))}</blockquote>);
+    // Blockquote — consecutive "> " lines merge into one quote; a bare ">"
+    // separates paragraphs within it
+    else if (line.startsWith("> ") || line === ">") {
+      const start = i;
+      const paras = [];
+      let current = [];
+      while (i < lines.length && (lines[i].startsWith("> ") || lines[i] === ">")) {
+        if (lines[i] === ">") {
+          if (current.length) paras.push(current.join(" "));
+          current = [];
+        } else {
+          current.push(lines[i].slice(2));
+        }
+        i++;
+      }
+      if (current.length) paras.push(current.join(" "));
+      elements.push(
+        <blockquote key={`bq-${start}`}>
+          {paras.map((para, pi) => <p key={pi}>{inlineFormat(para)}</p>)}
+        </blockquote>
+      );
+      continue;
     }
     // Horizontal rule
     else if (line.match(/^[-*]{3,}$/)) {
