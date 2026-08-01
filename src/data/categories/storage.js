@@ -2202,10 +2202,253 @@ Server-side **encryption is enabled by default** on creation — no action neede
 `,
     },
     {
+      id: "s3-storage-classes",
+      title: "S3 Storage Classes – The Four General-Purpose Tiers",
+      shortDesc: "Standard, Standard-IA, Intelligent-Tiering and One Zone-IA — and the retrieval fee that punishes the wrong choice",
+      visuals: ["StorageClasses"],
+      content: `## Why This Is the Biggest Cost Lever in S3
+
+Every object uploaded to S3 is assigned a **storage class**. Picking the right one for your actual access pattern is one of the largest cost savings available anywhere in AWS — and picking the wrong one can cost *more* than doing nothing.
+
+**Where to set it:** uploading an object, expand **Properties** → **Storage class**.
+
+---
+
+## The Decision That Drives Everything
+
+> **How often will this data actually be accessed?** "Frequent" means **more than once a month**; "infrequent" means **around once a month or less**. That single question selects the class.
+
+---
+
+## 1. S3 Standard — Frequently Accessed
+
+The **default**. Designed for data accessed more than once a month, with **millisecond** access.
+
+- **Durability:** 11 nines · **Availability:** 99.99%
+- Replicated across **3 or more Availability Zones**
+- **No minimum storage duration, no minimum object size, no retrieval fee**
+- **Most expensive** per GB — roughly **$2.50 per 100 GB/month**
+
+---
+
+## 2. S3 Standard-Infrequent Access (Standard-IA)
+
+Long-lived data accessed **about once a month**, still with **millisecond** latency.
+
+- **Durability:** 11 nines · **Availability:** 99.9%
+- Still replicated across **3 or more AZs**
+- ⚠️ **Minimum storage duration: 30 days** · ⚠️ **Minimum billable object size: 128 KB**
+- Roughly **$1.38 per 100 GB/month** — around **50% cheaper** than Standard
+
+### ⚠️ The Trap Everyone Tries
+
+> A natural thought: "store everything in Standard-IA at half price, then just access it frequently anyway." **AWS charges a per-GB retrieval fee** on every access from IA classes. Frequently-accessed data in an IA class ends up **more expensive overall** than simply using Standard.
+
+The storage discount is real, but it is paid for by retrieval charges — which is exactly why understanding your access pattern first is the whole game.
+
+---
+
+## 3. S3 Intelligent-Tiering — Unknown Access Pattern
+
+> **The keyword that maps to this class: "changing or unknown access pattern."** If you genuinely cannot predict whether data will be hot or cold, AWS monitors each object and moves it between tiers automatically.
+
+- **Durability:** 11 nines · **Availability:** 99.9%
+- Replicated across **3 or more AZs** · **No minimum storage duration**
+- ⚠️ **A per-object monitoring and automation fee applies** — that's the cost of the automation
+- **No retrieval fees** — appropriate, since the entire premise is that access is unpredictable
+- Roughly **$2.30 per 100 GB/month**
+
+---
+
+## 4. S3 One Zone-Infrequent Access (One Zone-IA)
+
+For **recreatable**, infrequently accessed data, still at millisecond speed.
+
+> **The single difference from Standard-IA: data is stored in ONE Availability Zone only**, not three or more.
+
+- **Durability:** 11 nines · **Availability: 99.5%** — visibly lower than every other class
+- ⚠️ **Not resilient to the loss of that Availability Zone** — if the AZ goes down, the data is unreachable until it returns
+- **Minimum duration 30 days · minimum object size 128 KB · retrieval fees apply**
+- Roughly **$1.10 per 100 GB/month** — the cheapest of these four
+
+**When it fits:** a second copy of data that already exists elsewhere — e.g. an off-site backup of on-premises data. Losing access temporarily is tolerable because the primary copy is somewhere else.
+
+---
+
+## Side by Side
+
+| Class | Access pattern | AZs | Availability | Min duration / size | ~Cost per 100 GB/mo |
+|---|---|---|---|---|---|
+| **Standard** | Frequent (>1/month) | 3+ | 99.99% | None / none | $2.50 |
+| **Standard-IA** | ~Once a month | 3+ | 99.9% | 30 days / 128 KB | $1.38 |
+| **Intelligent-Tiering** | **Unknown/changing** | 3+ | 99.9% | None | $2.30 + monitoring fee |
+| **One Zone-IA** | Infrequent, **recreatable** | **1** | **99.5%** | 30 days / 128 KB | $1.10 |
+
+> Prices here are approximate and illustrative — real S3 billing also depends on requests, retrieval, and transfer. The **relative ordering** is what matters for choosing correctly.
+
+> A fifth class, **S3 Express One Zone**, appears greyed out in this same dropdown — because it requires a completely different kind of bucket, which is the next topic.
+`,
+    },
+    {
+      id: "s3-express-one-zone",
+      title: "S3 Express One Zone & Directory Buckets",
+      shortDesc: "Single-digit millisecond latency by co-locating storage in the same AZ as your compute",
+      visuals: ["ExpressOneZone"],
+      content: `## Why It's Greyed Out
+
+In the storage-class dropdown, **S3 Express One Zone** cannot be selected for a normal upload.
+
+> **S3 Express One Zone requires a "directory bucket" — a different bucket type from the standard "general purpose" bucket.** A general purpose bucket cannot hold Express One Zone objects, and a directory bucket can hold *only* Express One Zone objects.
+
+---
+
+## What It Is
+
+> **A high-performance, single-AZ storage class purpose-built for consistent single-digit millisecond data access** — aimed at the most latency-sensitive workloads: gaming, real-time applications, and machine learning.
+
+- **Up to 10x faster** data access than S3 Standard
+- **Request costs around 50% lower** than Standard
+- The lowest-latency object storage class AWS offers
+
+---
+
+## The Mechanism: Co-Location
+
+This is the part worth actually understanding, because it explains *why* it's faster.
+
+**With a normal bucket:** you choose a **region**, but not an Availability Zone. Your EC2 instance might sit in one AZ while the data it reads sits in another. AZs are connected by fibre, which is fast — but crossing between them still introduces latency.
+
+> **With a directory bucket, you explicitly choose the Availability Zone.** Place the bucket in the *same* AZ as the EC2 instances running your application, and the request never crosses an AZ boundary at all. **That co-location is where the single-digit millisecond latency comes from.**
+
+---
+
+## Creating One
+
+**S3 → Create bucket** now offers two bucket types:
+
+| Bucket type | Purpose |
+|---|---|
+| **General purpose** | The normal bucket — supports all the standard storage classes |
+| **Directory** | Required for **S3 Express One Zone**, and supports only that class |
+
+Choosing **Directory** prompts for an **Availability Zone** (pick the one hosting your compute), plus an acknowledgement that data is stored in a **single AZ**.
+
+Afterwards the S3 console lists general purpose and directory buckets separately — and a directory bucket displays its **Availability Zone**, which a general purpose bucket never does.
+
+Uploading into a directory bucket, the storage-class picker inverts: **S3 Express One Zone is the only selectable option**, everything else greyed out.
+
+---
+
+## ⚠️ Regional Availability
+
+At the time of the source course, **S3 Express One Zone was available in only four regions** — notably **not** Mumbai (ap-south-1), which is why the walkthrough switches to N. Virginia. Newer AWS features routinely land in N. Virginia first.
+
+---
+
+## Express One Zone vs One Zone-IA
+
+Both store data in a single AZ, but they exist for opposite reasons:
+
+| | **One Zone-IA** | **Express One Zone** |
+|---|---|---|
+| **Goal** | **Cheap** storage for recreatable, rarely-read data | **Fast** storage for latency-critical workloads |
+| **Access speed** | Milliseconds | **Single-digit** milliseconds, up to 10x faster |
+| **Bucket type** | General purpose | **Directory bucket** |
+| **AZ choice** | Not selectable | **You choose it explicitly** |
+
+> Same single-AZ trade-off, entirely different motivation — cost in one case, latency in the other.
+`,
+    },
+    {
+      id: "s3-glacier-classes",
+      title: "S3 Glacier – The Three Archive Classes",
+      shortDesc: "Instant, Flexible and Deep Archive — plus the backup-vs-archive distinction that decides between them",
+      visuals: [],
+      content: `## First: Backup Is Not Archive
+
+These two words get used interchangeably, and choosing the wrong storage class usually starts with confusing them.
+
+| | **Backup storage** | **Archive storage** |
+|---|---|---|
+| **Primary goal** | **Disaster recovery** — a second copy in case the original is lost | **Long-term preservation** — compliance, analytics, historical record |
+| **Access frequency** | Potentially frequent — whenever something breaks | **Infrequent** — rarely touched at all |
+| **Retrieval speed needed** | **Fast** — seconds to minutes; the business is down until it's restored | **Slow is acceptable** — minutes or hours doesn't hurt anything |
+| **Cost priority** | Varies with how fast you need it | **As low as possible** — it may sit for 10+ years |
+
+**Worked examples:** copying customer data to a second location so a failed drive doesn't end the business → **backup**. An insurance company keeping policies for 10 years because regulation demands it → **archive**.
+
+---
+
+## All Three Share
+
+**11 nines durability**, and replication across **3 or more Availability Zones**. The differences are entirely about **retrieval speed, minimum duration, and price**.
+
+---
+
+## 1. S3 Glacier Instant Retrieval
+
+> **Archive data that still needs immediate access when it is needed.** Retrieval is in **milliseconds** — as fast as S3 Standard.
+
+- **Availability:** 99.9% · **Minimum storage duration: 90 days**
+- **Saves roughly 68% versus Standard-IA** for data accessed about **once per quarter**
+
+**When it fits:** long-lived data touched a few times a year, where the rare access must be instant.
+
+---
+
+## 2. S3 Glacier Flexible Retrieval
+
+> **Backup and archive data that is rarely accessed** — cheaper still, in exchange for giving up instant retrieval.
+
+- **Availability:** 99.9% · **Minimum storage duration: 90 days**
+- **Up to 10% cheaper** than Glacier Instant Retrieval, for data accessed **1–2 times per year**
+
+**Three retrieval options — the defining feature of this class:**
+
+| Option | Time | Note |
+|---|---|---|
+| **Expedited** | **1–5 minutes** | For when you need it urgently |
+| **Standard** | **3–5 hours** | Effectively free |
+| **Bulk** | **5–12 hours** | For very large volumes |
+
+> This class suits a **mix** of backup and archive data precisely because of that range: urgent restores use Expedited, while routine archive reads use the free Standard tier.
+
+---
+
+## 3. S3 Glacier Deep Archive
+
+> **The cheapest storage AWS offers** — for data that is very rarely accessed and must be kept for years.
+
+- **Availability:** 99.9% · ⚠️ **Minimum storage duration: 180 days** (double the other two)
+- **Only two retrieval options:**
+
+| Option | Time |
+|---|---|
+| **Standard** | **12–48 hours** |
+| **Bulk** | **48 hours** |
+
+> ⚠️ **There is no Expedited option in Deep Archive.** This is the key exam distinction from Flexible Retrieval: if a scenario requires the *possibility* of retrieving archived data within minutes, Deep Archive is disqualified — the fastest option here is measured in **hours**, minimum.
+
+**When it fits:** 7-, 10-, or 15-year compliance retention where the data will almost certainly never be read, and cost dominates every other consideration.
+
+---
+
+## Choosing Between Them
+
+| Class | Retrieval | Min duration | Best for |
+|---|---|---|---|
+| **Glacier Instant Retrieval** | **Milliseconds** | 90 days | Archive needing instant access, ~1/quarter |
+| **Glacier Flexible Retrieval** | 1–5 min / 3–5 hr / 5–12 hr | 90 days | Mixed backup + archive, 1–2 times/year |
+| **Glacier Deep Archive** | **12–48 hr / 48 hr** | **180 days** | Long-term compliance, cheapest possible |
+
+> **Exam shortcut:** "must be retrievable in minutes" → Flexible Retrieval (Expedited). "Millisecond access to archived data" → Instant Retrieval. "Cheapest possible, hours is fine" → Deep Archive.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
-      visuals: ["StorageClasses", "ExpressOneZone", "Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
+      visuals: ["Versioning", "LifecycleRules", "AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
       content: `## S3 – Simple Storage Service (Part 1)
 
 **Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
