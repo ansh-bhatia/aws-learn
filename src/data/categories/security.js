@@ -687,6 +687,183 @@ Beyond just naming *who* can assume a role, a custom trust policy can require:
 `,
     },
     {
+      id: "iam-root-mfa-lab",
+      title: "Lab – Enabling MFA on the Root User",
+      shortDesc: "The single most important thing to do to an AWS account — step by step with an authenticator app",
+      visuals: ["RootBestPractices"],
+      content: `## Why This Is Non-Negotiable
+
+The root user has **unrestricted** access to everything in the account — every service, all billing, the ability to close the account entirely. A password alone protecting that much power is not enough.
+
+> **There are 5 root user best practices.** This topic covers the first and most important: **enable Multi-Factor Authentication**. Not enabling MFA on root is explicitly a violation of AWS best practice, and it's the security recommendation AWS surfaces most prominently on the IAM dashboard.
+
+**MFA adds a second verification factor beyond the password** — so a stolen or guessed password on its own still cannot get anyone into the account.
+
+---
+
+## Step 1 — Find the MFA Setting
+
+Two routes to the same place:
+
+- **IAM dashboard** → the "Add MFA for root user" **security recommendation** banner (shown when root MFA isn't yet enabled), or
+- **Account name (top right) → Security credentials → Multi-factor authentication (MFA)**
+
+> ⚠️ Enabling MFA from **this** page applies it to the **root user** specifically — distinct from enabling MFA on an individual IAM user, which is done from that user's own Security credentials tab.
+
+Click **Assign MFA device** and give it a name (e.g. **my-MFA**).
+
+---
+
+## Step 2 — Choose the Device Type
+
+Three options:
+
+| Type | What it is |
+|---|---|
+| **Authenticator app** | A free app on your phone (Google Authenticator or similar) — no extra hardware needed |
+| **Security key** | A physical hardware key (e.g. FIDO/U2F) |
+| **Hardware TOTP token** | A dedicated physical token device, purchasable separately |
+
+This lab uses the **authenticator app** — install Google Authenticator (available on Android and iOS) on your phone first, then click **Next**.
+
+---
+
+## Step 3 — Pair the Device
+
+Click **Show QR code** in the AWS console. In the authenticator app: **Add code → Scan a QR code** → scan the code on screen.
+
+The app immediately begins generating rotating 6-digit codes for this account.
+
+> ⚠️ **AWS requires TWO consecutive codes to confirm the pairing** — enter the code currently shown, wait for it to roll over (about a minute), then enter the **next** one. This proves the device is genuinely synced and generating valid codes over time, not just a one-off match.
+
+Click **Add MFA**.
+
+---
+
+## Step 4 — Verify It Actually Works
+
+Sign out of the console entirely, then sign back in as root.
+
+After entering the email and password, AWS now prompts for the **MFA code**. Open the authenticator app, read the current code, enter it — and only then does login succeed.
+
+> That extra prompt is the whole point: even someone who has fully compromised the root password is stopped here without physical access to the paired device.
+
+---
+
+## Removing It (If Ever Needed)
+
+**Security credentials → MFA → select the device → Remove.** Available if a device is lost or being replaced — but there is no good reason to leave root without MFA in normal operation.
+
+---
+
+## The Other 4 Practices
+
+MFA is practice **#1** of 5. The remaining four — **never using root for daily work**, **deleting/rotating root access keys**, **securing the root email address**, and **using an account alias** — are covered in the next two topics.
+`,
+    },
+    {
+      id: "iam-never-use-root",
+      title: "Root User – The 9 Tasks Only Root Can Do",
+      shortDesc: "Everything else belongs to an admin IAM user — and the exact list AWS tests you on",
+      visuals: [],
+      content: `## Best Practice #2: Never Use Root for Everyday Tasks
+
+Root has unrestricted access, which makes using it for routine administration genuinely dangerous — one mistake, or one compromised session, affects everything with no guardrail whatsoever.
+
+> **But some tasks genuinely cannot be done by anything except the root user.** Knowing exactly which ones is a frequently-tested exam point — everything *not* on this list should be done by an IAM user instead.
+
+---
+
+## The Tasks That Require Root
+
+1. **Change account settings** — e.g. the account's email address or the root password itself
+2. **Close the AWS account** entirely
+3. **Restore IAM user permissions** — if an IAM user has been fully denied access (locked out by policy), only root can restore it
+4. **Configure AWS Shield Advanced** — the paid DDoS protection tier
+5. **Configure alternate account contacts** — the alternative billing, operations, and security contacts
+6. **Certain billing functions** — while an IAM user *can* be granted general billing access, **updating the payment method** specifically is root-only
+7. **Sign up for or cancel an AWS Support plan** — and transferring a support plan between tiers
+8. **Request a service limit increase**
+9. **Sign up for AWS GovCloud** (the US government cloud regions)
+
+> **Everything outside this list — launching instances, managing VPCs, creating buckets, all normal day-to-day operations — should be done through an IAM user, never root.**
+
+---
+
+## The Fix: Create an Admin IAM User
+
+For a single standalone AWS account, the standard approach is one dedicated administrative IAM user for daily work:
+
+**IAM → Users → Create user** → name it **admin** → enable **console access** → set a password → **Attach policies directly → AdministratorAccess** (an AWS Managed policy granting broad administrative permission).
+
+---
+
+## Verify It Covers Daily Work
+
+Log in as **admin** using the IAM sign-in URL. Normal administrative work all functions correctly — viewing EC2 instances, launching them, even terminating them.
+
+> This admin user handles essentially everything routine. It **cannot** perform the 9 root-only tasks above — which is exactly the intended boundary. Root stays locked away with MFA enabled, used only for those specific nine situations, while all real work happens through an account that can be audited, restricted, or revoked if something goes wrong.
+`,
+    },
+    {
+      id: "iam-root-security",
+      title: "Root User – Access Keys, Email & Account Alias",
+      shortDesc: "Best practices 3, 4, and 5 — the ones most often left undone",
+      visuals: [],
+      content: `## Best Practice #3: Delete or Rotate Root Access Keys
+
+Console login uses email + password. But **access keys** exist for programmatic and CLI access — and root can have them too.
+
+> ⚠️ **Root access keys are especially dangerous**: they grant unrestricted, programmatic access to the entire account, with no MFA prompt standing in the way (MFA protects console login, not API calls made with an access key).
+
+**Where to check:** **Account name → Security credentials → Access keys.**
+
+> **AWS allows a maximum of 2 active access keys** on the root user. If any exist and aren't genuinely needed, the correct action is: **deactivate first, then delete**. Ideally root has **zero** access keys at all.
+
+**"Rotating"** means deleting the old key and creating a fresh one — the practice for cases where a root key genuinely must exist and can't simply be removed. **Prefer IAM roles and IAM users over root access keys for any API access.**
+
+> Same rule as everywhere else with credentials: the **secret** access key is shown exactly once at creation. Download it then, or lose it permanently.
+
+---
+
+## Best Practice #4: Secure the Root Email Address
+
+The email address on the account **is** the root user's username — and it's also the address AWS sends password-reset links to.
+
+> ⚠️ **Anyone who controls that email inbox can reset the root password and take over the entire AWS account.** Securing the account is meaningless if the email address behind it is weakly protected.
+
+Practical implications: the root email should itself have a strong password and MFA, should ideally be a **dedicated** address (not a personal inbox or one individual's work address that disappears when they leave), and access to it should be tightly limited.
+
+**Where it lives:** **Account name → Account → Edit** (re-authentication is required to change it).
+
+---
+
+## Best Practice #5: Use an Account Alias
+
+By default, the IAM user sign-in URL contains the account's raw **12-digit account ID**.
+
+> An account alias is a unique identifier that **replaces the account ID** in that sign-in URL — so the URL becomes a readable company name instead of exposing the numeric account ID to everyone who receives it.
+
+**IAM → Dashboard → Account Alias → Create.** Delete the alias, and the sign-in URL immediately reverts to showing the 12-digit ID again — a quick way to see exactly what the alias is hiding.
+
+> Account IDs aren't secret in the cryptographic sense, but they are an identifier worth not broadcasting unnecessarily — particularly since sign-in URLs get shared with every new employee, contractor, and partner who needs console access.
+
+---
+
+## All 5 Root Best Practices Together
+
+| # | Practice |
+|---|---|
+| **1** | **Enable MFA** on the root user |
+| **2** | **Never use root for everyday tasks** — use an admin IAM user, reserve root for the 9 root-only tasks |
+| **3** | **Delete or rotate root access keys** — ideally root has none at all |
+| **4** | **Secure the root email address** — it can reset the root password |
+| **5** | **Use an account alias** — keep the 12-digit account ID out of shared sign-in URLs |
+
+> These five together are what "securing the root user" actually means in practice, and they come up repeatedly in exam scenarios framed as "which of the following is a best practice for the AWS account root user?"
+`,
+    },
+    {
       id: "iam-org-sso",
       title: "IAM – Reports, Organizations & SSO (Part 2)",
       shortDesc: "IAM reports, AWS Organizations + SCPs, Identity Center",
