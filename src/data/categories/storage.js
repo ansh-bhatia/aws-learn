@@ -3993,6 +3993,234 @@ With CORS correctly configured: clicking the link now shows **"CORS request succ
 `,
     },
     {
+      id: "s3-crr-lab",
+      title: "Lab – Cross-Region Replication (CRR)",
+      shortDesc: "One-way automatic replication to another region — the 4 configuration options that decide how it behaves",
+      visuals: ["CRRDemo"],
+      content: `## What CRR Does
+
+> **Cross-Region Replication automatically replicates every object uploaded to a source bucket into a destination bucket in a different region** — one-way, and fully automatic once configured.
+
+**Why it matters:**
+
+- **Disaster recovery** — a redundant off-site copy in a second region
+- **Compliance** — some industries (banking is the classic example) mandate off-site or cross-border data storage
+- **Lower latency for distant users** — if 30% of users are in the US while data lives in India, replicating to a US bucket gives that segment a local copy to read from
+
+---
+
+## ⚠️ Three Prerequisites
+
+1. **Source and destination buckets in different regions** — CRR is cross-**region** by definition
+2. ⚠️ **Versioning must be enabled on BOTH buckets** — a frequently tested exam fact. The console can enable it automatically while setting up the rule if it isn't already on.
+3. **An IAM role** permitting read from the source and write to the destination — AWS can generate this automatically during setup
+
+---
+
+## Setting Up the Rule
+
+**Source bucket → Management → Replication rules → Create replication rule:**
+
+- Name it, set **Status: Enabled**
+- **Scope:** apply to all objects, or filter by **prefix/tag** for partial replication
+- **Destination:** a bucket in the same account, or — with the destination account's ID — a bucket in a **different AWS account**
+- **IAM role:** let AWS create one automatically
+- **Destination storage class:** optionally different from the source — e.g. **Standard** in the source region for frequent local access, **Standard-IA** in the destination if that region's copy is rarely read. This is a real cost lever, not just a replication detail.
+
+---
+
+## The Four Options That Actually Get Tested
+
+**1. Replication Time Control (RTC)** — off by default.
+
+| | RTC off (default) | RTC on |
+|---|---|---|
+| **Speed guarantee** | None — minutes to hours, depends on object size | ✅ **99.99% of objects replicated within 15 minutes**, backed by an SLA |
+| **Monitoring** | Basic | Detailed replication metrics included |
+| **Cost** | Lower | Additional charge |
+
+**2. Replication metrics** — independent of RTC (RTC includes it automatically); provides detailed status/performance insight, useful when compliance requires reporting on replication activity.
+
+**3. Delete marker replication** — off by default.
+
+> **Off:** deleting an object in the source leaves the destination copy **untouched** — useful for archival, since the destination effectively becomes a permanent backup even of things later removed from the source.
+>
+> **On:** a delete in the source **propagates** to the destination — consistent deletion across both buckets.
+
+**4. Replica modification sync** — off by default.
+
+> Replication is inherently **one-way**: source → destination. Enabling this adds the reverse path specifically for **modifications to already-replicated objects** — editing a replicated object in the destination syncs that change **back** to the source. New objects created directly in the destination still do **not** flow backward; only edits to existing replicated objects do.
+
+---
+
+## Existing vs Future Objects
+
+Creating the rule asks whether to **replicate existing objects**:
+
+> **By default, CRR only replicates NEW uploads from the moment the rule is enabled.** Objects already sitting in the source bucket are **not** retroactively replicated unless you explicitly opt in to "Replicate existing objects."
+
+---
+
+## Verifying It Works
+
+With replication enabled (including existing objects): the source bucket's pre-existing files appear in the destination within roughly **40–45 seconds** in testing. Uploading a **new** object to the source shows up in the destination shortly after — replication timing without RTC has no guarantee, but is typically fast in practice for smaller objects.
+
+> Managing the rule afterward — pausing, editing, or deleting it — happens from **source bucket → Management → Replication rules**.
+`,
+    },
+    {
+      id: "s3-transfer-acceleration",
+      title: "Lab – S3 Transfer Acceleration",
+      shortDesc: "Routing uploads through the nearest CloudFront edge location instead of the raw internet — up to 500% faster",
+      visuals: ["TransferAcceleration"],
+      content: `## The Problem It Solves
+
+A bucket in **US East** serving mostly US-based users is correctly placed for them — but uploading to it from **India** (roughly 17,000 km away) over the ordinary internet is slow and inconsistent, regardless of local bandwidth.
+
+> **S3 Transfer Acceleration speeds up uploads and downloads by 50–500%**, particularly for **long-distance transfers of large files**, by routing traffic through AWS's own network instead of the public internet for most of the trip.
+
+AWS provides a **speed comparison tool** to preview the improvement for a specific location before enabling it for real.
+
+---
+
+## How It Actually Works
+
+> **Transfer Acceleration routes data through the nearest Amazon CloudFront Edge Location, then across AWS's own global backbone network to the bucket's region** — instead of the request traveling the full distance over the public internet the whole way.
+
+The trip breaks into two legs:
+
+1. **Local device → nearest edge location** — short, fast, using ordinary internet since the edge location is geographically close
+2. **Edge location → bucket's region → bucket**, entirely over **Amazon's private global backbone**, using AWS's own optimized routing rather than public internet paths, avoiding congestion and inconsistent public routing entirely
+
+> This is the same edge location network that underlies **CloudFront**, AWS's CDN (covered later in the course) — Transfer Acceleration essentially reuses that same edge infrastructure, just for uploads/downloads instead of content caching.
+
+---
+
+## Enabling and Using It
+
+**Bucket → Properties → Transfer Acceleration → Edit → Enable.** This generates a distinct **accelerated endpoint URL**, separate from the bucket's normal endpoint.
+
+> ⚠️ **Transfer Acceleration cannot be exercised through the console upload button — only via the CLI, SDK, or REST API**, since it requires targeting the special accelerated endpoint explicitly.
+
+**Using the AWS CLI:**
+
+- Baseline (no acceleration): **aws s3 cp** the file to the bucket normally
+- Accelerated: the same command, but adding **--region** (the source region) and **--endpoint-url** pointing at the accelerated endpoint (**https://**, with the bucket-specific accelerate hostname)
+
+---
+
+## The Measured Result
+
+In a real test uploading a 214 MB file from India to a US East bucket:
+
+| | Speed | Total time |
+|---|---|---|
+| **Direct upload (no acceleration)** | ~1.2 MB/s | **2 minutes 8 seconds** |
+| **Transfer Acceleration** | ~9 MB/s | **24 seconds** |
+
+> That's roughly a **5x improvement** on this specific transfer — squarely within the advertised 50–500% range, and dramatically more consistent than the unaccelerated path.
+
+---
+
+## The Trade-Off
+
+> ⚠️ **Transfer Acceleration is not free** — it carries its own transfer fee on top of standard S3 pricing. For buckets serving users geographically close to the bucket's region, the benefit is minimal and the extra cost isn't justified. It earns its keep specifically for **long-distance, large-file** transfer patterns.
+`,
+    },
+    {
+      id: "s3-server-access-logging",
+      title: "S3 Server Access Logging",
+      shortDesc: "A plain-text CCTV record of every request against a bucket — delivered in batches, never in real time",
+      visuals: [],
+      content: `## What It Records
+
+> **Server Access Logging provides a detailed record of every request made to an S3 bucket** — regardless of whether the request came through the console, SDK, or CLI.
+
+Each log entry captures: the **request type**, the **resource accessed**, the **requester**, their **IP address**, the **time**, and the **response status**.
+
+**Real use cases beyond pure security:**
+
+- **Security and access auditing** — the obvious one
+- **Request pattern tracking** — understanding how objects are actually being accessed
+- **Usage statistics** — e.g. discovering a specific PDF was downloaded 100,000 times, informing what content to produce next
+
+---
+
+## Enabling It
+
+**Bucket → Properties → Server access logging → Edit → Enable** → specify a **destination bucket** for the logs.
+
+> ⚠️ **Best practice is a SEPARATE destination bucket, not the same bucket being logged.** Logging a bucket to itself creates a feedback loop of billable storage growth and mixes log files in with real data. An optional log prefix/key format can organize entries by date, source account, etc.
+
+---
+
+## ⚠️ Delivery Is Not Real-Time
+
+> **Logs typically appear in the destination bucket within 2–4 hours of the actual event** — delivered in **batches**, not streamed as requests happen. A burst of high traffic can mean multiple log files landing together after the fact, but there is no live tailing.
+
+This delay is worth internalizing precisely because it's easy to assume logging is immediate and then be confused when nothing appears right after a test request.
+
+---
+
+## ⚠️ What You Do With the Logs (Exam-Favorite Scenario)
+
+> **Server access logs are delivered as plain-text files** — genuinely useful only once something else parses and analyzes them. AWS points at **Amazon Athena** and **AWS Glue** for this; third-party options include **Splunk** or the **ELK stack**.
+
+**The standard exam scenario:** *"How do you analyze S3 bucket access patterns using Amazon Athena?"* The answer chain is: **enable Server Access Logging → logs accumulate in the destination bucket → feed those logs into Athena for querying/analysis.** Server Access Logging is the prerequisite step that makes the Athena analysis possible at all — without it, there's nothing to analyze.
+
+> The next topic covers **CloudTrail Data Events** — a second, more detailed logging mechanism for S3 that serves a related but distinct purpose, and the comparison between the two is itself a common exam question.
+`,
+    },
+    {
+      id: "s3-cloudtrail-data-events",
+      title: "CloudTrail Data Events vs Server Access Logging",
+      shortDesc: "Summary plain-text logs vs detailed JSON API-call auditing — the 5 differences the exam actually tests",
+      visuals: ["LoggingVsCloudTrail"],
+      content: `## Two Logging Mechanisms, Genuinely Different Purposes
+
+> **CloudTrail Data Events provide a detailed log of every action performed on objects within an S3 bucket** — GetObject, PutObject, DeleteObject — down to **exactly who accessed which object, when, and from where.**
+
+That sounds a lot like Server Access Logging from the previous topic — deliberately so, since confusing the two is common and exam-tested.
+
+---
+
+## The Five Differences
+
+| | **Server Access Logging** | **CloudTrail Data Events** |
+|---|---|---|
+| **Detail level** | ⚠️ **Summary-level** — one line per request | ⚠️ **Detailed** — full **API call** records, including object-level operations |
+| **Log format** | **Plain text** | ⚠️ **JSON** |
+| **Where enabled** | S3 console — **bucket → Properties → Edit** | ⚠️ **CloudTrail console**, not S3 directly |
+| **Performance/cost impact** | Minimal | **Higher on busy buckets** — detailed logging generates substantially more data, raising storage cost |
+| **Best suited to** | Basic auditing, usage statistics, request-pattern analysis | **Security monitoring, compliance auditing, detailed API-activity tracking** |
+
+---
+
+## Reading the Log Entries
+
+A **PutObject** event, logged both ways, illustrates the gap directly:
+
+- **Server Access Logging** produces a **single line** — request type, resource, requester, time, response status
+- **CloudTrail Data Events** produces a **structured JSON record** with the same core facts plus far more: the requester's full **ARN**, richer API-call context, and finer-grained detail throughout
+
+> **Server Access Logging tells you a GetObject happened. CloudTrail Data Events tells you exactly which principal's ARN performed it, via which API call, with full surrounding context** — genuinely deeper, at the cost of more data and more setup.
+
+---
+
+## ⚠️ Where It's Configured
+
+> **CloudTrail Data Events for S3 cannot be turned on from the S3 console at all.** Configuration happens entirely in the **CloudTrail console**, since Data Events are a CloudTrail feature applied to S3 as a resource type — not an S3 feature in its own right. (Full CloudTrail configuration is covered when CloudTrail itself is introduced later in the course.)
+
+---
+
+## Exam Shortcuts
+
+> "**JSON**-formatted logs" or "**object-level API call** auditing" → **CloudTrail Data Events**. "**Plain-text** summary logs" or "basic usage statistics, feed into Athena" → **Server Access Logging**. "Configured **in the S3 console**" → Server Access Logging (CloudTrail Data Events require the CloudTrail console instead).
+
+> Both mechanisms can run simultaneously and answer different questions — Server Access Logging for lightweight, everyday usage insight; CloudTrail Data Events when the requirement is genuinely strict, detailed, API-level auditing.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
@@ -4053,7 +4281,7 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
       id: "s3-part2",
       title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
       shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
-      visuals: ["CRRDemo"],
+      visuals: [],
       content: `## S3 – Part 2
 
 Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
@@ -4131,7 +4359,7 @@ Auto-replicates objects to a destination bucket in **another region** — **one-
       id: "s3-part3",
       title: "S3 – Part 3 (Transfer Acceleration, Logging, Pre-signed URLs, Events, Multipart, Endpoints, Access Points)",
       shortDesc: "Acceleration, access logging vs CloudTrail, Requester Pays, pre-signed URLs, MFA Delete, events, multipart, VPC endpoint, access points",
-      visuals: ["TransferAcceleration", "LoggingVsCloudTrail", "RequesterPays", "PresignedURL", "MFADelete", "EventNotification", "MultipartUpload", "VPCEndpoint", "AccessPoints"],
+      visuals: ["RequesterPays", "PresignedURL", "MFADelete", "EventNotification", "MultipartUpload", "VPCEndpoint", "AccessPoints"],
       content: `## S3 – Part 3
 
 Advanced S3 features: performance, auditing, cost-shifting, secure sharing, automation, large uploads, private connectivity, and granular access.
