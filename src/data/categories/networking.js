@@ -2802,6 +2802,175 @@ A CloudFront distribution **cannot be deleted directly** — the **Delete** opti
 `,
     },
     {
+      id: "cloudfront-origin-settings",
+      title: "CloudFront – Origin Settings",
+      shortDesc: "Origin domain, origin path, custom headers, and Origin Shield — the four building blocks of where content actually comes from",
+      visuals: [],
+      content: `## Origin Domain
+
+> **Origin domain specifies the DNS name or endpoint CloudFront fetches content from** — S3, an Elastic Load Balancer, API Gateway, MediaStore, or a custom HTTP origin.
+
+⚠️ **Only resources that already exist in the account appear selectable** — everything else shows greyed out. An Elastic Load Balancer option is unavailable simply because no load balancer exists yet in that account; creating one first makes it selectable. The origin must exist **before** the distribution can point at it.
+
+---
+
+## Origin Path
+
+> **Origin path is optional**, and specifies a subfolder within the origin to treat as the distribution's root.
+
+If **index.html** sits directly at the **root** of the origin (e.g. bucket root), no origin path is needed — CloudFront just fetches from the root by default. But if the site actually lives inside a subfolder (e.g. a **/web** folder), CloudFront has no way to know that on its own — it fetches from the root unless explicitly told otherwise. **Origin path is exactly that instruction**: "look inside this subfolder for everything."
+
+---
+
+## Custom Headers
+
+> **A custom header is extra information CloudFront attaches to every request it sends to the origin** — commonly used for **authentication** (an API key the origin requires), **versioning** (telling the origin which content version to serve), or debugging/custom logic.
+
+**Two concrete use cases:**
+
+- An origin that requires an **API key** for every request — CloudFront can attach that key via a custom header on every fetch, so the origin authenticates CloudFront's requests automatically
+- An origin serving **multiple content versions** — a custom header tells the origin which version CloudFront wants back
+
+Configured directly in the distribution's origin settings as name/value pairs; multiple headers can be added if needed. Entirely optional and driven by whatever the specific origin requires.
+
+---
+
+## Origin Shield
+
+> **Origin Shield adds one additional, centralized caching layer positioned directly in front of the origin** — beyond the two layers CloudFront already provides by default (**Regional Edge Caches** and **Edge Locations**).
+
+**Without Origin Shield:** under heavy traffic, enough requests can slip past both existing caching layers and hit the origin directly, risking origin overload.
+
+**With Origin Shield enabled:** a new centralized cache sits directly in front of the origin. The very first request for a piece of content gets cached at this shield layer, then distributed outward to the other caching layers — meaning **near-zero requests ever reach the origin directly** after that first fetch, dramatically reducing origin load.
+
+> ⚠️ **Origin Shield is a chargeable feature** — worth enabling specifically when origin overload protection matters more than the extra cost.
+
+---
+
+## Exam Framing
+
+> "Content sits in a subfolder, not the origin's root" → **Origin Path**. "Origin requires an API key or specific content version on every request" → **Custom Header**. "Reduce direct requests hitting the origin even under heavy load, willing to pay extra" → **Origin Shield**.
+`,
+    },
+    {
+      id: "cloudfront-default-cache-behavior",
+      title: "CloudFront – Default Cache Behavior",
+      shortDesc: "Path pattern scoping, automatic compression, and the three viewer protocol policies that decide HTTP vs HTTPS",
+      visuals: [],
+      content: `## Path Pattern
+
+> **Path pattern specifies which content actually gets cached.** A wildcard covering everything caches the entire site; a folder-scoped pattern like an images-folder wildcard caches **only** that folder's content.
+
+Scoping the path pattern to just the content that benefits from caching (rather than everything) is a direct **cost lever** — content excluded from caching isn't stored across edge locations at all.
+
+---
+
+## Compress Objects Automatically
+
+> **CloudFront can automatically compress files before serving them to users** — no manual configuration beyond enabling the option.
+
+A concrete example from the source material: a **100KB CSS file** compressed down to roughly **30KB** — up to a **70% size reduction**. Smaller transferred payloads mean faster page loads for users, at effectively zero setup cost. ⚠️ **Best practice: always enable this** — there's essentially no downside.
+
+---
+
+## Viewer Protocol Policy
+
+> **This setting controls whether users can reach the distribution over HTTP, HTTPS, or both.**
+
+| Option | Behavior |
+|---|---|
+| **HTTP and HTTPS** | Both accepted — full flexibility, no enforcement |
+| **Redirect HTTP to HTTPS** | A plain HTTP request is automatically redirected to HTTPS — users can type either, but always end up secure |
+| **HTTPS only** | HTTP requests are rejected outright — the only way in is HTTPS |
+
+---
+
+## The HTTPS Payoff, Demonstrated
+
+An S3 static website hosting endpoint used as a CloudFront origin is itself **HTTP-only** — S3 static hosting has no HTTPS option at all, and browsers flag it as **"Not Secure."** Pointing a CloudFront distribution at that same S3 endpoint and opening the **CloudFront URL instead** shows the padlock and HTTPS immediately — **CloudFront is what adds HTTPS to content that otherwise has none.**
+
+> ⚠️ The default **cloudfront.net** distribution URL gets HTTPS automatically, with zero extra configuration. A **custom domain name** is different — it requires manually configuring a **CNAME record** in DNS and attaching a **custom SSL/TLS certificate**, covered in the next lab.
+
+---
+
+## Exam Framing
+
+> "Cache only a specific folder to control cost" → **Path Pattern**. "Automatically shrink transferred file sizes" → **Compress Objects**. "Force all traffic to HTTPS" → **Viewer Protocol Policy set to HTTPS only** (vs the softer **Redirect HTTP to HTTPS**, which still accepts HTTP but never serves it directly).
+`,
+    },
+    {
+      id: "cloudfront-custom-https-lab",
+      title: "Lab – CloudFront Custom Domain with HTTPS",
+      shortDesc: "Pointing a real domain at a distribution with a valid ACM certificate — and hitting (then fixing) the classic CNAME mismatch error",
+      visuals: [],
+      content: `## Goal
+
+Serve the S3-hosted static site from the earlier lab through **both** a custom domain name (not the default cloudfront.net URL) **and** valid HTTPS — the two things a real production deployment actually needs.
+
+---
+
+## Step 1 — S3 Static Website (Already Done)
+
+Reuses the static website hosting bucket from the earlier lab as the origin. ⚠️ **S3 static website hosting never provides HTTPS** — only CloudFront adds that layer on top.
+
+---
+
+## Step 2 — Register a Custom Domain
+
+Purchase a domain through **Route 53** (AWS's own registrar) or any third-party registrar (GoDaddy, Namecheap, etc.). Route 53 is used here specifically because it integrates far more smoothly with the certificate-validation and alias-record steps ahead.
+
+---
+
+## Step 3 — Request an SSL/TLS Certificate (ACM)
+
+HTTPS is fundamentally backed by a **digital certificate**. **AWS Certificate Manager (ACM) → Request a certificate → Request a public certificate:**
+
+- **Fully qualified domain name** — enter the exact registered domain. Using a **wildcard subdomain form** (a single asterisk followed by a dot and the domain) covers **any** subdomain under that domain with one certificate, rather than issuing separate certificates per subdomain
+- **Validation method** — **DNS validation** (recommended, faster) vs email validation
+- **Request** — generates the certificate, initially in a **pending validation** state
+
+**Completing DNS validation:** ACM provides a **CNAME record name/value pair** that must be added to the domain's DNS. In **Route 53** specifically, ACM offers a **one-click "Create record in Route 53"** button that adds it automatically — validation then typically completes within **5–10 minutes**. With a third-party DNS provider, the same CNAME must be added manually, and validation can take **30 minutes to 24 hours**.
+
+> ⚠️ **The certificate must be requested in the us-east-1 (N. Virginia) region — a certificate created in any other region cannot be attached to a CloudFront distribution at all.** This is a hard, non-negotiable requirement specific to CloudFront (other services like ALB don't have this restriction).
+
+---
+
+## Step 4 — Create the CloudFront Distribution
+
+**CloudFront → Create distribution:**
+
+- **Origin** — the S3 static website hosting endpoint
+- **Viewer protocol policy** — **Redirect HTTP to HTTPS**
+- **Custom SSL certificate** — select the ACM certificate created in Step 3 (only N. Virginia certificates appear here)
+- **Security policy** — **TLS 1.2_2021** for strong security defaults
+- **Create distribution** — provisions the usual cloudfront.net URL; opening it directly already works and is already HTTPS, but isn't the target custom domain yet
+
+---
+
+## Step 5 — Point the Custom Domain at the Distribution
+
+In **Route 53**: create a new record for the desired subdomain, type **Alias**, targeting the CloudFront distribution directly (selectable from a dropdown once the alias-record-type-CloudFront option is chosen).
+
+> ⚠️ **Opening the custom subdomain at this point fails** with an error resembling **"unsupported protocol"** — even though the record now exists and resolves. This is deliberate in the lab, to demonstrate a real troubleshooting scenario.
+
+---
+
+## Step 6 — Fix It: Alternate Domain Name (CNAME) on the Distribution
+
+The missing piece: the distribution itself was never told which custom domain name is allowed to represent it. **CloudFront distribution settings → Alternate domain name (CNAME) → add the exact custom subdomain** → attach the same ACM certificate again in this field → **Save changes**.
+
+> The distribution redeploys (another multi-minute wait), and only afterward does the custom domain resolve correctly over HTTPS — **the DNS alias record alone was never sufficient; the distribution must also explicitly declare the domain as one of its accepted alternate names.**
+
+---
+
+## ⚠️ The Leftover Problem
+
+Even with the custom-domain HTTPS setup fully working, the **original S3 bucket URL still works too** — anyone who has that URL can bypass CloudFront and HTTPS entirely, hitting the insecure S3 origin directly. This is a real security gap: the custom-domain path is locked down, but the back door is still wide open.
+
+> **This exact problem — locking the origin so it's reachable ONLY through CloudFront — is what the next topic (Origin Access) solves.**
+`,
+    },
+    {
       id: "cloudfront",
       title: "CloudFront",
       shortDesc: "Global CDN for low-latency content delivery",
