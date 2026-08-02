@@ -2971,10 +2971,157 @@ Even with the custom-domain HTTPS setup fully working, the **original S3 bucket 
 `,
     },
     {
+      id: "cloudfront-origin-access-lab",
+      title: "Lab – CloudFront Origin Access (OAC vs OAI vs Public)",
+      shortDesc: "Locking an S3 origin so it's reachable only through CloudFront — plus the classic missing-root-object error along the way",
+      visuals: ["OriginAccessControl"],
+      content: `## The Problem, Made Concrete
+
+A CloudFront distribution built on top of an S3 static website has two working URLs: the CloudFront URL (HTTPS, fine) and the **underlying S3 bucket URL/website endpoint (HTTP, insecure)** — and both serve the identical content, because the bucket had to be made public for CloudFront to read it. Anyone who discovers the raw S3 URL bypasses CloudFront, HTTPS, and any caching entirely.
+
+> **Origin Access settings decide who is allowed to reach the origin directly versus only through CloudFront.** ⚠️ **This setting only applies when the origin is an S3 bucket** — it doesn't exist for EC2, ALB, or other origin types.
+
+---
+
+## Three Origin Access Options
+
+When an S3 **bucket** (not its static-website endpoint) is selected as the origin, CloudFront presents three choices:
+
+**1. Public** — the origin is reachable with no restriction at all, directly or via CloudFront. Requires the bucket to have public-read permission. ⚠️ **Not best practice** — suitable only for genuinely public content where security isn't a concern.
+
+**2. Origin Access Control (OAC)** ⭐ — the modern, recommended approach. **Only CloudFront can read the bucket**; direct bucket access is blocked entirely via a bucket policy that grants access exclusively to the CloudFront distribution's own ARN.
+
+**3. Legacy access identity (OAI)** — the older mechanism, functionally similar to OAC. ⚠️ **Kept only for existing setups already using it — always choose OAC for anything new.**
+
+---
+
+## Setting Up OAC, Step by Step
+
+1. **Create the distribution** with the S3 **bucket** (not the website endpoint) as origin → **Origin access → Origin Access Control settings → Create new OAC** (or select an existing one)
+2. CloudFront then displays a **generated bucket policy snippet** that must be copied into the S3 bucket's own policy
+3. **Bucket → Permissions → Bucket policy** → paste the provided policy (it references the CloudFront distribution's ARN as the only allowed principal) → **Save changes**
+
+> ⚠️ **The bucket is never made "public" in this flow** — the policy grants access to one specific CloudFront distribution ARN, not to the world. This is the entire point: the bucket stays private to everyone except that one distribution.
+
+---
+
+## ⚠️ The Access Denied Error (and the Real Fix)
+
+After setting this up and waiting for deployment, opening the CloudFront URL can return **Access Denied** — even though the policy is correct. The actual cause: **CloudFront (via a plain S3 bucket origin) has no built-in concept of which file is the "home page."**
+
+- With **S3 static website hosting**, the index document is explicitly configured in the bucket's own settings, so this never comes up
+- With a **plain S3 bucket as origin** (required for OAC), CloudFront has no equivalent setting **unless told explicitly**
+
+**The fix:** manually appending the filename to the URL (e.g. requesting **index.html** directly) works immediately — confirming the bucket policy and OAC setup were correct all along; only the root-object resolution was missing.
+
+**The permanent fix:** **Distribution → Settings → Edit → Default Root Object → index.html** → save. Once deployed, the bare distribution URL resolves correctly without needing the filename appended.
+
+---
+
+## Exam Framing
+
+> "Lock an S3 origin so it's reachable ONLY through CloudFront, never directly" → **Origin Access Control (OAC)**. "An existing distribution still uses the older mechanism" → **OAI** (legacy, don't migrate without reason, but always choose OAC for new setups). The Access Denied troubleshooting pattern — **bucket policy is correct, but the root URL fails without a filename** — is specifically a missing **Default Root Object**, not a permissions problem.
+`,
+    },
+    {
+      id: "cloudfront-allowed-http-methods",
+      title: "CloudFront – Allowed HTTP Methods",
+      shortDesc: "Matching the method whitelist to what the site actually needs — static reads, CORS preflight, or full CRUD",
+      visuals: [],
+      content: `## What It Controls
+
+> **Allowed HTTP Methods specifies which HTTP methods CloudFront accepts from viewers and forwards to the origin.** Every request to the site passes through CloudFront first, so this setting is the actual gatekeeper for what kind of interaction is even possible.
+
+---
+
+## Three Options
+
+**1. GET, HEAD** — retrieval only.
+
+> Suitable for a **static site**: users read content (browse, download files) but never submit, edit, or delete anything. Any attempt at a write operation is rejected outright, because the method itself was never allowed through.
+
+**2. GET, HEAD, OPTIONS**
+
+> Adds **OPTIONS**, used specifically for **CORS (Cross-Origin Resource Sharing)** preflight requests — the browser's way of asking "what methods does this server actually permit?" before sending the real request. ⚠️ **Required when a site pulls content from multiple origins/buckets** — e.g. a page hosted in one S3 bucket fetching assets from a different bucket needs CORS, and CORS needs OPTIONS allowed through CloudFront to function. A single-bucket, single-origin static site typically doesn't need this.
+
+**3. GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE** — full interaction.
+
+> Required for **dynamic applications** needing complete **CRUD** (Create, Read, Update, Delete). The canonical example: a social-media-style app where users create posts, edit them, and delete them — every one of those actions is a different HTTP method that has to be explicitly allowed through.
+
+---
+
+## The Caching Sub-Option (Only Appears With 3+ Methods)
+
+> **GET and HEAD requests are cached by CloudFront automatically, by default, with no extra configuration.** This sub-option never shows up when only GET/HEAD are selected, because there's nothing extra to decide.
+
+Once **OPTIONS** (or the full method set) is enabled, CloudFront asks separately: **should OPTIONS requests also be cached?**
+
+- ⚠️ **PUT, POST, PATCH, DELETE are never cacheable** — they modify data, so caching them would serve stale or incorrect responses. This applies regardless of any setting.
+- **OPTIONS is the one exception worth deciding on** — since it's just a capability query (not a mutation), caching its response is safe and **reduces load on the origin** by not forwarding every single preflight check.
+
+---
+
+## Exam Framing
+
+> "Static site, read-only" → **GET, HEAD**. "Static or dynamic site pulling assets from multiple origins/buckets" → **GET, HEAD, OPTIONS** (CORS support). "Full create/update/delete functionality" → **all methods**. Remember: **write methods (PUT/POST/PATCH/DELETE) are never cached** — only the read-safe GET/HEAD (always) and OPTIONS (optionally) are.
+`,
+    },
+    {
+      id: "cloudfront-restrict-viewer-access",
+      title: "CloudFront – Restrict Viewer Access",
+      shortDesc: "Signed URLs for a single paid file vs signed cookies for a whole session's worth of paid content",
+      visuals: [],
+      content: `## The Use Case
+
+> **Restrict Viewer Access secures content so only authorized users can view it** — the standard scenario is **paid/premium content** that shouldn't be reachable by just anyone who has the CloudFront URL.
+
+Leaving this at its default (**No**) means content stays unrestricted — anyone with the link can view it. Setting it to **Yes** requires choosing how authorization is verified: **Signed URLs** or **Signed Cookies**.
+
+---
+
+## Signed URL vs Signed Cookies
+
+**Signed URL** — a single link with an embedded cryptographic signature proving the requester is authorized. Anyone holding that exact URL (e.g. after paying) can access **that one specific resource**.
+
+**Signed Cookies** — a small piece of data stored in the browser after authorization, which CloudFront checks on **every subsequent request** for the session. Access to **many resources** is granted at once, without needing a unique signed link per file.
+
+| | **Signed URL** | **Signed Cookies** |
+|---|---|---|
+| **Best for** | **Single resource** (e.g. one PDF, one file) | **Multiple resources** (e.g. a 50-video paid library) |
+| **Mechanism** | The URL itself carries the authorization | **Browser session** carries the authorization via stored cookies |
+| **Setup complexity** | Simple — purely URL-based | Requires cookie handling/management |
+| **Access pattern** | Temporary access to **one specific file** | Seamless access to **many files in one session** |
+
+> "One paid PDF download" → **Signed URL**. "A logged-in member browsing an entire paid video library" → **Signed Cookies**.
+
+---
+
+## Trusted Key Groups
+
+> **A Trusted Key Group is a collection of public keys CloudFront uses to verify that a Signed URL or Signed Cookie is genuine.**
+
+**The setup sequence:** generate a public/private key pair using a tool like **OpenSSL** → **CloudFront console → Key management → Public keys → Create public key**, pasting in the public key content → **Key groups → create a group**, selecting one or more registered public keys → reference that key group when enabling Restrict Viewer Access on the distribution.
+
+> The **private key** is what actually generates valid Signed URLs/Cookies programmatically; the **public key**, registered with CloudFront inside a trusted key group, is what CloudFront uses to verify a request's signature is legitimate.
+
+---
+
+## Trusted Signer (Alternative to Key Groups)
+
+> **Trusted Signer authorizes a specific AWS account** (the distribution owner's own account, or an additional trusted AWS account) **to generate Signed URLs/Signed Cookies** for the distribution's content — delegating signing authority to that account rather than managing individual public keys directly.
+
+---
+
+## Exam Framing
+
+> "Restrict access to premium/paid content behind a signature" → **Restrict Viewer Access**, via **Signed URLs** (one file) or **Signed Cookies** (many files, session-based). The verification layer behind both is a **Trusted Key Group** (public keys) or a **Trusted Signer** (a whole trusted AWS account) — both exist to answer the same question: is this signature legitimate?
+`,
+    },
+    {
       id: "cloudfront",
       title: "CloudFront",
       shortDesc: "Global CDN for low-latency content delivery",
-      visuals: ["OriginAccessControl", "CacheHitMiss", "OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
+      visuals: ["CacheHitMiss", "OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
       content: `## CloudFront — AWS Content Delivery Network (CDN)
 
 **CloudFront** is AWS's **CDN** — it delivers content (web pages, videos, APIs) with **low latency** and **high speed** by **caching** copies at 400+ **edge locations** worldwide. Netflix, Prime, Hotstar — all rely on CDNs.
