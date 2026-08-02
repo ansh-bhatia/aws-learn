@@ -2680,10 +2680,132 @@ Query from a machine whose public IP falls in **119.0.0.0/8** and the record con
 `,
     },
     {
+      id: "cloudfront-intro",
+      title: "CloudFront – Introduction to CDN",
+      shortDesc: "Why one origin serving the whole planet fails, and how edge caching fixes latency, bandwidth, and origin overload at once",
+      visuals: ["CDNGlobe3D"],
+      content: `## The Problem: One Origin, Global Users
+
+> **CloudFront is AWS's CDN (Content Delivery Network)** — a technology that delivers data, videos, applications, and APIs quickly and securely to users anywhere in the world, by **caching content close to the user** rather than always serving from one distant origin. Every major OTT platform — Netflix, Prime Video, Disney+ Hotstar — runs on this exact pattern.
+
+Picture a learning platform hosted entirely on a single server in **Mumbai**. Without a CDN, that single origin causes **three separate problems**:
+
+1. **Latency from distance** — a user in the USA is roughly **17,000 km** away from Mumbai; that physical distance alone adds delay no amount of local bandwidth can fix
+2. **International vs domestic bandwidth** — an Indian user rides fast domestic bandwidth; the American user's request crosses **international bandwidth**, which is consistently slower
+3. **Origin overload** — every single user worldwide, regardless of location, hits the *same* one server. Enough simultaneous global traffic and that server can be brought down entirely
+
+> The Indian user near the origin has a great experience. Every other user, everywhere else in the world, does not — and the more successful the platform gets, the worse the overload problem becomes.
+
+---
+
+## The Fix: Cache Near the User
+
+> **CloudFront copies (caches) your content out to Edge Locations distributed globally — AWS has 400+ of them, far more than its Availability Zones — so users fetch from the nearest edge instead of the distant origin.**
+
+Once a CloudFront distribution is set up in front of that same Mumbai origin:
+
+- The **Indian user** still gets a fast local response — nothing changes for them
+- The **American user** now fetches the cached copy from a **nearby US edge location** instead of crossing the ocean to Mumbai — suddenly they're on domestic bandwidth with no cross-continental distance either
+- Users in New Zealand, the UK, Africa — each routes to **their own nearest edge location** rather than all converging on the one Mumbai server
+
+**All three original problems disappear at once:**
+
+- **Latency** — solved, because the physical distance to the *nearest edge* is short, even though the distance to the true origin never changed
+- **Bandwidth** — solved, because each user's "last mile" is now domestic, not international
+- **Origin overload** — solved, because the origin only sees the relatively small number of requests that miss the cache (first-time fetches or fresh edges), not the full global volume
+
+> The core mental model: **CloudFront doesn't move your origin — it puts copies of your content in many places at once, and routes each user to whichever copy is physically closest to them.**
+
+---
+
+## Exam Framing
+
+> A scenario describing **"global users, one origin, slow for distant users"** or **"reduce latency for a worldwide audience"** → **CloudFront**. The three specific pains it solves — **latency, cross-border bandwidth cost/speed, and origin request overload** — are the standard exam-answer justification for reaching for a CDN at all.
+`,
+    },
+    {
+      id: "cloudfront-hands-on-lab-1",
+      title: "Lab – CloudFront Distribution (Before/After Comparison)",
+      shortDesc: "Hosting a static site on S3, then measuring the exact latency drop a CloudFront distribution buys you, worldwide",
+      visuals: ["DistributionConfig"],
+      content: `## Lab Goal
+
+Host a static website on S3, measure its global performance **without** CloudFront, then add a CloudFront distribution in front of the same origin and measure the **same** website again — side by side, same content, only the delivery path changes.
+
+---
+
+## Task 1 — Host the Static Website on S3
+
+1. **Create an S3 bucket** in a specific region (e.g. **us-east-1 / N. Virginia**)
+2. **Upload the site's asset files first** (video, images) — not the HTML yet, because the HTML needs to reference their final object URLs
+3. Copy each uploaded asset's **object URL** and paste it into the site's **index.html** in place of local file paths
+4. **Upload index.html** last, now that it correctly points at the uploaded assets
+5. **Enable static website hosting**: Bucket → Properties → Static website hosting → Enable → specify **index.html** as the index document
+6. **Make the bucket public**: Permissions → remove **Block all public access** (type "confirm") → attach a public-read bucket policy referencing the bucket's ARN
+
+> This produces an **S3 static website hosting URL** — the baseline "before CloudFront" endpoint.
+
+---
+
+## Measuring the Baseline (No CDN)
+
+Using a **geo-distributed latency testing tool**, the same S3 website URL was checked from multiple simulated locations:
+
+| Location | Latency |
+|---|---|
+| N. Virginia (same region as origin) | ~0ms |
+| Brazil | 113ms |
+| California | 62ms |
+| Ireland | 72ms |
+| Australia | 200ms |
+
+> Exactly the pattern the intro topic predicted: **fast next to the origin, progressively worse the farther away the requester is.**
+
+---
+
+## Task 2 — Create the CloudFront Distribution
+
+**CloudFront console → Create distribution:**
+
+- **Origin domain** — select the S3 bucket; since it has static website hosting enabled, CloudFront explicitly asks whether to use the **website endpoint** — confirm yes
+- **Origin path** — left blank here, because the site's index.html sits at the bucket's root, not inside a subfolder. (If assets lived under a folder like **/web**, that path would need to be specified here so CloudFront knows where the "root" actually is.)
+- **Price class** — leave at **all edge locations** for this test (fewer locations = lower cost, but less global reach)
+- No custom security/HTTPS configuration yet — those are covered in dedicated topics ahead
+
+**Create distribution** → AWS provisions a unique **cloudfront.net** subdomain URL, initially showing status **Deploying** — this typically takes **5–10 minutes** before it settles to **Enabled**.
+
+> ⚠️ **There are now two distinct URLs**: the plain **S3 endpoint** (bypasses CloudFront entirely) and the **CloudFront distribution URL** (routes through edge locations). Using the S3 URL gets none of CloudFront's benefit — the comparison only works if the *same* origin is tested through *both* URLs.
+
+---
+
+## Measuring After CloudFront
+
+Re-running the same geo-latency tool against the **CloudFront URL** instead of the S3 URL, for the identical website:
+
+| Location | Before (S3 direct) | After (CloudFront) |
+|---|---|---|
+| N. Virginia | ~0ms | ~0ms (unchanged — already local) |
+| Brazil | 113ms | ~0ms |
+| California | 62ms | ~2ms |
+| Ireland | 72ms | ~1ms |
+| Australia | 200ms | ~0ms |
+
+> **Same content, same code, zero changes to the website itself** — the only difference is which URL routes through CloudFront's edge network. The dramatic latency drop for every non-local region is the entire value proposition of a CDN, made concrete.
+
+---
+
+## ⚠️ Deleting a Distribution (Two-Step, Not One)
+
+A CloudFront distribution **cannot be deleted directly** — the **Delete** option stays greyed out until the distribution is first **Disabled**, which itself takes several minutes to take effect (another "Deploying" wait). Only once the status shows **Disabled** does **Delete** become available.
+
+> Forgetting this sequence is a common source of confusion — the console doesn't hide the Delete button, it just refuses to let it be clicked until the disable step has fully propagated.
+`,
+    },
+    {
       id: "cloudfront",
       title: "CloudFront",
       shortDesc: "Global CDN for low-latency content delivery",
-      visuals: ["CDNGlobe3D", "DistributionConfig", "OriginAccessControl", "CacheHitMiss", "OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
+      visuals: ["OriginAccessControl", "CacheHitMiss", "OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
       content: `## CloudFront — AWS Content Delivery Network (CDN)
 
 **CloudFront** is AWS's **CDN** — it delivers content (web pages, videos, APIs) with **low latency** and **high speed** by **caching** copies at 400+ **edge locations** worldwide. Netflix, Prime, Hotstar — all rely on CDNs.
