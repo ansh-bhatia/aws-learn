@@ -3285,6 +3285,306 @@ SSE splits by **who manages the keys**:
 `,
     },
     {
+      id: "s3-sse-s3",
+      title: "SSE-S3 – S3-Managed Keys",
+      shortDesc: "The free, transparent default — and the four limitations that push people to KMS",
+      visuals: ["SSEOptions"],
+      content: `## The Default Option
+
+> **With SSE-S3, S3 handles encryption and decryption entirely on its own, using keys AWS manages.** You have no interaction with the keys at all.
+
+**It is the default:** creating a bucket, **Server-side encryption with Amazon S3 managed keys (SSE-S3)** is preselected. AWS now mandates encryption on S3 data, and this is what satisfies it with zero configuration.
+
+**Algorithm:** **AES-256**, the strongest of the symmetric standards.
+
+**Cost:** ⚠️ **Free** — no charge beyond standard S3 storage and request pricing.
+
+---
+
+## Bucket Default vs Per-Object Override
+
+The bucket's setting applies to every object uploaded into it. Uploading an object shows the inherited encryption type under **Destination details**.
+
+To change it for **one object**: **object → Properties → Server-side encryption → Edit → Override bucket settings for default encryption**, then pick a different option.
+
+> The whole process is **completely transparent** — objects are encrypted on write and decrypted on read with no visible difference. There is nothing to manage, and nothing to notice.
+
+---
+
+## ⚠️ The Four Limitations
+
+These are precisely why the other three options exist:
+
+**1. No key management flexibility.** You cannot **rotate**, **disable**, or **revoke** the keys — AWS controls them entirely. Key rotation is a standard security practice that SSE-S3 simply does not expose.
+
+**2. No detailed audit logging.** There is no way to track **when or by whom a key was used**. Compliance regimes that require demonstrable key-usage auditing cannot be satisfied.
+
+**3. No customer-managed key integration.** You cannot supply your own key.
+
+**4. Compatibility gaps.** Some advanced S3 features and third-party security tools have limited support for SSE-S3.
+
+---
+
+## When It Fits
+
+> **Basic encryption needs with no requirement to control or audit the keys.** If the goal is simply "data must be encrypted at rest" with the least effort and no cost, SSE-S3 is the correct answer.
+
+Anything involving **key rotation, auditing, access control over keys, or strict compliance** requires **SSE-KMS** — covered next.
+`,
+    },
+    {
+      id: "s3-sse-kms",
+      title: "SSE-KMS – Key Management Service",
+      shortDesc: "AWS-managed vs customer-managed keys, and the three-way comparison against SSE-S3",
+      visuals: [],
+      content: `## First: What KMS Is
+
+> **AWS Key Management Service (KMS) is a managed service for creating and controlling encryption keys**, with granular permissions over who may use each key. It integrates across AWS — S3, RDS, EBS, EFS all use KMS keys when you want managed encryption.
+
+**SSE-KMS** means S3 still performs the encryption, but the **keys come from KMS** — bringing visibility, access control, and auditing that SSE-S3 cannot offer.
+
+---
+
+## Two Kinds of KMS Key
+
+Selecting **SSE-KMS** on a bucket offers a key choice, and the distinction matters:
+
+**AWS-managed key** — a default KMS key that exists automatically, even in a brand-new account with no keys ever created. Listed as the AWS-managed S3 key.
+
+**Customer-managed key (CMK)** — a key **you** create in KMS (**Create KMS key**, or directly from the S3 encryption dialog). This is where full control lives.
+
+---
+
+## The Three-Way Comparison
+
+This table is the thing worth memorizing, since exam questions turn on exactly these differences:
+
+| | **SSE-S3** | **SSE-KMS (AWS-managed key)** | **SSE-KMS (customer-managed key)** |
+|---|---|---|---|
+| **Key management** | Entirely AWS/S3 | AWS manages, you get some visibility | **You create and manage in KMS** |
+| **Key control** | ❌ None | ⚠️ Limited — enable/disable, see the key ID | ✅ **Full** — rotation policy and permissions |
+| **Key visibility** | ❌ None | ⚠️ Limited | ✅ **Full** |
+| **Auditing** | ⚠️ Basic S3 server access logs only | ✅ **Detailed via CloudTrail** | ✅ **Detailed via CloudTrail** |
+| **Key rotation** | Automatic, invisible to you | Automatic, **trackable** | ✅ Automatic **or manual**, fully customizable |
+| **Permissions** | Tied to bucket access | KMS key policies + IAM policies | ✅ **Full control over who may use the key** |
+| **Compliance** | ⚠️ May be insufficient | Suitable for moderate requirements | ✅ **Strict compliance** |
+| **Cost** | **Free** | ⚠️ Additional KMS charges | ⚠️ Additional KMS charges |
+
+---
+
+## Choosing Between the Three
+
+> **SSE-S3** — simple encryption, no need to control keys, no cost.
+>
+> **SSE-KMS with an AWS-managed key** — you want **CloudTrail auditing** of key usage without managing keys yourself.
+>
+> **SSE-KMS with a customer-managed key** — **sensitive data and strict compliance**: you decide who can use the key, when it rotates, and you can revoke it.
+
+> The critical capability the AWS-managed option adds over SSE-S3 is **auditability**; the critical capability the customer-managed option adds on top is **control**. The next topic proves that control by building it and testing it against two different users.
+`,
+    },
+    {
+      id: "s3-sse-kms-lab",
+      title: "Lab – SSE-KMS with a Customer-Managed Key",
+      shortDesc: "Two users with identical S3 permissions — only one holds the key, and only one can read the data",
+      visuals: ["KMSAccessDemo"],
+      content: `## What This Proves
+
+The point of the lab is a genuinely important security property: **S3 permissions and encryption-key permissions are separate gates.** A user can hold full S3 read access and still be unable to read an object.
+
+---
+
+## Step 1 — Prerequisites
+
+Create **two IAM users**, **Amit** and **Ravi**, each with console access and each granted **AmazonS3ReadOnlyAccess**. Create a bucket (default SSE-S3 for now) and upload a test object.
+
+**Verify the baseline:** signing in as **each** user (use an incognito window and a second browser so all three sessions coexist), both can open the bucket, view the object's contents, and download it. **Identical access.**
+
+---
+
+## Step 2 — Create a Customer-Managed Key and Apply It
+
+**KMS → Customer managed keys → Create key:**
+
+- **Symmetric** key — because S3 uses symmetric encryption
+- **Single-region** key (multi-region is available if data spans regions)
+- Name it, e.g. **fox-key**
+- **Key administrators:** skip — root manages it here
+- ⚠️ **Key users: add Amit only. Deliberately do NOT add Ravi.**
+
+Then apply it: **bucket → Properties → Default encryption → Edit → SSE-KMS → choose fox-key → Save.**
+
+> ⚠️ **Changing the bucket default does not re-encrypt existing objects.** The object uploaded in Step 1 is still SSE-S3. Update it explicitly: **object → Properties → Server-side encryption → Edit → Use bucket settings for default encryption → Save.**
+
+---
+
+## Step 3 — Test Both Users
+
+| User | Has S3 read access | Is a KMS key user | Result |
+|---|---|---|---|
+| **Amit** | ✅ Yes | ✅ **Yes** | ✅ Opens and downloads the object normally — decryption is fully transparent |
+| **Ravi** | ✅ Yes | ❌ **No** | ❌ **"not authorized to perform kms:Decrypt"** — cannot view **or** download |
+
+> **Ravi's IAM policy has not changed.** He still has full S3 read access to that bucket. What blocks him is the **KMS key policy** — a completely separate control. This is the core reason SSE-KMS provides stronger access control than SSE-S3: **access to the bucket and access to the key are independent decisions.**
+
+---
+
+## Key Features This Unlocks
+
+- **Enhanced security** — full control over a customer-managed key
+- **Audit and compliance** — key usage appears in **CloudTrail → Event history**: who used the key, when, and who created it (entries take a short while to appear)
+- **Granular access control** — add or remove key users at any time; removing Amit revokes his ability to decrypt immediately, without touching his IAM policy
+- **Key rotation** — automatic on a schedule, or **on-demand** (up to ten on-demand rotations)
+
+---
+
+## ⚠️ The Cost
+
+Unlike free SSE-S3, SSE-KMS bills for:
+
+- Key creation and storage
+- Automatic key rotation
+- **Key usage** — every encrypt/decrypt call
+- Cross-region data transfer, and CloudTrail logging
+
+> On a bucket with heavy read traffic, per-request KMS charges are the item that surprises people — worth checking in the pricing calculator before enabling it broadly.
+`,
+    },
+    {
+      id: "s3-dsse-kms",
+      title: "DSSE-KMS – Dual-Layer Encryption",
+      shortDesc: "Encrypting the encrypted data, and the US government standard that created the requirement",
+      visuals: [],
+      content: `## What It Does
+
+> **DSSE-KMS encrypts your data twice before storing it** — two independent layers, applied one on top of the other.
+
+| Layer | Performed by |
+|---|---|
+| **First layer** | **S3 itself**, using its own key (the SSE-S3 mechanism) |
+| **Second layer** | **AWS KMS**, using a KMS key you control |
+
+Plain text is encrypted once, and the resulting ciphertext is **encrypted again** with a different key.
+
+> The second layer is where control lives: because it uses KMS, you retain key permissions, rotation, and CloudTrail auditing exactly as with SSE-KMS.
+
+---
+
+## Why It Exists
+
+This option was added for a specific regulatory reason, not as a general-purpose upgrade:
+
+1. **FIPS** (the US Federal Information Processing Standards body) recommended **multiple layers of encryption** for protecting sensitive data — encrypting already-encrypted data using **two different keys**
+2. The **NSA**, via **CNSSP 15** (Committee on National Security Systems Policy 15), implemented that recommendation for US government systems
+3. **AWS added DSSE-KMS to S3** so workloads bound by those standards could meet the requirement natively
+
+> **The exam framing:** a scenario mentioning **multi-layer encryption**, **two independent layers**, or **US government / CNSSP compliance** points to **DSSE-KMS**. Nothing else in S3 provides two layers.
+
+---
+
+## Configuring It
+
+**bucket → Properties → Default encryption → Edit → Dual-layer server-side encryption with AWS KMS keys (DSSE-KMS)**, then select the KMS key.
+
+> The configuration is **identical to SSE-KMS** in every other respect — same key selection, same key management, same permissions model. The only difference is choosing the third option instead of the second.
+
+---
+
+## When to Use It
+
+> Only when a **compliance standard explicitly requires multiple layers of encryption**. For ordinary sensitive data, **SSE-KMS is sufficient** — DSSE-KMS adds processing overhead and cost for a second layer that most requirements do not ask for.
+`,
+    },
+    {
+      id: "s3-sse-c",
+      title: "Lab – SSE-C with a Customer-Provided Key",
+      shortDesc: "Supplying your own key with every request — CLI-only, and AWS never stores it",
+      visuals: ["SSECFlow"],
+      content: `## The Fourth Option
+
+> **SSE-C lets you encrypt S3 data using a key you generate and supply yourself.** S3 performs the encryption, but **AWS never stores your key.**
+
+⚠️ **It does not appear in the S3 console at all** — the key must accompany every individual request, which a web UI cannot do. **SSE-C is usable only via the CLI, SDK, or REST API.**
+
+---
+
+## How It Works
+
+- **You** generate and manage the encryption key
+- **On upload:** you send the key with the request; S3 encrypts the object and stores it, then **discards the key**
+- **On download:** you send the same key again; S3 decrypts and returns the object
+
+> ⚠️ **Because AWS does not retain the key, losing it means losing the data permanently.** There is no recovery path — that is the trade-off for absolute control.
+
+---
+
+## Step 1 — Get OpenSSL
+
+Key generation uses **OpenSSL**. Either install it on Windows from the OpenSSL site, or — far simpler — use an **Amazon Linux EC2 instance**, which ships with OpenSSL preinstalled.
+
+SSH in and become root with **sudo -i**. Confirm availability by running **openssl**.
+
+---
+
+## Step 2 — Generate the Key and Its MD5 Hash
+
+Every SSE-C request needs **two** values: the **base64-encoded AES-256 key**, and its **MD5 hash**.
+
+1. Generate 32 random bytes into a key file: **openssl rand 32 > sse-c.key**
+2. Base64-encode it into a shell variable: **cat sse-c.key | base64** stored as **key**
+3. Produce the MD5 digest of the key, base64-encoded, into a second variable, **key_md5**
+
+Echo each variable to confirm both hold values.
+
+---
+
+## Step 3 — Authenticate the CLI
+
+Run **aws configure** and supply an access key, secret key, default region (e.g. ap-south-1), and output format (json).
+
+> ⚠️ The walkthrough uses **root access keys** purely for demonstration and deletes them afterwards. **This is explicitly bad practice** — real use should authenticate with an IAM user or, better, an instance role, as established in the IAM section.
+
+---
+
+## Step 4 — Upload with the Key
+
+Use **aws s3api put-object**, supplying:
+
+- **--bucket** and **--key** (the object name)
+- ⚠️ **--body** — the local file. **Omitting this uploads an empty object**, a genuinely easy mistake
+- **--sse-customer-algorithm AES256**
+- **--sse-customer-key** — the base64 key variable
+- **--sse-customer-key-md5** — the MD5 variable
+
+---
+
+## Step 5 — Confirm It's Locked
+
+The object now appears in the console. Checking **Properties → Server-side encryption** shows an **unknown/error** state, noting the object is **encrypted with SSE-C**.
+
+> **Opening or downloading it through the console is impossible** — there is nowhere to supply the key. The object is genuinely unreadable to anyone without it, including through the AWS UI.
+
+---
+
+## Step 6 — Download with the Key
+
+Delete the local copy first (to prove the download is real), then run **aws s3api get-object** with the **same** three SSE-C parameters. The file downloads, and its contents are intact.
+
+---
+
+## Where SSE-C Fits
+
+| | SSE-S3 | SSE-KMS | DSSE-KMS | **SSE-C** |
+|---|---|---|---|---|
+| **Who holds the key** | AWS | AWS KMS | AWS KMS (2 layers) | **You** |
+| **AWS stores the key** | ✅ | ✅ | ✅ | ❌ **Never** |
+| **Console support** | ✅ | ✅ | ✅ | ❌ **CLI/SDK/API only** |
+| **Key loss** | N/A | N/A | N/A | ⚠️ **Data unrecoverable** |
+
+> **Use SSE-C when the key must never reside in AWS at all** — a genuine regulatory or organizational constraint. For everything else, SSE-KMS delivers strong control without the burden of key custody.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
@@ -3345,7 +3645,7 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
       id: "s3-part2",
       title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
       shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
-      visuals: ["SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "StaticHosting", "CORSDemo", "CRRDemo"],
+      visuals: ["PublicAccessWays", "BlockPublicAccess", "StaticHosting", "CORSDemo", "CRRDemo"],
       content: `## S3 – Part 2
 
 Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
