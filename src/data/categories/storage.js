@@ -3756,6 +3756,243 @@ Reload the object's URL in the same incognito window that returned Access Denied
 `,
     },
     {
+      id: "s3-static-hosting-intro",
+      title: "S3 Static Website Hosting",
+      shortDesc: "No server to manage, HTML/CSS/JS only — and the scalability that makes it the cheapest hosting option that exists",
+      visuals: ["StaticHosting"],
+      content: `## The Problem
+
+A website's files sitting on a local computer can be opened locally but reached by nobody else. **Web hosting** is what makes files reachable over the internet — space on a server, made publicly accessible.
+
+---
+
+## Five Hosting Options, and Where S3 Fits
+
+| Option | What it is |
+|---|---|
+| **Shared hosting** | Many customers on one server (GoDaddy, Namecheap) — cheapest, least control |
+| **VPS** | A dedicated virtual machine (e.g. AWS Lightsail) |
+| **Dedicated hosting** | A physical server, yours alone — maximum security |
+| **Cloud hosting** | Provision your own server (EC2, an Azure VM) and run it as a web server |
+| **S3 Static Web Hosting** | ⚠️ **No server at all — but only works for static content** |
+
+---
+
+## What "Static" Actually Means
+
+> **Static content is fixed and does not change unless someone manually updates the files.** It contrasts with **dynamic** hosting, where content changes based on user interaction and requires **server-side processing**.
+
+- **Static sites** are built from **HTML, CSS, and JavaScript** — files a browser can render directly, with **no server-side execution** required
+- **Dynamic sites** run server-side languages like **PHP or Node.js** to generate content per request — social media platforms (Twitter, Facebook) are the classic example, since content changes per user and per interaction
+
+> **Roughly 80–90% of ordinary business websites are static** — a company site describing services and products rarely needs per-user dynamic content. That's the audience S3 static hosting serves.
+
+> ⚠️ **This is a direct exam distinction:** HTML/CSS/JS = client-side, no server processing needed. PHP/Node.js = server-side processing required. A scenario needing the latter cannot be satisfied by S3 alone.
+
+---
+
+## Why Host Static Sites on S3 Specifically
+
+- **Scalability** — S3 absorbs a traffic spike from 100 users/day to 10,000/day without any capacity planning on your part
+- **Cost-effective** — pay only for **storage** and **outbound data transfer**; inbound requests are free. This is genuinely one of the cheapest hosting options available anywhere
+- **High availability and durability** — the same 11-nines durability and near-100% availability S3 offers for any object
+- **Fast content delivery** — and can be paired with **CloudFront** (a CDN, covered in a later section) for low-latency delivery worldwide
+- **Simple management** — no OS to patch, no server to monitor, a handful of console steps
+- **Security** — bucket policies and IAM integrate the same way they do for any other bucket
+
+> The next two topics build this hands-on — first with a domain registered outside AWS (GoDaddy), then with **Route 53** as the DNS provider, including transferring DNS management from GoDaddy to Route 53.
+`,
+    },
+    {
+      id: "s3-static-hosting-lab",
+      title: "Lab – Static Hosting with an External Domain (GoDaddy)",
+      shortDesc: "Why the bucket name must exactly match the subdomain when your registrar isn't Route 53",
+      visuals: [],
+      content: `## ⚠️ The Bucket Naming Rule
+
+> **When a domain is registered OUTSIDE Route 53 (GoDaddy, Namecheap, etc.), the bucket name for static hosting MUST exactly match the full hostname the website will be reached at — including any subdomain.**
+
+Wanting the site reachable at **web.cloudfox.in** (a domain registered with GoDaddy), the bucket must be named **exactly** **web.cloudfox.in** — not just **cloudfox.in**.
+
+---
+
+## Step 1 — Create the Bucket and Upload
+
+**S3 → Create bucket** → name it to match the target hostname exactly (e.g. **web.cloudfox.in**) → upload the site's files (**index.html**, CSS, JS, images — multi-select or drag-and-drop).
+
+---
+
+## Step 2 — Make It Public
+
+Static hosting requires the objects to be publicly readable — the same two-step process from the public access topics:
+
+1. **Permissions → Block public access → Edit → uncheck the relevant boxes → confirm**
+2. **Bucket policy → Edit → Policy generator** → Effect **Allow** → Principal a bare wildcard → Action **GetObject** → Resource the bucket ARN with a trailing wildcard for every object → generate → save
+
+---
+
+## Step 3 — Enable Static Website Hosting
+
+**Properties → Static website hosting → Edit → Enable** → **Index document: index.html** → optionally an **Error document** for missing pages → save.
+
+This produces an **S3-provided URL** — functional immediately, but not the friendly domain name the business actually wants.
+
+---
+
+## Step 4 — Point the Domain at the Bucket
+
+In GoDaddy's DNS management for the domain: **Add record.**
+
+> ⚠️ **GoDaddy cannot create an A record pointing at an S3 static website** — A records require a fixed IP address, and S3's endpoint doesn't have one. The workaround is a **CNAME record**: record name **web** (matching the subdomain), value the **S3 static-hosting URL with the leading "http://" stripped off**.
+
+Save the record.
+
+---
+
+## Step 5 — Wait and Verify
+
+DNS propagation for a new record typically takes **5–10 minutes**, though it can extend up to 48 hours depending on the provider. Opening **web.cloudfox.in** in an incognito window after propagation loads the site successfully.
+
+---
+
+## ⚠️ It's HTTP, Not HTTPS — And That's a Hard Limit
+
+The browser flags the site **"Not Secure"** — it's being served over plain **HTTP**.
+
+> **S3 static website hosting supports HTTP only. HTTPS is not possible directly on an S3 static site — this is a genuine limitation, not a missing configuration step**, and it's a fact worth memorizing for the exam.
+
+The fix requires pairing the bucket with **CloudFront** in front of it, which can terminate TLS and serve the site over HTTPS — covered when CloudFront is introduced later in the course.
+`,
+    },
+    {
+      id: "s3-static-hosting-route53-lab",
+      title: "Lab – Static Hosting with Route 53 (Including Domain Transfer)",
+      shortDesc: "Migrating DNS from GoDaddy to Route 53, then the exact record type that actually targets an S3 bucket",
+      visuals: [],
+      content: `## Two Things This Lab Covers
+
+Hosting the same static site, but with **Route 53** as the DNS provider instead of GoDaddy — which means first **migrating DNS management** for an already-GoDaddy-registered domain over to Route 53.
+
+---
+
+## Step 1 — Bucket and Static Hosting, as Before
+
+Create a bucket named to match the intended hostname (e.g. **test.cloudfox.in**), upload the site files, disable Block Public Access, attach a public-read bucket policy via the Policy Generator, then enable **Static website hosting** with **index.html** as the index document — identical to the GoDaddy lab.
+
+---
+
+## Step 2 — Create a Route 53 Hosted Zone
+
+**Route 53 → Hosted zones → Create hosted zone** → enter the **root domain** (e.g. **cloudfox.in**, copied carefully from GoDaddy — a typo here breaks everything downstream) → type **Public hosted zone** → create.
+
+This generates a set of **name server (NS) records** — the addresses Route 53 will use to answer DNS queries for this domain.
+
+---
+
+## Step 3 — Transfer DNS Management to Route 53
+
+The domain is still registered at GoDaddy; only **DNS resolution** moves to Route 53.
+
+**In GoDaddy:** domain → **DNS → Change Name Servers** → switch from GoDaddy's default name servers to **custom name servers** → paste in all **4** name server values generated by Route 53.
+
+> From this point, any DNS query for the domain gets forwarded to Route 53 to answer — but the domain **registration itself** stays with GoDaddy, and still needs renewing there.
+
+---
+
+## Step 4 — Create the Record (A/Alias, Not CNAME)
+
+**Route 53 → the hosted zone → Create record.**
+
+> ⚠️ **The record name must match the bucket name exactly.** Creating a record named **web** when the bucket is named **test.cloudfox.in** produces a mismatch — the S3 static-website target won't even appear in the alias dropdown, because Route 53 is looking for a bucket matching **web.cloudfox.in**, which doesn't exist. This is the single most common mistake in this lab.
+
+With the record name correctly set to **test** (matching **test.cloudfox.in**):
+
+- **Record type: A**
+- Toggle **Alias: on**
+- **Route traffic to:** Alias to S3 website endpoint → select the region (e.g. Asia Pacific – Mumbai) → the matching bucket now appears
+
+> **Route 53 also supports a CNAME approach** — record type CNAME, value the S3 endpoint URL with **http://** stripped — functionally similar to the GoDaddy lab's CNAME record. But the **A record with Alias** is what the exam favors, and it's also the only option that supports being placed at the **zone apex** (the bare domain with no subdomain at all), which a CNAME record cannot do.
+
+---
+
+## Step 5 — Propagation and Verification
+
+As with any DNS change, allow **10–20 minutes** (occasionally longer) before testing. Once propagated, the site loads at the Route 53-managed domain — still over **HTTP only**, the same S3 limitation from the previous lab.
+
+---
+
+## GoDaddy vs Route 53 for This Use Case
+
+| | **GoDaddy (external)** | **Route 53** |
+|---|---|---|
+| **Record type available** | CNAME only (no A record to a non-IP target) | **A record with Alias** (plus CNAME) |
+| **Works at the bare domain (zone apex)?** | ❌ No — CNAME can't be used at the apex | ✅ **Yes**, via Alias |
+| **Bucket naming requirement** | Must match subdomain **exactly** | Must match the **record name** exactly |
+| **Integration** | Manual, cross-platform | **Native** — AWS console throughout |
+
+> **Exam shortcut:** "point a domain's root (apex) directly at an S3 static website" → this requires **Route 53's Alias record**, since a standard CNAME record is disallowed at the zone apex by DNS specification itself.
+`,
+    },
+    {
+      id: "s3-cors-lab",
+      title: "Lab – Cross-Origin Resource Sharing (CORS)",
+      shortDesc: "Why a browser blocks a file fetch across two buckets — and the JSON rule that tells it not to",
+      visuals: ["CORSDemo"],
+      content: `## Reproducing the Problem First
+
+Two buckets: **web-data** hosts a static site (**index.html**), and a separate bucket **web-object-01** holds a file the page tries to fetch (e.g. a download link). Both are made public and static hosting is enabled on **web-data**.
+
+The page's link points at **web-object-01**'s object URL — a **different bucket, which is effectively a different origin**.
+
+**Testing it:** clicking the download link fails — **"CORS request failed"**, visible in the browser console — even though the target file is genuinely public and directly reachable by its own URL.
+
+---
+
+## What CORS Actually Is
+
+> **CORS (Cross-Origin Resource Sharing) is a browser security feature that blocks a webpage from requesting resources from a different origin than the one that served the page — unless that other origin explicitly says it's allowed.**
+
+This isn't an S3-specific concept — it's a decades-old web security mechanism that applies to any cross-origin request. S3 buckets are treated as separate origins from one another, which is exactly why a page hosted in one bucket can't silently pull a file from another without permission.
+
+> ⚠️ **The failure has nothing to do with the object's own public/private status.** The file is fully public and independently downloadable by its direct URL — the browser is blocking the request because of *where the request originated from*, not because of any permission on the file itself.
+
+---
+
+## The Fix: a CORS Configuration on the Resource's Bucket
+
+The CORS rule belongs on the bucket **being requested from** (**web-object-01**), not the bucket serving the page.
+
+**web-object-01 → Permissions → Cross-origin resource sharing (CORS) → Edit** → paste a JSON CORS configuration:
+
+| Field | Meaning |
+|---|---|
+| **AllowedHeaders** | Which request headers the browser may send — a wildcard permits any |
+| **AllowedMethods** | Which HTTP methods are permitted (e.g. GET, HEAD, POST) |
+| **AllowedOrigins** | Which origins may make the request — a wildcard permits any website; a specific origin can be listed instead for tighter control |
+| **ExposeHeaders** | Which response headers JavaScript running in the browser is allowed to read |
+
+> This JSON is typically supplied by a developer rather than written from scratch by a cloud engineer — but knowing what each field controls is what lets you configure it correctly and troubleshoot it when it fails.
+
+---
+
+## ⚠️ Testing It Correctly
+
+Save the CORS configuration, then test in a **fresh incognito window** — not a tab that already had the page open.
+
+> **A tab that loaded the page before the CORS fix was applied may cache the earlier failure**, producing a false negative even after the fix is genuinely in place. Always re-test cross-origin behavior in a clean session.
+
+With CORS correctly configured: clicking the link now shows **"CORS request successful"**, and the file downloads.
+
+**Removing the CORS configuration** and testing again (in a fresh incognito window) immediately reproduces the original failure — confirming the CORS rule, and nothing else, was what made the cross-bucket request work.
+
+---
+
+## The Takeaway
+
+> **CORS is required whenever a static site hosted in one S3 bucket needs to fetch a resource — an image, a file, an API response — from a different bucket (or any different origin).** It is configured on the **target** resource's bucket, expressed as a JSON rule naming which origins, methods, and headers are permitted, and it is a browser-enforced security boundary — not something S3 itself restricts on its own.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
@@ -3816,7 +4053,7 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
       id: "s3-part2",
       title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
       shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
-      visuals: ["StaticHosting", "CORSDemo", "CRRDemo"],
+      visuals: ["CRRDemo"],
       content: `## S3 – Part 2
 
 Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
