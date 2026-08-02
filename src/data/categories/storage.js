@@ -3585,6 +3585,177 @@ Delete the local copy first (to prove the download is real), then run **aws s3ap
 `,
     },
     {
+      id: "s3-public-access-ways",
+      title: "S3 Public Access – The Two Ways to Grant It",
+      shortDesc: "ACL and bucket policy can both make an object public — and why one attempt alone silently fails",
+      visuals: ["PublicAccessWays"],
+      content: `## Private by Default
+
+Every object uploaded to S3 is **private** — reachable only by the account that owns it. Opening an object's URL from anywhere else, even logged into a different AWS account, returns **Access Denied**.
+
+> **Public access means anyone on the internet can view or interact with the bucket's content** — genuinely useful for hosting a static website or sharing files, but a real security risk if enabled carelessly.
+
+---
+
+## Two Mechanisms Can Grant It
+
+**1. ACL** — grants permission on an **individual object**. E.g. "allow public read on this specific PDF."
+
+> ⚠️ **AWS does not recommend this route.** ACLs are the legacy mechanism (covered earlier in this section), and by default they're disabled on every bucket — attempting to edit one shows it greyed out until **Object Ownership** is switched away from "Bucket owner enforced."
+
+**2. Bucket policy** — a JSON document attached to the bucket, naming a **Principal**, an action, and a resource. Setting the Principal to everyone and the resource to the whole bucket is what actually makes content public.
+
+---
+
+## ⚠️ Neither One Works Yet
+
+Attempting either approach on a fresh bucket — enabling public ACL access, or saving a public bucket policy — **fails**, even as root with full permissions:
+
+> The ACL save fails with **"you don't have permission to edit ACL settings."** The bucket policy save fails with **"your bucket policy changes can't save."**
+
+Being root does not bypass this. Something else is actively preventing both mechanisms from taking effect — a **separate, centralized safety setting** that overrides ACLs and bucket policies alike.
+
+> That setting is **Block Public Access**, and understanding it is the entire next topic. Once it's correctly configured, the exact same ACL or bucket policy steps shown here succeed immediately.
+`,
+    },
+    {
+      id: "s3-block-public-access",
+      title: "Block Public Access – The Four Settings",
+      shortDesc: "The account-level override that silently defeats a technically-correct ACL or bucket policy",
+      visuals: ["BlockPublicAccess"],
+      content: `## The Setting That Was Blocking Everything
+
+> **Block Public Access is a centralized safety control that can override both ACLs and bucket policies** — even a perfectly correct public policy fails to save while this blocks it. AWS enables it **by default specifically to prevent accidental public exposure**, since making a bucket public exposes **every object inside it**.
+
+---
+
+## Two Levels, Not Inherited the Way You'd Expect
+
+Block Public Access can be configured at **account level** and **bucket level** independently.
+
+| Level | Default | Scope |
+|---|---|---|
+| **Account level** | **Off** | Applies to **every bucket** in the account — the strongest, most centralized option |
+| **Bucket level** | **On** | Applies to **one specific bucket** |
+
+> ⚠️ **The account-level setting takes precedence and overrides the bucket-level setting.** If Block Public Access is **enabled at the account level**, a bucket with it **disabled at the bucket level still cannot be made public** — both levels must permit it. There is no inheritance shortcut; each level is an independent gate that must both be open.
+
+---
+
+## The Four Individual Settings
+
+Both levels expose the same four checkboxes:
+
+**1. Block public access via new ACLs** — prevents **new** public ACLs from being created; **does not touch ACLs that already exist**.
+
+**2. Block public access via any ACL (new or existing)** — the stronger version of #1: blocks public access from ACLs **regardless of when they were created**, including ones set up before this setting was enabled.
+
+**3. Block public access via new bucket or access point policies** — the bucket-policy equivalent of #1: prevents saving a **new** public policy; existing public policies are unaffected.
+
+**4. Block public and cross-account access via any bucket or access point policies** — the strongest setting: blocks public access **and cross-account access** through any policy, new or existing.
+
+> Settings 1 and 3 only guard the **future**. Settings 2 and 4 guard **everything, past and present** — which is why toggling setting 2 off immediately strips public access from an ACL that was already public, while toggling setting 1 off leaves that same existing ACL untouched.
+
+---
+
+## Proving the Asymmetry
+
+Starting from a bucket already made public via ACL:
+
+- Enabling **"block new ACLs" (setting 1)** and saving — the bucket **stays public**. The setting only prevents *future* public ACLs; it doesn't retroactively revoke the one already in place.
+- Enabling **"block new or existing ACLs" (setting 2)** instead — the existing public ACL is **immediately removed**, and the bucket becomes private again.
+
+The same asymmetry holds for settings 3 and 4 with bucket policies.
+
+---
+
+## Why This Matters
+
+> **Exam framing:** "prevent any future public bucket, but don't touch what's already configured" → settings 1/3. **"Lock down a bucket completely, including anything already public"** → settings 2/4. **"Guarantee no bucket in the account can ever be public, no matter what any individual bucket owner configures"** → the **account-level** toggle, since it overrides every bucket's own setting.
+
+With the relevant boxes unchecked, the ACL and bucket-policy attempts from the previous topic finally succeed — proven end to end in the next lab.
+`,
+    },
+    {
+      id: "s3-public-bucket-policy-lab",
+      title: "Lab – Making a Bucket Public with a Bucket Policy",
+      shortDesc: "Disabling the right Block Public Access boxes, then building the policy with the visual Policy Generator",
+      visuals: [],
+      content: `## Goal
+
+Take a fresh bucket from fully private to serving one file publicly over the internet — the complete, correct sequence.
+
+---
+
+## Step 1 — Create the Bucket and Upload
+
+Create a new bucket, upload a test file (e.g. a PDF). Confirm the baseline: opening the object's URL in an incognito window returns **Access Denied** — private by default, exactly as expected.
+
+---
+
+## Step 2 — Disable the Relevant Block Public Access Settings
+
+This lab uses a **bucket policy**, so only the **policy-related** settings need adjusting — not the ACL ones:
+
+**Bucket → Permissions → Block public access (bucket settings) → Edit:**
+
+- ☐ **Block public access via new bucket or access point policies** — uncheck
+- ☐ **Block public and cross-account access via any bucket or access point policies** — uncheck
+
+Leave the two ACL-related boxes **checked** — this lab isn't using ACLs, and leaving them blocking is simply good hygiene.
+
+Save, typing **confirm** as required.
+
+---
+
+## Step 3 — Understand the Policy Before Writing It
+
+A bucket policy has a fixed anatomy:
+
+| Field | Meaning |
+|---|---|
+| **Version** | The policy-language version — essentially always the same fixed value |
+| **Statement** | An array — a policy can contain multiple statements |
+| **Sid** | An optional identifier/name for the statement |
+| **Effect** | **Allow** or **Deny** — here, Allow |
+| **Principal** | Who the statement applies to — a single wildcard character means **literally everyone** |
+| **Action** | **s3:GetObject** — read access to objects |
+| **Resource** | The bucket's ARN, with a trailing **/wildcard** appended to mean "every object inside it" |
+
+> **The two details that make this a public-read policy specifically:** Principal is the bare wildcard (not a specific user or account), and the action is limited to **GetObject** — read-only, not write or delete.
+
+---
+
+## Step 4 — Build It With the Policy Generator
+
+Rather than hand-writing JSON: **bucket → Permissions → Bucket policy → Policy generator** (opens a separate tool):
+
+- **Select type of policy:** S3 Bucket Policy
+- **Effect:** Allow
+- **Principal:** a single wildcard character, typed directly
+- **AWS service:** Amazon S3
+- **Actions:** **GetObject**
+- **Amazon Resource Name (ARN):** the bucket's ARN, with a trailing **/wildcard** appended
+- **Add statement → Generate Policy**
+
+The tool outputs the exact JSON described above. Copy it, paste it into **bucket policy → Edit**, save.
+
+---
+
+## Step 5 — Verify
+
+Reload the object's URL in the same incognito window that returned Access Denied earlier: it now **opens successfully**. Anyone, anywhere, with no AWS account at all, can now reach that file.
+
+---
+
+## What This Confirms
+
+> Making an object genuinely public requires **two independent things to align**: **Block Public Access must permit it** (the settings from the previous topic), **and** an actual public-granting policy (ACL or bucket policy) must exist. Either one alone is not enough — this is exactly why the very first attempt in this batch failed even with a textbook-correct policy.
+
+> ⚠️ Making a bucket public this way exposes **every object matching the resource pattern** — here, everything in the bucket. Scope the resource ARN to a specific prefix or object if only part of a bucket should be public.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
@@ -3645,7 +3816,7 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
       id: "s3-part2",
       title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
       shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
-      visuals: ["PublicAccessWays", "BlockPublicAccess", "StaticHosting", "CORSDemo", "CRRDemo"],
+      visuals: ["StaticHosting", "CORSDemo", "CRRDemo"],
       content: `## S3 – Part 2
 
 Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
