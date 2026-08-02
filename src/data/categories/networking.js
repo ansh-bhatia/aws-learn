@@ -3118,10 +3118,155 @@ Leaving this at its default (**No**) means content stays unrestricted — anyone
 `,
     },
     {
+      id: "cloudfront-cache-key-origin-requests",
+      title: "CloudFront – Cache Key & Origin Request Policies",
+      shortDesc: "How CloudFront tells a Hindi 4K request apart from an English HD one — and what happens on a cache miss",
+      visuals: ["CacheHitMiss"],
+      content: `## The Problem: One Movie, Many Variants
+
+A streaming platform's origin holds **multiple variants** of the same title — Full HD English, Full HD Hindi, Ultra HD English, Ultra HD Hindi. A user requesting "Inception" isn't asking for one file — they're asking for one **specific variant**, based on their language and quality settings. CloudFront needs a way to tell these requests apart, since caching "Inception" as a single blob would serve the wrong variant to the wrong user.
+
+> **The Cache Key is what CloudFront uses to distinguish otherwise-identical-looking requests into distinct cache entries** — built from whichever combination of **headers, query strings, and cookies** actually carries the distinguishing information (e.g. a language header, a resolution query parameter).
+
+---
+
+## Cache Hit Walkthrough
+
+1. A user requests **Inception, Hindi, 4K**
+2. The request routes to the **nearest edge location** (DNS/latency-based routing)
+3. That edge location checks its **cache key** — built from a **Cache Policy** — against what's actually cached there
+4. If the **Hindi 4K variant is already cached at that edge** → **cache hit** → content is served **immediately from the edge**, no origin involved at all
+
+> **Creating a Cache Policy**: CloudFront console → Policies → Cache → Create cache policy → specify which **headers/query strings/cookies** should participate in distinguishing cache entries (e.g. a device-type header, a resolution query string). Without this, CloudFront has no way to know that "Inception" needs to be split into multiple distinctly-cached variants at all.
+
+---
+
+## Cache Miss Walkthrough
+
+1. A user requests **Inception, English, 4K**
+2. Request routes to an edge location — this time, that edge only has **English Full HD** cached, not 4K
+3. Cache key comparison finds **no match** → **cache miss**
+4. ⚠️ **CloudFront forwards the request to the origin** — governed by a separate, **optional Origin Request Policy**, which decides exactly which details (headers/query strings/cookies) get passed along to the origin when fetching the missing variant
+5. The origin returns the correct **English 4K** variant → CloudFront **caches it at that edge location** for future requests → delivers it to the user
+
+> ⚠️ **On a cache miss, the edge location fetches directly from the origin — it never asks a neighboring edge location for the content.** Each edge is independent; there's no edge-to-edge lookup, only edge-to-origin.
+
+---
+
+## Cache Policy vs Origin Request Policy
+
+| | **Cache Policy** | **Origin Request Policy** |
+|---|---|---|
+| **Purpose** | Defines what makes a cache entry **unique** at the edge | Defines what gets **forwarded to the origin** on a miss |
+| **Required?** | Effectively yes — without it, CloudFront can't distinguish variants | **Optional** |
+| **Matters on cache hit?** | Yes — this is what's checked | No — never invoked if there's a hit |
+| **Matters on cache miss?** | Already determined there's no match | Yes — this is what governs the origin fetch |
+
+> ⚠️ **Origin Request Policy is irrelevant on a cache hit** — it only ever comes into play once a miss has already been determined. Skipping it means CloudFront forwards everything the cache policy captured; defining it narrows what actually reaches the origin, reducing unnecessary origin load.
+
+---
+
+## Exam Framing
+
+> "Distinguish cache entries by header/query string/cookie" → **Cache Policy**. "Control exactly what's forwarded to the origin on a miss, to reduce origin load" → **Origin Request Policy** (optional, only relevant after a miss). The Netflix multi-variant example is the standard mental model for why a cache key needs to be more than just the URL path.
+`,
+    },
+    {
+      id: "cloudfront-response-header-policy",
+      title: "CloudFront – Response Header Policy",
+      shortDesc: "CORS, security headers, custom headers, and server-timing — instructions attached to every response CloudFront sends back",
+      visuals: [],
+      content: `## What a Response Header Actually Is
+
+> **A response header is information the server (or in this case, the CloudFront edge) attaches to a response, telling the browser how to handle what it just received** — similar to a "fragile" label on a shipped package instructing the handler how to treat the contents.
+
+Without a CDN, response headers come straight from the origin. With CloudFront serving cached content from an **edge location**, the request often never reaches the origin at all — so **the edge location itself must be the one attaching these headers**, since it's the one actually replying to the browser.
+
+> **Response Header Policy is CloudFront's configuration for adding, removing, or modifying HTTP response headers** sent back to the client — without touching the origin server's own configuration at all.
+
+---
+
+## Five Categories
+
+**1. CORS (Cross-Origin Resource Sharing)** — configures how CloudFront handles cross-origin requests when a site's content is genuinely sourced from multiple origins (same underlying concept as the CORS coverage in the S3 section).
+
+**2. Security headers** — a set of ready-to-use, predefined headers (e.g. **Strict-Transport-Security**, among others) that harden a site against common attack classes: **cross-site scripting, clickjacking, man-in-the-middle attacks, and protocol downgrade attempts**. Real-world sites (the lecture inspects Netflix's own response headers via browser DevTools as a live example) rely heavily on these. Each individual security header has its own specific purpose and configurable parameters (e.g. a max-age value for Strict-Transport-Security).
+
+**3. Custom headers** — arbitrary key/value pairs added on top of the predefined security headers, for whatever project-specific information needs to reach the browser.
+
+**4. Remove headers** — strips headers that would otherwise leak internal server details (e.g. internal IP addresses or server software versions) — reducing the information an attacker could gather through reconnaissance.
+
+**5. Server timing headers** — attaches performance/timing metrics about how long the request took to process, letting developers diagnose performance bottlenecks directly from browser-side data. Configurable via a **sampling rate**, to control what fraction of requests actually get this instrumentation attached (avoiding the overhead of measuring every single request).
+
+---
+
+## Setting It Up
+
+**CloudFront console → Policies → Response headers → Create response headers policy**, then choose which category(ies) apply and configure each — CORS behavior, which security headers to attach, any custom headers, which headers to strip, and whether to enable server-timing.
+
+---
+
+## Exam Framing
+
+> "Add security hardening headers without touching the origin" → **Response Header Policy → security headers**. "Prevent leaking internal server details" → **remove headers**. "Diagnose server-side performance from the browser" → **server timing headers**. The unifying theme: **CloudFront can add/modify/strip response headers entirely at the edge, independent of what the origin itself is configured to send.**
+`,
+    },
+    {
+      id: "cloudfront-function-associations",
+      title: "CloudFront – Function Associations (CloudFront Functions vs Lambda@Edge)",
+      shortDesc: "Running custom code at 4 trigger points in the request/response lifecycle — and picking the right execution engine for each",
+      visuals: [],
+      content: `## The Four Trigger Points
+
+> **Function associations let custom code run at specific points as a request/response passes through CloudFront**, enabling personalized, dynamic behavior beyond static caching rules.
+
+A request's full journey passes through **four possible hook points**:
+
+1. **Viewer request** — runs when CloudFront first receives the request from the viewer, **before** checking the cache
+2. **Origin request** — runs only when there's a **cache miss** and CloudFront is about to forward the request to the origin
+3. **Origin response** — runs after the origin replies, **before** CloudFront caches or forwards that response
+4. **Viewer response** — runs right before CloudFront sends the final response back to the viewer (this fires whether the content came from cache **or** from the origin)
+
+---
+
+## Use Cases at Each Point
+
+**Viewer request** — URL rewrites, redirects, request validation, adding custom headers. Classic example: **geo-based redirection** — a script inspects the viewer's IP-derived location and redirects an Indian user to the Indian version of a site, a German user to the German version, before any cache lookup happens.
+
+**Origin request** — modifying headers before they reach the origin, adding an authentication token, routing to a different origin entirely. Example: an origin that **requires an auth token** on every request for security/compliance reasons — a function generates and attaches that token only on the (less frequent) cache-miss path, so the origin can trust the request came from CloudFront.
+
+**Origin response** — modifying headers, altering the response status code, custom cache-duration logic. Example: applying **different TTLs by content type** — caching images for a long duration but HTML for a short one, so page structure updates propagate quickly while heavy assets stay cached.
+
+**Viewer response** — adding security headers, customizing/modifying response headers right before delivery (overlaps with the dedicated Response Header Policy feature covered separately). Example: attaching a **CSP (Content Security Policy)** header to every outgoing response to harden against XSS and clickjacking.
+
+> ⚠️ If content is already cached and the viewer request function doesn't redirect it elsewhere, **the origin request and origin response functions never run at all** — they're strictly cache-miss-only hooks.
+
+---
+
+## CloudFront Functions vs Lambda@Edge
+
+| | **CloudFront Functions** | **Lambda@Edge** |
+|---|---|---|
+| **Best for** | Lightweight, high-performance operations | More complex, comprehensive processing |
+| **Latency** | Sub-millisecond | Millisecond-level (still fast, but higher than CloudFront Functions) |
+| **Cost** | More cost-effective for simple operations | More expensive, justified for complex tasks |
+| **Language support** | ⚠️ **JavaScript only**, limited runtime | Node.js, Python, Java, C#, and more |
+| **Typical use cases** | Header manipulation, URL rewrites, redirects, request validation | Authentication/authorization, dynamic content generation, advanced decision logic, integrating with other AWS services |
+
+> ⚠️ **A Lambda function only becomes "Lambda@Edge" when it's actually associated with a CloudFront distribution** — it's not a separate function type, just a normal Lambda function used in this specific role. And ⚠️ **that Lambda function must be created in us-east-1 (N. Virginia)** — a function created in any other region cannot be attached to CloudFront, the same hard regional requirement seen earlier with ACM certificates.
+
+---
+
+## Exam Framing
+
+> "Lightweight, high-speed edge logic — header tweaks, simple redirects" → **CloudFront Functions**. "Complex logic, non-JavaScript language, deeper AWS integration" → **Lambda@Edge**, which must live in **us-east-1**. Remember the exam explicitly tests this comparison — cost, latency, language support, and complexity are the four axes to keep straight.
+`,
+    },
+    {
       id: "cloudfront",
       title: "CloudFront",
       shortDesc: "Global CDN for low-latency content delivery",
-      visuals: ["CacheHitMiss", "OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
+      visuals: ["OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
       content: `## CloudFront — AWS Content Delivery Network (CDN)
 
 **CloudFront** is AWS's **CDN** — it delivers content (web pages, videos, APIs) with **low latency** and **high speed** by **caching** copies at 400+ **edge locations** worldwide. Netflix, Prime, Hotstar — all rely on CDNs.
