@@ -2693,10 +2693,342 @@ The **incomplete multipart uploads** half of that option cleans up partial uploa
 `,
     },
     {
+      id: "s3-access-control-overview",
+      title: "S3 Access Control – The Three Mechanisms",
+      shortDesc: "IAM policy, bucket policy and ACL as layers — and why a single Deny anywhere wins",
+      visuals: ["AccessControl"],
+      content: `## The Problem
+
+Objects in a bucket are private by default. Granting access — to an IAM user, an EC2 instance, another AWS account — means deliberately configuring it.
+
+> **Controlling S3 access is the process of managing who can view, change, or delete objects stored in a bucket.** Three mechanisms exist, and they operate as **layers**.
+
+| Mechanism | Configured from | Notes |
+|---|---|---|
+| **IAM policy** | IAM console | Attached to a user, group or role |
+| **Bucket policy** | S3 bucket → Permissions | Attached to the bucket itself |
+| **ACL (Access Control List)** | S3 bucket → Permissions | ⚠️ **Legacy** — AWS recommends against it |
+
+---
+
+## ACLs Are Off by Default
+
+Creating a bucket, **ACLs are disabled**, and the console explicitly recommends leaving them that way. They can be enabled at creation or afterwards, but they exist mainly for backwards compatibility.
+
+---
+
+## Why Three Mechanisms Exist
+
+> **AWS applies a layered security approach.** Multiple independent layers mean that a mistake at one layer doesn't automatically expose your data — another layer can still block the request.
+
+A request passes through each layer in turn. **If a policy exists at a layer, it must allow the action** for the request to continue. If no policy exists at that layer, the request simply passes through.
+
+---
+
+## ⚠️ The Rule That Overrides Everything
+
+> **A single explicit Deny — in an IAM policy, a bucket policy, or an ACL — results in total denial of access.** One Deny anywhere beats every Allow everywhere.
+
+---
+
+## How Allow Actually Works
+
+The complementary rule is more permissive than people expect:
+
+> **Allow at any ONE layer is sufficient**, provided no other layer explicitly denies it. You do **not** need matching Allows at all three layers.
+
+**Worked combinations:**
+
+| IAM policy | Bucket policy | ACL | Result |
+|---|---|---|---|
+| Not attached | Not attached | Not attached | ❌ **Denied** — default is deny |
+| Not attached | Not attached | **Allow** | ✅ Granted |
+| Not attached | **Allow** | Not attached | ✅ Granted |
+| **Allow** | Not attached | Not attached | ✅ Granted |
+| **Allow** | **Allow** | Not attached | ✅ Granted |
+| **Allow** | **Allow** | **Allow** | ✅ Granted |
+| Any | Any | **Deny anywhere** | ❌ **Denied** |
+
+> **The two rules to carry into the exam:** with nothing configured, access is **denied** (default deny). **One Allow at any single layer grants access; one Deny at any single layer removes it.**
+
+> The next topic compares the two mechanisms you'll actually use — IAM policy and bucket policy — and when each is the right choice.
+`,
+    },
+    {
+      id: "s3-iam-vs-bucket-policy",
+      title: "IAM Policy vs Bucket Policy",
+      shortDesc: "Identity-based vs resource-based — the distinction that decides cross-account and public access",
+      visuals: ["IAMvsBucketPolicy"],
+      content: `## The Core Distinction
+
+Both are JSON documents granting S3 access. The difference is **what the policy attaches to**.
+
+> **An IAM policy is identity-based** — it attaches to an IAM **user, group, or role**, and says "this identity may access that bucket."
+>
+> **A bucket policy is resource-based** — it attaches to the **bucket**, and says "this identity may access me."
+
+The permission granted can be identical; the direction of attachment is what differs.
+
+---
+
+## Full Comparison
+
+| | **IAM policy** | **Bucket policy** |
+|---|---|---|
+| **Where configured** | IAM console | S3 → bucket → Permissions |
+| **Format** | JSON | JSON |
+| **Attaches to** | IAM user / group / role (**identity**) | The S3 bucket (**resource**) |
+| **Type** | **Identity-based** | **Resource-based** |
+| **Scope** | **Any AWS service** | **S3 only** |
+| **Names the principal?** | ❌ No — implied by attachment | ✅ **Yes — a Principal field is required** |
+| **Best for** | Permissions spanning many services | Permissions on one specific bucket |
+| **Cross-account access** | Possible, but **complex** | **Straightforward** |
+| **Public access** | ❌ **Not possible** | ✅ **Possible** |
+
+---
+
+## The Principal Field
+
+This is the most visible structural difference in the JSON itself.
+
+> An **IAM policy contains no Principal** — the identity is whoever the policy is attached to. A **bucket policy must specify a Principal** (an IAM user's ARN, an account, or everyone), because the policy lives on the bucket and has no other way to know who it's talking about.
+
+---
+
+## Where Only One Will Do
+
+Two scenarios where the choice is forced:
+
+**Cross-account access** — account B's user needs to reach account A's bucket. Both approaches technically work, but a **bucket policy is far simpler**: account A adds account B's principal directly to the bucket.
+
+**Public access** — making objects readable by anyone, including people with no AWS account at all. ⚠️ **Only a bucket policy can do this.** An IAM policy attaches to an identity, and anonymous public users have no identity to attach to.
+
+> **Exam shortcuts:** "grant access across multiple AWS services" → **IAM policy**. "grant another AWS account access to one bucket" or "make a bucket public" → **bucket policy**.
+`,
+    },
+    {
+      id: "s3-iam-policy-lab",
+      title: "Lab – IAM Policies for S3 Buckets",
+      shortDesc: "Read-only, write-only and full-access policies attached to a user, then tested against three buckets",
+      visuals: [],
+      content: `## Lab Setup
+
+Three buckets, each holding the same **sample_file.txt**, named for the access level they'll receive: **read-only-bucket**, **write-only-bucket**, **full-access-bucket**.
+
+Create an IAM user **s3-user** with console access and **no policies attached**. Signing in (use an **incognito window** so the root session stays active in the main browser) and opening S3 shows the expected result: no permission to list any buckets.
+
+> Every policy in this lab is an **IAM policy** — no bucket policies are used, so the effect of each one is unambiguous.
+
+---
+
+## Finding a Bucket ARN
+
+Policies reference buckets by **ARN** (Amazon Resource Name). Find one under **bucket → Properties → Bucket ARN**.
+
+---
+
+## Policy 1 — Read-Only
+
+Two Allow statements: one permitting **ListAllMyBuckets** (so the user can see buckets exist at all), and one permitting **GetObject** on the target bucket's ARN.
+
+**IAM → Policies → Create policy → JSON** → paste → name it (e.g. **cloudfox-s3-user-readonly**) → create. Then **Users → s3-user → Add permissions → Attach policies directly** → attach it.
+
+**Testing as s3-user:**
+
+| Action | Result |
+|---|---|
+| List buckets | ✅ All three visible (from ListAllMyBuckets) |
+| Open **read-only-bucket** | ✅ Allowed |
+| Open the object inside | ✅ Contents readable |
+| Delete the object | ❌ Denied |
+| Upload a new object | ❌ Upload fails |
+| Open the other two buckets | ❌ Insufficient permissions |
+
+---
+
+## Policy 2 — Write-Only
+
+Allow **ListBucket** plus **PutObject** on **write-only-bucket**.
+
+**Testing:**
+
+| Action | Result |
+|---|---|
+| Open **write-only-bucket** | ✅ Allowed |
+| **Read** an existing object | ❌ Denied — no GetObject |
+| Delete an existing object | ❌ Denied |
+| Upload a new object | ✅ Succeeds |
+| Delete the object **it just uploaded** | ❌ **Still denied** |
+
+> ⚠️ **Write permission does not imply the ability to delete — not even your own uploads.** PutObject allows writing; DeleteObject is a separate action entirely. This surprises people, and it's a genuinely useful property for append-only or drop-box style buckets.
+
+---
+
+## Policy 3 — Full Access
+
+Instead of listing individual actions, grant **all S3 actions** (the S3 service with an action wildcard) on **full-access-bucket** — which covers GetObject, PutObject, DeleteObject and everything else.
+
+**Testing:** listing, reading, uploading and deleting all succeed on that bucket — while the other two remain restricted to their own policies.
+
+---
+
+## What This Demonstrates
+
+Three separate policies were used purely for clarity; a single policy could hold all three statements. The important result is that **each bucket enforces exactly the actions its policy names**, and the user's total access is the union of the attached policies.
+
+> Next: achieving the **identical** three outcomes using **bucket policies** instead — and the surprise that comes with testing them through the console.
+`,
+    },
+    {
+      id: "s3-bucket-policy-lab",
+      title: "Lab – Bucket Policies for S3",
+      shortDesc: "The same three permission levels from the bucket side, and why the console needs one extra IAM policy",
+      visuals: ["BucketPolicyAnatomy"],
+      content: `## Same Goal, Opposite Direction
+
+The previous lab granted read-only, write-only and full access using **IAM policies**. This lab achieves the identical outcomes using **bucket policies** — attached to the buckets rather than the user.
+
+**Setup:** the same three buckets (each with a sample file and **no** bucket policy attached), and a freshly recreated **s3-user** with **no** IAM policies.
+
+---
+
+## The Structural Difference
+
+An IAM policy names actions and resources. **A bucket policy names actions, resources, and a Principal** — the ARN of the IAM user being granted access.
+
+> The bucket policy lives on the bucket, so it must state **who** it applies to. That Principal field is the only meaningful difference between the two policy documents.
+
+**Where:** **bucket → Permissions → Bucket policy → Edit** → paste JSON → Save changes.
+
+---
+
+## ⚠️ The Surprise: It Doesn't Work Yet
+
+Attaching a correct read-only bucket policy and testing as **s3-user** — the bucket still can't be reached. The policy is not wrong.
+
+**The explanation:** there are three ways to reach S3, and they don't need the same permissions.
+
+| Access method | Typical share of real usage | Needs ListAllMyBuckets? |
+|---|---|---|
+| **AWS CLI** | ~90% combined with SDK | ❌ No |
+| **SDK / programmatic** | | ❌ No |
+| **AWS Console (GUI)** | ~10%, mostly testing | ✅ **Yes** |
+
+> **The bucket policy alone genuinely is sufficient** — for CLI and programmatic access, exactly as the access-control table promised. **The console is the special case:** browsing to a bucket requires permission to *list all buckets* first, which is an account-level action no single bucket's policy can grant.
+
+**The fix:** attach one small **IAM policy** granting **ListAllMyBuckets** — purely to make console navigation work. Every actual permission still comes from the bucket policies.
+
+---
+
+## Testing the Three Policies
+
+With console navigation enabled, each bucket policy behaves exactly like its IAM equivalent:
+
+**Read-only bucket:** open ✅ · read object ✅ · upload ❌ · delete ❌
+
+**Write-only bucket:** open ✅ · read object ❌ · upload ✅ · delete ❌
+
+**Full-access bucket:** open ✅ · read ✅ · upload ✅ · delete ✅
+
+---
+
+## The Takeaway
+
+> There is **no functional difference in the permissions** these two mechanisms can express — only in **how they attach**. Attach it to an identity and it's an **identity-based IAM policy**; attach it to a bucket and it's a **resource-based bucket policy**.
+
+The practical selection rule stays as covered earlier: bucket policies for **cross-account** and **public** access and for anything scoped to a single bucket; IAM policies when permissions span **multiple services** or should follow a user around.
+`,
+    },
+    {
+      id: "s3-acl",
+      title: "S3 Access Control Lists (ACLs)",
+      shortDesc: "The legacy XML mechanism — account-level only, and the reason AWS wants it left disabled",
+      visuals: [],
+      content: `## Legacy, and Deliberately So
+
+> **ACLs are a legacy access-control mechanism.** AWS explicitly recommends **bucket policies and IAM policies** instead, and disables ACLs by default on every new bucket.
+
+They remain worth understanding because they still appear in the console, and because their limitations explain why the modern mechanisms exist.
+
+---
+
+## ⚠️ What ACLs Can and Cannot Target
+
+> **ACLs grant access to AWS accounts and predefined groups only — never to a specific IAM user, group, or role.**
+
+That single limitation rules them out of most real access-control work, since permissions are normally managed per-IAM-identity.
+
+**The one genuine advantage:** ACLs apply at **both bucket level and object level**. A bucket policy can only attach to the bucket — an ACL can be set on an **individual object**.
+
+---
+
+## Enabling Them
+
+New buckets have ACLs **disabled**. **bucket → Permissions → Object Ownership → Edit** to change it, which offers two settings:
+
+| Setting | Who controls uploaded objects |
+|---|---|
+| **Bucket owner enforced** (default, ACLs disabled) | ACLs are off entirely; the bucket owner owns everything |
+| **Bucket owner preferred** | **You** (the bucket owner) retain full control over objects uploaded by other accounts |
+| **Object writer** | **The uploading account** retains control of its own objects |
+
+> The distinction matters when another AWS account can write to your bucket: **bucket owner preferred** means you can still manage permissions on their objects; **object writer** means they keep control and can set permissions differing from the bucket's.
+
+---
+
+## The Four Permissions
+
+Under **Permissions → Access control list → Edit**, permissions split into two groups:
+
+**On objects:**
+- **List** — see the objects in the bucket
+- **Write** — create, overwrite, **and delete** objects
+
+**On the bucket's ACL itself:**
+- **Read** — view who currently has access
+- **Write** — modify who has access, including adding other accounts
+
+> ⚠️ **Note that Write covers deletion too.** There is no way to grant "upload but not delete" through an ACL — precisely the distinction the IAM policy lab demonstrated is possible with policies.
+
+---
+
+## The Three Predefined Groups
+
+| Group | Who it means |
+|---|---|
+| **Everyone (public access)** | ⚠️ **Anyone at all** — no AWS account required |
+| **Authenticated users group** | ⚠️ **Any AWS account holder** — not just yours |
+| **S3 log delivery group** | AWS's logging service, for writing access logs |
+
+> ⚠️ Both of the first two are dangerous. **"Authenticated users" does not mean "users in my account"** — it means *anyone in the world with an AWS account*, which is a very common and serious misreading.
+>
+> AWS greys out **Write** for the Everyone group entirely — allowing anonymous uploads to your bucket would let anyone store data at your expense.
+
+---
+
+## Granting to a Specific Account
+
+**Add grantee** requires that account's **canonical ID** — found under **account name → Security credentials → Canonical user ID**.
+
+> ⚠️ **Canonical IDs exist for AWS accounts only, never for IAM users** — reinforcing that ACLs cannot target individual identities.
+
+---
+
+## Why AWS Moved On
+
+1. **Only basic permissions** — read/write granularity, with write implying delete
+2. **Doesn't scale** — every bucket *and* every object carries its own ACL; managing thousands individually is unworkable, with no central policy
+3. **Easy to misconfigure** — combining predefined groups with object-ownership settings makes accidental public exposure genuinely likely
+4. **Older format** — ACLs are **XML**-based, while IAM and bucket policies use modern, far more expressive **JSON**
+
+> **The practical rule: leave ACLs disabled and use bucket policies or IAM policies.** Understand ACLs well enough to recognize them in the console and answer an exam question — particularly the fact that they operate at **account level, not IAM-user level**.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
-      visuals: ["AccessControl", "IAMvsBucketPolicy", "ObjectLock", "S3Encryption"],
+      visuals: ["ObjectLock", "S3Encryption"],
       content: `## S3 – Simple Storage Service (Part 1)
 
 **Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
@@ -2753,7 +3085,7 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
       id: "s3-part2",
       title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
       shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
-      visuals: ["SymmetricAsymmetric", "ServerVsClientEnc", "SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "BucketPolicyAnatomy", "StaticHosting", "CORSDemo", "CRRDemo"],
+      visuals: ["SymmetricAsymmetric", "ServerVsClientEnc", "SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "StaticHosting", "CORSDemo", "CRRDemo"],
       content: `## S3 – Part 2
 
 Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
