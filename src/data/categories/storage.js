@@ -3025,10 +3025,270 @@ Under **Permissions → Access control list → Edit**, permissions split into t
 `,
     },
     {
+      id: "s3-object-lock",
+      title: "Lab – S3 Object Lock",
+      shortDesc: "Governance vs Compliance mode, retention periods, legal holds — and the switch that can never be undone",
+      visuals: ["ObjectLock"],
+      content: `## What Object Lock Does
+
+> **Object Lock prevents an object version from being deleted or modified for a fixed period, or indefinitely.** Once applied, **not even a lifecycle policy can remove the object.**
+
+The driver is almost always **compliance**: a regulator requiring records be held for a fixed number of years, protected from both accidental deletion and deliberate tampering.
+
+---
+
+## The Two Retention Modes
+
+| Mode | Strictness | Who can override |
+|---|---|---|
+| **Governance mode** | **Soft** | Users holding special permissions **can** shorten the lock or delete the object |
+| **Compliance mode** | **Strict** | ⚠️ **Nobody** — including the **root user** — until the retention period expires |
+
+**Governance mode override** requires two permissions (granted via IAM or bucket policy): **s3:BypassGovernanceRetention** and **s3:PutObjectRetention**. The root user can do it directly.
+
+> **Compliance mode is genuinely absolute.** Choosing it for five years means the object is immovable for five years, no exceptions, no escalation path. That is the point — but it means the mode must be chosen deliberately.
+
+---
+
+## Retention Period vs Legal Hold
+
+**Retention period** — a defined duration (days or years) after which the lock expires on its own.
+
+**Legal hold** — the same protection, but with **no expiry date at all**. It is switched on manually and must be switched off manually.
+
+> **When legal hold fits:** an active legal investigation, where nobody knows whether the data must be retained for one year or ten. A retention period demands a number up front; a legal hold does not.
+
+Both can apply simultaneously — a legal hold on top of a retention period keeps the object protected even after the period lapses.
+
+---
+
+## Two Prerequisites
+
+1. **Versioning must be enabled** — Object Lock operates on object *versions*. The console will refuse to enable Object Lock without it (and can enable versioning for you in the same step).
+2. **Appropriate permissions** — as root, or as an IAM user granted the relevant Object Lock permissions.
+
+---
+
+## ⚠️ Enabling It Is Permanent
+
+Object Lock can be turned on at bucket creation (**Advanced settings**) or afterwards (**Properties → Object Lock → Edit**).
+
+> ⚠️ **Once Object Lock is enabled on a bucket, it cannot be disabled, and versioning can never be suspended on that bucket again.** The console requires an explicit acknowledgement. This is a genuinely one-way door.
+
+---
+
+## Default Retention — On or Off
+
+Enabling Object Lock offers a **default retention** setting, and the choice determines how objects behave afterwards:
+
+**Default retention DISABLED** — every object uploaded is unlocked unless you lock it individually. Choose this when different objects need **different** lock durations, or when flexibility matters more than consistency.
+
+**Default retention ENABLED** — every uploaded object automatically receives the configured mode and duration. Choose this when a compliance rule mandates uniform protection and you want to eliminate manual configuration.
+
+---
+
+## Applying a Lock to an Individual Object
+
+> ⚠️ **Object Lock settings cannot be specified while uploading through the S3 console** — only via the **CLI, SDK, or REST API**. Uploading through the console means applying the lock **afterwards**.
+
+**Select the object → scroll to Object Lock Retention → Edit** → choose Governance or Compliance → set the retain-until date → Save.
+
+---
+
+## Testing the Lock
+
+With the lock applied, attempt a delete: the object appears to delete successfully — because in a versioned bucket, that just adds a **delete marker** (from the versioning topic), which is not blocked.
+
+**Now try to permanently delete the actual version** (Show versions → select the real version → Delete → "permanently delete"):
+
+> **The operation fails**, with an error explaining the object is protected by Object Lock. Re-uploading the same key to overwrite it also fails.
+
+**Legal hold** works the same way: **object → Properties → Object Lock Legal Hold → Edit → Enable.** While enabled, no deletion or overwrite is possible; disabling it manually restores normal behaviour.
+
+> **The exam framing:** "prevent deletion for a fixed period, even by administrators" → **Compliance mode**. "Prevent deletion but allow authorized override" → **Governance mode**. "Indefinite hold with no known end date" → **Legal hold**.
+`,
+    },
+    {
+      id: "s3-encryption-fundamentals",
+      title: "S3 Encryption – Data at Rest vs In Transit",
+      shortDesc: "What encryption actually protects against, and the two states data needs protecting in",
+      visuals: ["S3Encryption"],
+      content: `## Why Encryption Exists
+
+Cryptography long predates computing. Messages carried between princely states in India faced an obvious problem: the messenger could read — or alter — what they carried. Wax seals helped, but were defeated. The real solution was to **scramble the message itself**, so interception revealed nothing.
+
+A **Caesar cipher** (shifting each letter by a fixed amount) is the simplest form: the encrypted text is unreadable until you know the **key** — "shift of 3" — at which point it decodes back to the original.
+
+> Keys were exchanged **in advance**, when parties met in person, precisely so that later messages could be read without transmitting the key alongside the message.
+
+---
+
+## What It Protects
+
+Encryption delivers two properties:
+
+- **Confidentiality** — someone who obtains the file cannot read it
+- **Integrity** — unable to read it, they also cannot meaningfully alter it
+
+> **Why this matters for S3:** bucket policies, IAM policies and ACLs all control *access*. Encryption is the layer that matters when those controls are somehow bypassed — if someone obtains the underlying data, encryption means they still have nothing. **Even AWS cannot read properly encrypted data.**
+
+---
+
+## The Two States of Data
+
+| | **Data at rest** | **Data in transit** |
+|---|---|---|
+| **When** | Stored in S3 | Moving across the network |
+| **Threat** | Unauthorized access to stored data | Interception during transfer |
+| **Protected by** | **Server-side or client-side encryption** | **HTTPS** (via TLS, successor to SSL) |
+
+**Data at rest:** S3 encrypts the object **before writing it to storage**, and decrypts it on read. The process is **fully transparent** — you never see the encrypted form.
+
+**Data in transit:** the same mechanism as entering a card number on a website — **HTTPS** wraps the transfer, and the data is decrypted on arrival.
+
+> That transparency is exactly why encryption confuses people: everything is encrypted and decrypted automatically, so from the console it looks like nothing happened at all.
+
+---
+
+## What's Ahead
+
+Two questions remain, and each gets its own topic:
+
+- **Which kind of encryption?** Symmetric vs asymmetric — and which one S3 actually uses
+- **Who does the encrypting?** Server-side (S3 does it) vs client-side (you do it before uploading)
+
+> Then the practical implementations: **SSE-S3**, **SSE-KMS**, **DSSE-KMS**, and **SSE-C**.
+`,
+    },
+    {
+      id: "s3-symmetric-asymmetric",
+      title: "Symmetric vs Asymmetric Encryption",
+      shortDesc: "One shared key or a public/private pair — and why S3 uses only the first",
+      visuals: ["SymmetricAsymmetric"],
+      content: `## Symmetric Encryption — One Key
+
+> **A single shared key both encrypts and decrypts the data.** Encrypt with it, hand the same key to whoever needs to read it, and they decrypt with it.
+
+- **Fast and efficient**, particularly for **large volumes** of data
+- ⚠️ **The weakness is key distribution** — the key must reach the recipient through some genuinely secure channel, and anyone who intercepts it can read everything
+
+**Common standards:** **AES** (in 128-, 192-, and 256-bit variants), DES, and 3DES.
+
+> **AES-256 is considered the most secure of these, and is the default encryption standard used by S3.**
+
+---
+
+## Asymmetric Encryption — Two Keys
+
+> **Two mathematically related keys: a public key encrypts, a private key decrypts.** They are not interchangeable.
+
+- **Stronger security through key separation** — even someone holding the encrypted data **and** the public key cannot decrypt it without the private key
+- **Solves the distribution problem** — the public key can be shared openly
+- ⚠️ **Slower than symmetric**, especially for large data volumes
+
+**Common algorithms:** **RSA**, **ECC**, and **Diffie-Hellman** key exchange.
+
+---
+
+## ⚠️ Which One S3 Uses
+
+> **S3 uses symmetric encryption — specifically AES-256.** Asymmetric encryption is **not** used for S3 object encryption.
+
+The reason is the trade-off above: S3 is built to store enormous volumes of data, and symmetric encryption is dramatically faster at that scale.
+
+**Where asymmetric encryption does appear in AWS:** the **key pair used to access EC2 instances** (the **.pem** file) is asymmetric — you hold the private key, AWS holds the public key. It also underpins **certificate authorities** and TLS.
+
+---
+
+## Summary
+
+| | **Symmetric** | **Asymmetric** |
+|---|---|---|
+| **Keys** | One shared key | **Public + private pair** |
+| **Speed** | **Fast** — suits large data | Slower |
+| **Main weakness** | Securely distributing the key | Performance at scale |
+| **Examples** | **AES-256**, DES, 3DES | RSA, ECC, Diffie-Hellman |
+| **Used by S3?** | ✅ **Yes — AES-256** | ❌ No |
+
+> For S3 purposes, **symmetric encryption is the only one that matters**. The asymmetric distinction is worth knowing for the exam and for understanding EC2 key pairs and TLS.
+`,
+    },
+    {
+      id: "s3-server-vs-client-encryption",
+      title: "Server-Side vs Client-Side Encryption",
+      shortDesc: "Who performs the encryption — and why only one of them appears in the S3 console",
+      visuals: ["ServerVsClientEnc"],
+      content: `## The Distinction
+
+> **Server-Side Encryption (SSE):** you upload **unencrypted** data; **S3 encrypts it** before writing to storage, and decrypts on read.
+>
+> **Client-Side Encryption (CSE):** **you encrypt the data yourself** before uploading; S3 receives data that is already encrypted and simply stores it.
+
+---
+
+## ⚠️ Why the Console Only Shows Server-Side Options
+
+Opening a bucket's encryption settings shows three options — **all of them server-side**.
+
+> **Client-side encryption has no console option because S3 plays no part in it.** You encrypt with your own tools before upload; from S3's perspective it is storing ordinary bytes. There is nothing to configure.
+
+---
+
+## Full Comparison
+
+| | **Server-Side (SSE)** | **Client-Side (CSE)** |
+|---|---|---|
+| **Who encrypts** | **S3**, on arrival | **You**, before upload |
+| **Key management** | AWS-managed **or** customer-provided | **Entirely yours** |
+| **Ease of use** | **Easy** — SSE-S3 is on by default and fully transparent | **Complex** — your own tooling and key handling |
+| **Performance cost** | Minor, borne by S3 | **On your side**, noticeable for large objects |
+| **Protects at rest** | ✅ Yes | ✅ Yes |
+| **Protects in transit** | ⚠️ **Only if you use HTTPS** | ✅ **Inherently** — the data is already encrypted |
+| **Tools** | Built into S3 | AWS Encryption SDK, OpenSSL, GnuPG |
+
+---
+
+## The In-Transit Difference That Matters
+
+This is the genuinely important distinction:
+
+> **With SSE, you upload plaintext.** If that upload happens over plain HTTP, the data is exposed in transit — encryption only begins once S3 receives it. **HTTPS is therefore effectively mandatory** with SSE.
+>
+> **With CSE, the data is already encrypted before it leaves your machine.** Even over HTTP, an interceptor gets ciphertext. Using HTTPS as well simply layers a second protection on top.
+
+That is why CSE is described as offering **stronger overall security** — it protects the data across both states inherently, rather than depending on the transport.
+
+---
+
+## The Four Server-Side Options
+
+SSE splits by **who manages the keys**:
+
+| Option | Key management |
+|---|---|
+| **SSE-S3** | **S3 manages the keys entirely** — the default, fully transparent |
+| **SSE-KMS** | Keys managed through **AWS KMS** — adds audit trails and access control |
+| **DSSE-KMS** | **Dual-layer** KMS encryption — two independent layers |
+| **SSE-C** | **You supply the key** with each request |
+
+> ⚠️ **SSE-C does not appear in the console** — it can only be used via the **CLI, SDK, or REST API**, since the key must travel with every individual request.
+
+---
+
+## Choosing Between Them
+
+**Use SSE** for general data protection and standard compliance — it is easy, transparent, and sufficient for most requirements. **SSE-KMS** specifically is the strongest option for compliance needs, thanks to KMS's auditing.
+
+**Use CSE** when you need **maximum control**: custom encryption algorithms, keys that must never touch AWS, or regulatory requirements S3's built-in options cannot satisfy.
+
+> Each of the four SSE options gets its own topic next, with the practical configuration for each.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
-      visuals: ["ObjectLock", "S3Encryption"],
+      visuals: [],
       content: `## S3 – Simple Storage Service (Part 1)
 
 **Amazon S3** is AWS's first service and its 2nd most popular — durable, virtually unlimited **object storage**.
@@ -3085,7 +3345,7 @@ Prevents deletion/overwrite (needs versioning; can't be disabled). **Governance*
       id: "s3-part2",
       title: "S3 – Part 2 (Encryption Deep-Dive, Public Access, Hosting, CORS, CRR)",
       shortDesc: "SSE-S3/KMS/DSSE/C, public access & Block Public Access, static hosting, CORS, replication",
-      visuals: ["SymmetricAsymmetric", "ServerVsClientEnc", "SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "StaticHosting", "CORSDemo", "CRRDemo"],
+      visuals: ["SSEOptions", "KMSAccessDemo", "SSECFlow", "PublicAccessWays", "BlockPublicAccess", "StaticHosting", "CORSDemo", "CRRDemo"],
       content: `## S3 – Part 2
 
 Building on Part 1, this covers the **encryption deep-dive**, how **public access** really works, **static website hosting**, **CORS**, and **Cross-Region Replication**.
