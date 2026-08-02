@@ -3263,10 +3263,91 @@ A request's full journey passes through **four possible hook points**:
 `,
     },
     {
+      id: "cloudfront-settings-http-versions",
+      title: "CloudFront – Supported HTTP Versions & Default Root Object",
+      shortDesc: "Letting CloudFront auto-negotiate HTTP/2 and HTTP/3 per viewer, plus why a bare root URL needs an explicit default file",
+      visuals: [],
+      content: `## Supported HTTP Versions
+
+> **This setting controls which HTTP protocol versions CloudFront is willing to serve.** By default, only **HTTP 1.0 and 1.1** are supported — the older, universally-compatible baseline.
+
+Enabling the newer options — **HTTP/2** and **HTTP/3** — adds real performance and security benefits **on top of**, not instead of, the older versions:
+
+- **HTTP/2** — widely supported by modern browsers; improves speed and efficiency via **multiplexing** (many requests over one connection) and **header compression**
+- **HTTP/3** — builds further on HTTP/2 using **QUIC**, delivering even lower latency and better performance specifically on **unstable networks**
+
+> ⚠️ **Enabling HTTP/2 and HTTP/3 does not forcibly switch every viewer to them.** CloudFront **auto-negotiates the best version each individual viewer's browser actually supports** — a modern browser gets HTTP/2 or HTTP/3, an older client still gets HTTP/1.1, all from the same distribution with no separate configuration needed per client. There's essentially no downside to enabling the newer versions alongside the defaults.
+
+---
+
+## Default Root Object (Recap)
+
+> **Default Root Object specifies which file CloudFront should serve when a viewer requests the distribution's bare root URL** (e.g. just the domain, with no filename) — typically **index.html**.
+
+This was already covered in full, hands-on, in the earlier **CloudFront Origin Access lab** topic — it's the exact fix for the **Access Denied** error that appears when a plain S3 **bucket** (not a static-website endpoint) is used as the origin without this field set. The short version: leaving it blank means CloudFront has no idea which file represents "home," so the bare distribution URL fails until a filename is appended manually — setting **Default Root Object = index.html** in **Distribution → Settings → Edit** makes the bare URL resolve correctly on its own.
+
+---
+
+## Exam Framing
+
+> "Get the best HTTP performance for each viewer automatically, no per-client configuration" → enable **HTTP/2 and HTTP/3** — CloudFront negotiates down as needed. "Bare domain URL fails but the same file works when named explicitly" → missing **Default Root Object**.
+`,
+    },
+    {
+      id: "cloudfront-geo-restrictions-lab",
+      title: "Lab – CloudFront Geographic Restrictions (with EC2 as Origin)",
+      shortDesc: "Allow-listing or block-listing countries at the distribution level — demonstrated live with a real 403 from a blocked country",
+      visuals: ["GeoRestrictions"],
+      content: `## Setting Up EC2 as the Origin (First Time in This Section)
+
+Every prior CloudFront lab in this section used S3 as the origin. This lab deliberately uses **EC2** instead, to show that CloudFront isn't S3-specific:
+
+1. **Launch an EC2 instance** (Amazon Linux), allowing **inbound HTTP (port 80)** in its security group — without this, the web server itself would be unreachable regardless of CloudFront
+2. **SSH in**, install a web server (**httpd**), place a simple **index.html** in the default web root, then **systemctl start httpd** and **systemctl enable httpd** (the enable step ensures the service restarts automatically on reboot — easy to forget and a real gotcha if skipped)
+3. Confirm the site loads directly via the instance's public IP first, **before** involving CloudFront at all
+
+> ⚠️ **An EC2 instance never appears in CloudFront's origin dropdown the way S3/ALB/API Gateway do.** Instead, manually copy the instance's **public IPv4 DNS** (not the private DNS) and paste it into the **Origin domain** field — CloudFront then treats it as an **HTTP custom origin**.
+
+Create the distribution with this EC2 origin, leaving other settings at defaults (including declining Web Application Firewall for this lab) — confirm the site loads through the CloudFront URL before moving on.
+
+---
+
+## Geographic Restrictions
+
+> **Distribution → Security → CloudFront geographic restrictions** — by default set to **None**, meaning the site is reachable from anywhere in the world.
+
+Two modes:
+
+- **Allow list** — the site is reachable **only** from the specific countries listed (everywhere else is blocked)
+- **Block list** — the site is reachable from **everywhere except** the specific countries listed
+
+> Choosing between them is purely about which list is shorter for the actual requirement: restricting to a handful of countries → **allow list**; blocking a handful while staying open everywhere else → **block list**.
+
+---
+
+## Proving It Works
+
+Using a geo-distributed browsing tool to open the CloudFront URL from multiple simulated countries confirms the baseline: the site loads fine from Ireland, Australia, Singapore, Brazil — no restriction in place yet.
+
+**Configuring a block list** for two countries (in the lab: Brazil and India) → **Save changes** → distribution redeploys (a multi-minute wait, same as any distribution change):
+
+- Opening the site from a **blocked** country (tested live from India, one of the two blocked countries) returns a **403 error**: **"Amazon CloudFront distribution is configured to block access from your country."**
+- The same geo-browsing tool confirms the **Brazil** simulated location gets the identical blocked message, while **Ireland and Australia** (not on the block list) continue to load normally
+
+**Removing the restriction** (setting geographic restrictions back to **None**, saving, and waiting for redeployment) immediately restores access from the previously-blocked countries — confirming the block was applied entirely at the CloudFront layer, with no changes needed on the origin itself.
+
+---
+
+## Exam Framing
+
+> "Restrict a site to only a handful of countries" → **geographic restrictions, Allow list**. "Block a handful of specific countries while staying open elsewhere" → **Block list**. A blocked viewer gets a **403**, not a connection failure — the distribution is actively refusing the request based on the viewer's detected country, not failing to reach them.
+`,
+    },
+    {
       id: "cloudfront",
       title: "CloudFront",
       shortDesc: "Global CDN for low-latency content delivery",
-      visuals: ["OriginGroupFailover", "GeoRestrictions", "CacheInvalidation"],
+      visuals: ["OriginGroupFailover", "CacheInvalidation"],
       content: `## CloudFront — AWS Content Delivery Network (CDN)
 
 **CloudFront** is AWS's **CDN** — it delivers content (web pages, videos, APIs) with **low latency** and **high speed** by **caching** copies at 400+ **edge locations** worldwide. Netflix, Prime, Hotstar — all rely on CDNs.
