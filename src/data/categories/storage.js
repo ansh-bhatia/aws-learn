@@ -4221,6 +4221,239 @@ A **PutObject** event, logged both ways, illustrates the gap directly:
 `,
     },
     {
+      id: "s3-requester-pays",
+      title: "S3 Requester Pays",
+      shortDesc: "Flipping data-transfer and request costs onto whoever downloads — with an AWS-account requirement baked in",
+      visuals: ["RequesterPays"],
+      content: `## The Problem It Solves
+
+> **By default, the bucket OWNER pays every cost** — storage, data transfer, and request charges — regardless of who is downloading the objects.
+
+That's fine for a normal bucket, but breaks down for a specific scenario: a non-profit or research institution wants to share large datasets **freely** with the world. If a university publishes terabytes of research data and thousands of students download it, the university foots the entire data-transfer bill even though it never wanted a cent from anyone.
+
+> **Requester Pays flips two of the three costs onto whoever downloads the data**: the **requester** pays **data transfer** and **request** costs. The **owner** still pays **storage cost**, since they own the data.
+
+---
+
+## Two Kinds of Requester
+
+- **Authenticated requester** — uses valid AWS credentials, including cross-account access
+- **Anonymous requester** — no AWS credentials at all, works only against a fully public bucket
+
+> ⚠️ **Enabling Requester Pays eliminates anonymous access entirely — even on an otherwise-public bucket.** There is no way for AWS to bill an anonymous requester, so an AWS account becomes mandatory the moment this feature is on. A bucket that was public and freely browsable before suddenly returns Access Denied to anyone without an account, purely because of this setting.
+
+---
+
+## Three Prerequisites
+
+1. **The requester must have a valid AWS account** — enforced automatically once the feature is enabled
+2. **A bucket policy (or IAM policy) must still grant the requester access** — Requester Pays only changes who's billed, not who's allowed in
+3. ⚠️ **The requester must include a specific header — x-amz-request-payer — in every request**, explicitly confirming they know they'll be charged. Without it, the request is rejected outright, which is exactly the point: nobody can claim later that they were billed without warning.
+
+---
+
+## Enabling It
+
+**Bucket → Properties → scroll to Requester Pays → Edit → Enable.**
+
+> ⚠️ **This cannot be exercised through the ordinary console download flow — only the AWS CLI, SDK, or a manually-signed API/curl request can supply the required header.** There is no button in the S3 console UI a requester can click to add it.
+
+---
+
+## Accessing a Requester Pays Object
+
+**Via curl (HTTPS):** requires manually building an authentication signature and attaching it alongside the x-amz-request-payer header — technically possible but genuinely complex.
+
+**Via AWS CLI (the practical route):**
+
+- **aws configure** with the requester's own access key and secret key (not the owner's)
+- **aws s3 cp** using the object's **s3://** URI (not the https:// URL), with **--request-payer requester** appended
+
+> In a real cross-account test: logging in as the bucket owner shows the bucket normally; logging out and back in as a completely separate requester account shows **no buckets at all** — that account has none of its own. Running the CLI copy command with the request-payer flag against the owner's object still succeeds, and the requester — not the owner — is billed for the transfer.
+
+---
+
+## Exam Framing
+
+> "Share large data freely without paying for everyone's downloads" → **Requester Pays**. The giveaway phrase is usually **non-profit / research data / who pays for downloads** — storage always stays on the owner regardless.
+`,
+    },
+    {
+      id: "s3-presigned-url",
+      title: "S3 Presigned URLs",
+      shortDesc: "A temporary, time-boxed link into a private object — no public bucket, no forgetting to lock it back down",
+      visuals: ["PresignedURL"],
+      content: `## The Problem It Solves
+
+Sharing a private S3 object the naive way means **making the object (or bucket) public** — and then remembering to make it private again afterward. Forget that step, and the object stays exposed to anyone who ever had the link, indefinitely.
+
+> **A presigned URL is a temporary, secure link to a private S3 object that expires after a set time** — the object never has to become public at all. Whoever holds the link can access it only until it expires; after that, the same URL returns **Access Denied — request has expired**.
+
+---
+
+## Generating One — Three Ways
+
+- **AWS SDK** (Java, Python, etc.) — fully customizable, but requires writing code
+- **AWS CLI** — quick, scriptable
+- **AWS Console** — the easiest, pure GUI, no code
+
+---
+
+## Downloading via a Presigned URL (Console)
+
+**Select the object → Actions → Share with a presigned URL** → specify an expiration (minutes/hours, within AWS's min/max bounds) → **Create presigned URL**.
+
+> The URL is copied to the clipboard immediately. Opened in an incognito window (simulating an anonymous third party) it works exactly like a normal object link — **until the timer runs out**, after which the identical URL fails.
+
+⚠️ **The console's "share with presigned URL" action only ever generates a download (GET) link** — there's no equivalent console button for an upload link.
+
+---
+
+## Uploading via a Presigned URL
+
+Generating an **upload** presigned URL cannot be done from the plain S3 console — it requires **AWS SDK** or the **AWS Toolkit for Visual Studio**:
+
+1. Install **AWS Toolkit for Visual Studio** as an extension, then set up an **AWS Explorer** profile (IAM user's access key + secret key + region)
+2. In AWS Explorer, right-click the target bucket → **Create presigned URL**
+3. Choose **PUT** (not GET) as the operation, set an expiration, and specify the exact **key name** the uploaded file must use — e.g. **myfile.txt** locks the URL to accepting only a file with that exact name
+4. **Generate URL**
+
+**Using the generated URL:** from the command line, **curl -X PUT -T myfile.txt "<presigned-url>"** — the **-T** flag streams the local file's contents as the PUT body. A silent, no-error response means success; refreshing the S3 console shows the new object has appeared.
+
+---
+
+## Exam Framing
+
+> "Temporary, secure, expiring access to a private object without making it public" → **Presigned URL**. Remember it covers **both directions** — GET for downloads (console-native) and PUT for uploads (SDK/toolkit-only) — a common source of confusion since many assume it's download-only.
+`,
+    },
+    {
+      id: "s3-mfa-delete",
+      title: "Lab – S3 MFA Delete",
+      shortDesc: "A second lock on deletion itself — a security-device code required on top of normal credentials",
+      visuals: ["MFADelete"],
+      content: `## What It Adds
+
+> **MFA Delete requires a time-based code from a registered MFA device to permanently delete an object version or to change a bucket's versioning state** — on top of whatever IAM permissions the user already has. It's an extra lock specifically on the delete action itself, distinct from versioning or Object Lock (both covered earlier), which protect against accidental loss in different ways.
+
+---
+
+## Four Prerequisites
+
+1. **Root user credentials are the recommended way to enable it** (not best practice generally, but how this lab proceeds, since the setting is unusually sensitive)
+2. **An MFA device must already be set up** on that root account (e.g. Google Authenticator)
+3. ⚠️ **Bucket versioning must already be enabled** — MFA Delete builds directly on top of versioning
+4. ⚠️ **Only the AWS CLI (or SDK) can enable or disable MFA Delete — the console cannot.** Toggling bucket versioning in the console shows an "MFA delete" field, but it's greyed out with a note to use the CLI instead.
+
+---
+
+## Step 1 — Enable MFA on the Root Account
+
+**Account name → Security credentials → Multi-factor authentication (MFA) → Assign MFA device** → choose **Authenticator app** → scan the QR code in Google Authenticator → enter **two consecutive 30-second codes** to confirm.
+
+> ⚠️ **Save the MFA device's ARN immediately after setup** — the CLI command to enable MFA Delete requires it explicitly, and it isn't surfaced anywhere convenient afterward.
+
+---
+
+## Step 2 — Enable Versioning, Then Enable MFA Delete via CLI
+
+Versioning enables normally from the console. MFA Delete does not — it needs:
+
+**aws configure** (root access key + secret key + region) →
+
+**aws s3api put-bucket-versioning --bucket <name> --versioning-configuration Status=Enabled,MFADelete=Enabled --mfa "<mfa-arn> <current-mfa-code>"**
+
+> The MFA code must be entered **within its 30-second validity window**, so the whole command needs to be assembled and run quickly after reading the code off the authenticator app. A status check afterward (**get-bucket-versioning**) confirms both **Status: Enabled** and **MfaDelete: Enabled**.
+
+---
+
+## Step 3 — Prove It Actually Blocks Deletion
+
+- Deleting an object normally (with versioning already on) just adds a **delete marker** — the underlying version survives, as expected from ordinary versioning behavior
+- Attempting to permanently delete that underlying **version** (via "Show versions" → delete the specific version) now fails outright: **"You can't delete object version because MFA delete is enabled for this bucket."**
+- The **same block applies to emptying or deleting the bucket** — a bucket containing an undeletable version can never be emptied, so it can never be deleted either, until MFA Delete comes off.
+
+---
+
+## Deleting a Version With MFA Delete On (CLI-Only)
+
+**aws s3api delete-object --bucket <name> --key <object-key> --version-id <id> --mfa "<mfa-arn> <fresh-mfa-code>"**
+
+> A fresh MFA code is required for **every** delete-object call — reusing one from a minute ago fails. For a bucket with many objects, this becomes genuinely tedious one file at a time.
+
+---
+
+## ⚠️ Disabling It
+
+Same command shape as enabling, with **MFADelete=Disabled** instead of Enabled, plus a fresh MFA code:
+
+**aws s3api put-bucket-versioning --bucket <name> --versioning-configuration Status=Enabled,MFADelete=Disabled --mfa "<mfa-arn> <code>"**
+
+> Versioning itself stays enabled — only the MFA requirement on deletion comes off. With MFA Delete disabled, ordinary console deletion (including emptying and deleting the bucket) works normally again.
+
+---
+
+## Exam Framing
+
+> "Require a second-factor code specifically to delete an object version or disable versioning" → **MFA Delete**. Remember the two hard CLI-only requirements: **it can only be toggled via CLI/SDK, never the console**, and **it requires versioning already enabled as a prerequisite**.
+`,
+    },
+    {
+      id: "s3-event-notification",
+      title: "S3 Event Notifications",
+      shortDesc: "Auto-triggering SNS, SQS, or Lambda the instant an object is created, deleted, or restored",
+      visuals: ["EventNotification"],
+      content: `## The Real-World Hook
+
+Online marketplaces (the lecture uses a classifieds site as the example) automatically stamp a watermark logo onto every photo a seller uploads — instantly, for millions of listings, with zero manual work. That automation is a textbook S3 Event Notification use case, and it's specifically called out as a recurring exam scenario.
+
+> **S3 Event Notifications send a notification whenever a specific event occurs in a bucket** — most commonly **object created**, **object deleted**, or **object restored** (e.g. restoring an archived object out of Glacier).
+
+---
+
+## Three Possible Destinations
+
+| Destination | What it does |
+|---|---|
+| **SNS (Simple Notification Service)** | Sends a message to subscribers — e.g. emailing someone whenever a new image is uploaded |
+| **SQS (Simple Queue Service)** | Places a message onto a queue for later, decoupled processing |
+| **Lambda function** | Runs code **without provisioning any server** — the destination used for the watermarking example, and the one most heavily tested |
+
+---
+
+## Configuring It
+
+**Bucket → Properties → scroll to Event notifications → Create event notification:**
+
+- Name the rule
+- Select the triggering **event type(s)** — object creation events (Put, Post, Copy, Multipart Upload Complete), object removal, object restore, and others
+- Optionally filter by **prefix/suffix** — e.g. only trigger for keys ending in **.jpg**
+- Choose the **destination**: Lambda function, SNS topic, or SQS queue
+
+---
+
+## The Watermarking Lab, Step by Step
+
+1. A **Lambda function** already exists (written in Python), designed to add a watermark to the center of any image it receives — Lambda itself is covered in full detail later in the course; for now it's treated as a black box that "adds a watermark."
+2. **Bucket → Properties → Event notifications → Create event notification** → trigger on **Put/Post object creation** → destination: the existing Lambda function → **Save changes**.
+3. Uploading a plain JPEG (no watermark) to the bucket triggers the Lambda function automatically.
+4. The function creates a **new folder inside the bucket** and deposits a **watermarked copy** of the uploaded image there — the original upload remains untouched in place, while the watermarked version appears moments later in the new folder.
+5. Uploading a second image proves it isn't a one-off: the same automatic watermark-and-file-drop happens again, unattended.
+
+---
+
+## Three Benefits
+
+> **Workflow automation** (the watermark example — no human touches each upload), **real-time monitoring** (notify subscribers/systems the instant something happens), and the resulting **processing efficiency** from removing manual steps entirely.
+
+---
+
+## Exam Framing
+
+> A scenario describing **"automatically process/transform/notify whenever a file lands in a bucket"** → **S3 Event Notifications feeding a Lambda function**. The three destinations — **SNS for human notification, SQS for queued processing, Lambda for serverless code execution** — are the standard exam distinction to keep straight.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
@@ -4359,7 +4592,7 @@ Auto-replicates objects to a destination bucket in **another region** — **one-
       id: "s3-part3",
       title: "S3 – Part 3 (Transfer Acceleration, Logging, Pre-signed URLs, Events, Multipart, Endpoints, Access Points)",
       shortDesc: "Acceleration, access logging vs CloudTrail, Requester Pays, pre-signed URLs, MFA Delete, events, multipart, VPC endpoint, access points",
-      visuals: ["RequesterPays", "PresignedURL", "MFADelete", "EventNotification", "MultipartUpload", "VPCEndpoint", "AccessPoints"],
+      visuals: ["MultipartUpload", "VPCEndpoint", "AccessPoints"],
       content: `## S3 – Part 3
 
 Advanced S3 features: performance, auditing, cost-shifting, secure sharing, automation, large uploads, private connectivity, and granular access.
