@@ -4454,6 +4454,203 @@ Online marketplaces (the lecture uses a classifieds site as the example) automat
 `,
     },
     {
+      id: "s3-multipart-upload-lab",
+      title: "Lab – S3 Multipart Upload",
+      shortDesc: "Splitting a file into chunks to get past the 5GB single-upload cap and build files up to 5TB",
+      visuals: ["MultipartUpload"],
+      content: `## The Puzzle It Solves
+
+S3 supports objects up to **5 TB**, but a **single PUT upload cannot exceed 5 GB**. So how does a 5 TB file ever get created?
+
+> **Multipart Upload breaks a large file into smaller parts, uploads each part separately, then has S3 reassemble them into one final object.** Parts can upload **in parallel**, speeding up the overall transfer.
+
+**Why it matters beyond the size limit:**
+
+- **Parallel part uploads** improve throughput
+- **Individual failed parts can be retried alone** — no need to restart the whole upload if part 47 of 50 fails on a flaky connection
+- Essential for **unstable network conditions**, where a single giant upload failing at 80% would otherwise mean starting completely over
+
+---
+
+## The Five-Step Process
+
+1. **Start the upload → get an Upload ID.** This ID ties every subsequent part to the same in-progress object — S3 uses it to know which parts belong together.
+2. **Upload each part**, tagged with that Upload ID. ⚠️ Best practice: **minimum 5 MB per part**, except the final part which may be smaller.
+3. Each part upload **returns an ETag** — record every one; they're required later to assemble the file.
+4. **Send a "complete" request** with the Upload ID and the full list of part-number/ETag pairs, telling S3 to assemble the final object.
+5. **Optionally abort** an incomplete upload to clean up the orphaned parts if you decide not to finish.
+
+---
+
+## Lab Walkthrough (CLI)
+
+**Splitting the file:** a 200MB test file split with **7-Zip's "split to volumes"** option (Linux: the **split** command) into ~100MB chunks — 7-Zip compresses as it splits, so the actual chunk count depends on the compressed size.
+
+**Step 1 — Start the upload and capture the Upload ID:**
+
+**aws s3api create-multipart-upload --bucket &lt;bucket&gt; --key myvideo.mp4**
+
+**Step 2 — Upload each part**, incrementing --part-number each time:
+
+**aws s3api upload-part --bucket &lt;bucket&gt; --key myvideo.mp4 --part-number 1 --body myvideo.mp4.001 --upload-id "&lt;id&gt;"**
+
+Repeat with **--part-number 2** and **myvideo.mp4.002**, etc. — copy down the **ETag** returned by each call.
+
+**Step 3 — Verify all parts landed**, before assembling:
+
+**aws s3api list-parts --bucket &lt;bucket&gt; --key myvideo.mp4 --upload-id "&lt;id&gt;"**
+
+**Step 4 — Build a JSON manifest** listing each part number with its ETag (a **Parts** array), saved as a local file.
+
+**Step 5 — Complete the upload**, referencing that JSON file:
+
+**aws s3api complete-multipart-upload --bucket &lt;bucket&gt; --key myvideo.mp4 --upload-id "&lt;id&gt;" --multipart-upload file://parts.json**
+
+> No error response means the object now exists, fully assembled, in the bucket — confirmed by refreshing the S3 console and seeing the single final object.
+
+---
+
+## Cleaning Up Abandoned Uploads
+
+> An incomplete multipart upload leaves orphaned parts sitting in the bucket, **invisible in the normal object listing but still billed for storage** until assembled or aborted. A **lifecycle rule action — "delete expired object delete markers or incomplete multipart uploads"** — can auto-clean these after a set number of days, so forgotten in-progress uploads don't quietly accumulate cost.
+
+---
+
+## Exam Framing
+
+> "Upload a file larger than 5GB" or "improve upload reliability over an unstable connection" → **Multipart Upload**. The two numbers to remember: **max single-object size 5TB**, **max single PUT 5GB** — multipart is the only bridge between them.
+`,
+    },
+    {
+      id: "s3-vpc-gateway-endpoint-lab",
+      title: "Lab – VPC Gateway Endpoint for S3",
+      shortDesc: "Keeping EC2-to-S3 traffic off the public internet entirely, proven live with ping and traceroute",
+      visuals: ["VPCEndpoint"],
+      content: `## The Default Behavior
+
+> **By default, traffic between an EC2 instance and an S3 bucket travels over the public internet** — even when both resources sit in the same AWS region. This is true whether or not the traffic is otherwise secured.
+
+**With a VPC endpoint**, that same traffic stays **entirely within the AWS network**, never touching the public internet. Benefits: **increased security** (no exposure to the open internet), **reduced latency**, and **better performance** from AWS's own optimized network path.
+
+---
+
+## Gateway vs Interface Endpoint
+
+| | **Gateway Endpoint** | **Interface Endpoint** |
+|---|---|---|
+| **Used for** | **S3 and DynamoDB only** | Everything else supporting PrivateLink (SSM, EC2 API, etc.) |
+| **Cost** | ⚠️ **No additional charge** | Hourly + data-processing charges apply |
+| **How it attaches** | Adds an entry directly into a **VPC route table** (done automatically when you pick the table) | Creates an **ENI (Elastic Network Interface)** in a subnet — no route table entry needed |
+| **Setup complexity** | Simple — pick VPC + route table | Simple — pick a security group |
+
+> **For S3 specifically, AWS recommends the Gateway Endpoint** — free, purpose-built, and it integrates directly with the route table rather than needing its own network interface.
+
+---
+
+## Proving the Behavior Change, Step by Step
+
+**Before creating any endpoint:**
+
+- **ping** the bucket's URL from an EC2 instance → gets a reply, confirming basic connectivity (though this alone doesn't prove which path the traffic takes)
+- **tracert / traceroute** the same URL → shows multiple **internet hops**, confirming the traffic really is going out over the public internet
+
+**Creating the Gateway Endpoint:**
+
+**VPC console → Endpoints → Create endpoint** → select **AWS services → the S3 gateway endpoint entry** → choose the **VPC** → choose the **route table** to update (AWS adds the routing entry automatically — no manual route editing) → optionally restrict via policy, or allow full access → **Create endpoint**.
+
+> Refreshing the route table immediately afterward shows a **new route entry pointing at the S3 prefix list via the endpoint** — added automatically, exactly as promised.
+
+**After creating the endpoint:**
+
+- **ping** the bucket URL again → still gets a reply — communication still works
+- **tracert / traceroute** again → ⚠️ **shows no hop path at all this time**, because the traffic is now moving over AWS's private network, which standard traceroute tooling can't trace the way it traces public internet hops. **The absence of a traceable route is itself the proof the private path is being used.**
+
+**Deleting the endpoint** reverts behavior immediately: **traceroute goes back to showing the full internet hop chain**, confirming traffic fell back to the public path the moment the endpoint was removed.
+
+---
+
+## Exam Framing
+
+> "Keep S3/DynamoDB traffic off the public internet, with no additional cost" → **Gateway Endpoint**. "A service other than S3/DynamoDB needs private connectivity" → **Interface Endpoint** (ENI-based, has hourly + data charges).
+`,
+    },
+    {
+      id: "s3-access-point-theory",
+      title: "S3 Access Points – Theory",
+      shortDesc: "Splitting one unwieldy bucket policy into many small, per-application access-point policies",
+      visuals: ["AccessPoints"],
+      content: `## The Problem with a Single Bucket Policy
+
+> **A bucket can have exactly one bucket policy.** Every permission rule for every user and every application accessing that bucket has to live inside that one document.
+
+Picture a bucket with two folders, **f1** and **f2**, where **user1** should only be able to put objects into f1 and **user2** only into f2. With a plain bucket policy, both rules sit in the same JSON document. Scale that to **500 users each needing distinct folder-level permissions**, and the single policy becomes enormous and genuinely hard to maintain — one policy carrying the entire weight of every access rule in the bucket.
+
+> **An S3 Access Point is a distinct named "door" into a bucket, each with its own attached policy** — instead of one sprawling bucket policy, you get many small, focused ones. Access point 1 might grant user1 put-access to f1; access point 2 grants user2 put-access to f2 — completely independent documents, each scoped to exactly one purpose.
+
+---
+
+## Three Concrete Advantages
+
+**1. Simplified permission management** — up to **hundreds of access points per bucket**, each with a narrow, purpose-built policy, instead of one policy trying to cover every case at once.
+
+**2. Enhanced network security** — ⚠️ **bucket policies alone can't cleanly restrict access to a specific VPC.** An access point's **network origin** setting can be scoped to **VPC-only**, blocking internet access entirely for that access point specifically — something a plain bucket policy struggles to express directly.
+
+**3. Improved scalability** — as the number of users/applications grows, access points scale by **adding more small policies** rather than growing one already-large policy further.
+
+> Access points earn their keep specifically when a bucket serves **many** applications or user groups. For 2–3 straightforward consumers, a plain bucket policy is still simpler — access points are a complexity trade-off that pays off at scale, not a universal upgrade.
+
+---
+
+## Two Network Origin Options
+
+**VPC** — restricts the access point to traffic originating from a **specific VPC only**. ⚠️ **Using this requires also creating a VPC Gateway Endpoint for S3** — the access point's VPC restriction and the VPC endpoint are two separate pieces that work together, not substitutes for each other.
+
+**Internet** — the access point is reachable from anywhere, subject to whatever IAM user/group/role permissions its attached policy grants. It does **not** have to make the bucket publicly readable — "internet" here means *reachable* over the internet by an authenticated, permitted caller, not *open to anyone*.
+
+---
+
+## Exam Framing
+
+> "Many applications, each needing different folder-level permissions on one shared bucket" → **S3 Access Points**, one per application/user, each with its own small policy — instead of one bucket policy trying to hold every rule at once. "Restrict a specific access path to one VPC only" → an access point with **VPC network origin**, paired with a **Gateway Endpoint**.
+`,
+    },
+    {
+      id: "s3-access-point-lab",
+      title: "Lab – S3 Access Points",
+      shortDesc: "Delegating a bucket's access control to per-user access points, and the easy-to-miss console-list permission",
+      visuals: [],
+      content: `## The Six-Step Build
+
+**Step 1 — Bucket and folders.** Create a bucket with two folders, **f1** and **f2**.
+
+**Step 2 — Delegate access control to Access Points.** ⚠️ **This is the step people miss.** By default, the bucket policy governs access. To let access points take over, the bucket policy must explicitly grant **"full delegation"** to access points owned by the account — a specific policy statement referencing the bucket's ARN and the account ID. Once applied, **the bucket policy effectively steps aside**, and access control moves to whatever policies are attached to individual access points.
+
+**Step 3 — Create two IAM users**, **user1** and **user2**, with console access and no permissions attached yet. Logging in as either (in separate incognito sessions) confirms they can see **nothing** — no bucket, no access points, exactly as expected for a fresh IAM user.
+
+**Step 4 — Create the two access points**, each scoped to one user and one folder:
+
+- **AP1**: network origin Internet, policy grants **s3:PutObject** on every object under the **f1** folder, **Principal restricted to user1's ARN**
+- **AP2**: same shape, scoped to **user2's ARN** and every object under the **f2** folder
+
+> Even after creating both, logging in as user1 or user2 and opening **Access Points** in the console shows: **"Insufficient permission to list access point."** The access points exist and their policies are correct — something else is still missing.
+
+**Step 5 — Grant the missing console-list permission.** ⚠️ **An access-point policy alone does not let a user SEE the access point in the console** — that requires a separate **IAM identity policy** granting **s3:ListAccessPoints** and **s3:GetAccessPoint**. Attach a small customer-managed policy with those two actions to both user1 and user2. Only after this step do the access points become visible when each user refreshes the console.
+
+**Step 6 — Verify the isolation actually holds:**
+
+- **user1** can upload into **AP1 → f1** successfully; attempting to upload via **AP2** (into f2) fails outright — user1 was never granted permission on AP2, regardless of being logged in and authenticated
+- **user2** shows the exact mirror image: uploads via **AP2 → f2** succeed, uploads via **AP1** fail
+
+> The isolation is enforced entirely by each access point's own policy — user1's access point never mentions user2 and vice versa, so neither can act through the other's door even though both are valid, authenticated IAM users on the same bucket.
+
+---
+
+## Exam Framing
+
+> Two gotchas worth remembering for real deployments: **(1)** the bucket policy must explicitly delegate control to access points before per-access-point policies take effect at all, and **(2)** a user needs a plain IAM identity policy granting **list/get access point** just to see an access point in the console — the access point's own policy governs *usage*, not *visibility*.
+`,
+    },
+    {
       id: "s3",
       title: "S3 – Simple Storage Service (Part 1)",
       shortDesc: "Object storage: classes, versioning, lifecycle, access, encryption",
@@ -4587,86 +4784,6 @@ Auto-replicates objects to a destination bucket in **another region** — **one-
 - **Delete-marker replication:** OFF = destination keeps object even if source deleted; ON = deletes propagate.
 - **Replicate existing objects:** OFF by default (only new/modified); opt in to backfill.
 - **Replica modification sync:** sync destination changes back to source (otherwise one-way).`,
-    },
-    {
-      id: "s3-part3",
-      title: "S3 – Part 3 (Transfer Acceleration, Logging, Pre-signed URLs, Events, Multipart, Endpoints, Access Points)",
-      shortDesc: "Acceleration, access logging vs CloudTrail, Requester Pays, pre-signed URLs, MFA Delete, events, multipart, VPC endpoint, access points",
-      visuals: ["MultipartUpload", "VPCEndpoint", "AccessPoints"],
-      content: `## S3 – Part 3
-
-Advanced S3 features: performance, auditing, cost-shifting, secure sharing, automation, large uploads, private connectivity, and granular access.
-
----
-
-## Transfer Acceleration
-Speeds up **long-distance** uploads/downloads by **50–500%**. Data hops to the nearest **CloudFront edge location**, then travels the **AWS global backbone** (optimized routing, no public-internet congestion) to the bucket.
-- Enable **per bucket** → use the **accelerated endpoint** via CLI/SDK.
-- Bigger files = bigger gains. **Not free** — a transfer fee applies.
-
----
-
-## Auditing: Server Access Logging vs CloudTrail Data Events
-Both record "who accessed what"; analyze with **Athena/Glue** (or Splunk/ELK).
-
-| | Server Access Logging | CloudTrail Data Events |
-|---|---|---|
-| **Focus** | Summary-level requests | Detailed object-level API calls |
-| **Detail** | Requester, time, action, status | + requester **ARN**, in depth |
-| **Format** | **Plain text** | **JSON** |
-| **Enable from** | S3 console (target bucket) | **CloudTrail** console (not S3) |
-| **Cost** | Low; batched (2–4 hrs) | Higher (detailed) |
-| **Use for** | Usage stats, patterns | Security/compliance, API audit |
-
-> Exam: "logs in **JSON**" / object-level audit → **CloudTrail Data Events**.
-
----
-
-## Requester Pays
-By default the **bucket owner** pays storage + transfer + requests. Enable Requester Pays to push **data-transfer + request** costs onto whoever downloads (storage still owner-paid). Ideal for sharing large public datasets.
-- Requester needs an **AWS account** (no anonymous access), a **bucket policy** granting access, and must send the **\`x-amz-request-payer\`** header (CLI \`--request-payer requester\`). Console can't send it → use CLI/curl.
-
----
-
-## Pre-signed URLs
-A **temporary, secure link** to a **private** object — no need to make it public. Works for **download (GET)** and **upload (PUT)**, with an expiry you set.
-- Create via **console** (download), **CLI**, **SDK**, or **AWS Toolkit for Visual Studio** (upload). Upload URLs are locked to one object key. After expiry → "Access Denied — request has expired".
-
----
-
-## MFA Delete
-Extra protection: deleting an object **version** (or disabling versioning) needs a fresh **MFA code**.
-- Requirements: **root** credentials, an **MFA device**, **versioning enabled**, and enable via **CLI/SDK only**.
-- \`put-bucket-versioning … --mfa "arn code" --versioning-configuration MFADelete=Enabled,Status=Enabled\`.
-- While on, you **can't** permanently delete versions or empty/delete the bucket without a code — disable it first to clean up.
-
----
-
-## Event Notifications
-Trigger an action on bucket events (**created / removed / restored**). Destinations: **Lambda, SNS, SQS**.
-- Classic exam scenario: JPEG upload → S3 event → **Lambda** adds a watermark → writes to a \`watermark/\` folder (like OLX). Enables automated workflows, real-time monitoring, efficient processing.
-
----
-
-## Multipart Upload
-Objects can be **5 TB**, but a single PUT is capped at **5 GB** — so split big files into parts (**≥5 MB** each).
-- Flow: **create-multipart-upload** (get an **Upload ID**) → **upload-part** ×N (each returns an **ETag**) → **complete** with the ETag list.
-- Benefits: **parallel** uploads (faster), retry only failed parts (resilient on flaky networks). Use a **lifecycle rule** to auto-delete incomplete uploads.
-
----
-
-## VPC Gateway Endpoint for S3
-By default EC2 → S3 traffic uses the **public internet** (even same-region). A **gateway endpoint** keeps it on the **AWS private network** — more secure, lower latency.
-- **Gateway endpoint** (S3 & DynamoDB): **free**, adds a **route table** entry. **Interface endpoint** (other services): hourly + data charges, uses an **ENI** (PrivateLink).
-- Verify with \`traceroute\`: internet route shows hops; private route shows none.
-
----
-
-## Access Points
-A bucket has only **one** bucket policy — unwieldy when many apps need different access. Access points give each app its **own named endpoint + policy**.
-- Each user/app → its own access point with a tailored policy (e.g. User1 → AP1 → PUT to \`f1\`). Scales to **hundreds** per bucket.
-- Set a **network origin**: **VPC** (requires an S3 VPC endpoint) or **Internet**.
-- Setup: delegate bucket access to access points in the **bucket policy** → create an access point + policy per user → grant users **\`ListAccessPoints/GetAccessPoint\`** IAM permission to see them. Best when **many** applications share one bucket.`,
     },
     {
       id: "glacier",
