@@ -598,10 +598,177 @@ This reframes the Cluster's higher price: it isn't "paying more for the same ava
 `,
     },
     {
+      id: "rds-settings-identifier-master-username",
+      title: "RDS Settings – Identifier, Master Username & Self-Managed Passwords",
+      shortDesc: "Naming your instance, the master-user restrictions, and why storing credentials in a plaintext app file is a real security hole",
+      visuals: [],
+      content: `## DB Identifier
+
+> **The identifier is simply the name used to identify an RDS instance or cluster** — no functional effect on connectivity (that's what the endpoint is for), purely for recognizing which database is which when an account has more than one.
+
+⚠️ **The field label changes depending on the deployment option chosen**: selecting **Multi-AZ DB Cluster** shows **"DB cluster identifier"** (since it's provisioning three instances as one unit); selecting **Single DB Instance** or **Multi-AZ DB Instance** shows **"DB instance identifier"** (since it's provisioning exactly one addressable instance).
+
+---
+
+## Master Username
+
+> **The master username is the initial administrative user created alongside the RDS instance** — used to configure the database engine, create additional users, create tables, and manage records. Additional users can be created later, but this one is provisioned automatically at instance creation.
+
+**Rules**: 1-16 characters, letters (upper/lowercase), numbers, and underscore only — no other special characters.
+
+⚠️ **Avoid the common default names explicitly**: admin, root, administrator, postgres, rdsadmin, azure_superuser. Different engines even suggest different defaults (PostgreSQL defaults to "postgres," for example) — but using any of these predictable names makes an attacker's job easier, since they're the very first usernames any automated attack tries. A distinctive, non-default username (e.g. **dbuser** with a project-specific twist) is a real, low-effort security improvement.
+
+---
+
+## Credential Management: Two Options
+
+RDS offers exactly two ways to manage the master password: **self-managed** or **AWS Secrets Manager**. This topic covers self-managed; Secrets Manager is covered in full next.
+
+> **Self-managed means you personally set the password at creation, remember it, and are responsible for storing and rotating it yourself** — through the RDS console or AWS CLI, entirely manually.
+
+**Pros**: full control, and the simplest possible setup — just type a password and use it.
+
+**Cons**: you must securely store and rotate it yourself; every application that connects has to be manually updated whenever it changes; and — the real risk — **higher exposure if the credential is ever leaked or simply never rotated**.
+
+---
+
+## ⚠️ Why Self-Managed Is Risky, Demonstrated
+
+A concrete two-tier setup: a **web server (front end)** running PHP, and an **RDS database (back end)** behind it. The front end's **index.php** includes a separate file, **db_test.php**, which contains the actual connection logic.
+
+> **Opening db_test.php reveals the database endpoint, username, and password sitting in plain, unencrypted text** — because with self-managed credentials, this is the only way for the application code to actually authenticate to the database at all.
+
+**The real exposure**: this web server is internet-facing. Anyone who compromises it — a common enough occurrence — gains **direct, plaintext database credentials** the instant they read that one file. From there they can read, modify, or delete any record in the database. ⚠️ **This is exactly the scenario Secrets Manager exists to eliminate** — instead of a plaintext credential sitting on a public-facing server, the application fetches it securely at runtime.
+
+---
+
+## Exam Framing
+
+> "Application credentials stored in plaintext on a publicly-reachable server" → immediately flag this as the self-managed anti-pattern. "Reduce this exposure without changing the application's basic architecture" → **AWS Secrets Manager**, covered next.
+`,
+    },
+    {
+      id: "rds-secrets-manager-credentials",
+      title: "RDS Credentials – AWS Secrets Manager (The Secure Alternative)",
+      shortDesc: "Letting Secrets Manager hold the password so it never touches the web server — with automatic rotation built in",
+      visuals: ["CredentialsSecurity"],
+      content: `## What Changes
+
+> **AWS Secrets Manager stores the RDS master credentials securely on AWS's side, and can automatically rotate them on a schedule you define** — whenever a rotation happens, Secrets Manager updates RDS's actual password to match, entirely without manual intervention.
+
+The core shift from self-managed: **the credential never has to live inside the application's own code or config files at all.**
+
+---
+
+## The Corrected Flow
+
+Using the same web-server-to-database scenario from the self-managed topic, but with Secrets Manager enabled at RDS creation:
+
+1. A user submits a form on the web server (front end)
+2. The web server needs to write that record to RDS, but **has no stored username or password of its own**
+3. The web server — which is specifically **authorized** to do this — calls **Secrets Manager**, requesting the current credential for this specific database
+4. Secrets Manager returns the username and password
+5. The web server uses that credential to authenticate to RDS and complete the write
+
+> **Opening the equivalent db_test.php file under this setup shows no username or password anywhere in the code** — only logic that calls out to Secrets Manager to retrieve the credential dynamically, at the moment it's actually needed. Comparing this file side-by-side against the self-managed version from the prior topic is the clearest possible illustration of what changed.
+
+---
+
+## Where the Secret Actually Lives
+
+**AWS Secrets Manager console**: a secret exists per protected resource, with its own **ARN**, tied to the specific RDS instance. Opening the secret's value reveals the actual username/password pair — but ⚠️ **this requires explicit IAM permission to view; there's no way to browse into it without authorization**, unlike a plaintext file sitting on an internet-facing server.
+
+---
+
+## Benefits
+
+- **No credentials stored in application code or config files** — the single biggest security improvement over self-managed
+- **Automatic rotation** — no manual password updates, reducing both operational burden and the risk of forgetting to rotate
+- **Encrypted storage with strict IAM-gated access control**
+- **Easy retrieval via the AWS SDK/API** — applications fetch the current credential programmatically, always getting the latest value with no manual sync step
+- **No manual application updates needed when the credential changes** — since the app always asks Secrets Manager for the current value rather than storing its own copy
+
+---
+
+## Downsides
+
+- **Slightly more complex setup** — integrating Secrets Manager into application code (calling the SDK/API to retrieve the secret) is real, if usually small, extra development work
+- **A real, if low, ongoing cost** for storing and rotating secrets — unlike self-managed, which is free
+
+---
+
+## Exam Framing
+
+> "Eliminate plaintext database credentials from application servers, with automatic rotation" → **AWS Secrets Manager**. The pairing worth remembering: **self-managed = free but the credential exposure risk sits entirely on you; Secrets Manager = small ongoing cost, but the credential never has to leave AWS's control plane** — and rotation happens without anyone touching application code.
+`,
+    },
+    {
+      id: "rds-instance-configuration-classes",
+      title: "RDS Instance Configuration – Classes, Naming, and Optimized Writes",
+      shortDesc: "Decoding db.m6g.large, choosing standard vs memory-optimized vs compute-optimized, and the free toggle that doubles write throughput",
+      visuals: ["InstanceClassNaming"],
+      content: `## What Instance Class Controls
+
+> **The DB instance class determines the underlying hardware — CPU power, memory, and network speed — for an RDS database.** This choice directly affects both performance and cost: more powerful hardware costs proportionally more.
+
+RDS scales from tiny free-tier instances up to configurations suited for Fortune 500-scale workloads — the same service, sized to the requirement.
+
+---
+
+## Decoding the Naming System
+
+A name like **db.m6g.large** breaks into four parts, and the pattern is identical worldwide:
+
+| Segment | Meaning |
+|---|---|
+| **db** | Fixed prefix — confirms this is a database instance type |
+| **Family letter** (T / M / R / C) | The hardware category — see below |
+| **Generation number** | Higher = newer hardware/technology, generally better price-performance (the same "iPhone 15 vs 16" logic as everywhere else in AWS naming) |
+| **Size** (micro, small, medium, large, xlarge, 2xlarge...) | Capacity tier — each step up roughly **doubles** CPU, RAM, and price over the previous step |
+
+---
+
+## The Three Instance Classes
+
+**T — Burstable performance.** For low-to-moderate workloads with occasional spikes — the free-tier default, and a natural fit for dev/test and small production databases.
+
+**M — Standard/general purpose.** Balanced CPU, memory, and networking — the right default for "a variety of regular applications that don't need extreme resources in any one direction," similar to picking a mid-range laptop when the requirement isn't extreme.
+
+**R — Memory-optimized.** More weight on RAM relative to CPU — suited for memory-intensive workloads: in-memory-style access patterns, real-time big data processing, caching-adjacent database use.
+
+**C — Compute-optimized.** More weight on CPU — suited for batch processing, high-performance computing, and analytics workloads that are genuinely calculation-heavy rather than memory-bound.
+
+> **The simple decision rule**: general purpose for most regular applications; memory-optimized when fast data access at volume matters more than raw compute; compute-optimized when heavy calculation is the actual bottleneck.
+
+---
+
+## Amazon RDS Optimized Writes
+
+> **A free toggle, available only on supported instance classes, that improves write performance by up to 2× for write-heavy workloads** — with zero additional cost when the instance class supports it.
+
+**How it works — traditional vs optimized:**
+
+| | Traditional writes | Optimized writes |
+|---|---|---|
+| **Mechanism** | Each piece of data written individually, in sequence, after logging | Multiple writes **batched together** and written as a group |
+| **I/O operations** | One I/O operation per write — 50 writes means 50 I/O operations | Grouped writes need far fewer I/O operations — e.g. 50 writes batched into 2 groups means just 2 I/O operations |
+| **Latency** | Higher — each write waits its turn, completing one at a time | Lower — batched writes are processed together, reducing the wait per individual write |
+| **Best suited for** | — | Write-heavy workloads: transactional databases, high-volume logging, analytics ingestion |
+
+> The mechanism in one sentence: **fewer, larger I/O operations are inherently more efficient than many small individual ones** — Optimized Writes is RDS batching writes together specifically to reduce that I/O operation count.
+
+---
+
+## Exam Framing
+
+> "Decode an instance type name" → **db.[family][generation][size]**, where **T=burstable, M=general purpose, R=memory-optimized, C=compute-optimized**, and each size step roughly doubles capacity and cost. "Improve write throughput for a write-heavy workload at no extra AWS charge" → **RDS Optimized Writes** — a free toggle, not a separate paid feature, available only on supported instance classes.
+`,
+    },
+    {
       id: "rds",
       title: "RDS – Relational Database Service",
       shortDesc: "Managed relational databases (MySQL, Postgres, etc.)",
-      visuals: ["InstanceClassNaming", "StorageAutoScaling", "CredentialsSecurity"],
+      visuals: ["StorageAutoScaling"],
       content: `## RDS – Relational Database Service
 
 **Amazon RDS** is a **managed relational database** service. AWS runs the database engine for you — you skip the hardware, OS patching, backups, and replication, and get a production database in **minutes**.
@@ -610,17 +777,6 @@ This reframes the Cluster's higher price: it isn't "paying more for the same ava
 
 
 
-## Instance Class
-
-A class name like \`db.m6g.large\` encodes the hardware:
-- **db** — it's a database instance
-- **Family** — **T** burstable · **M** general purpose · **R** memory-optimized · **C** compute-optimized
-- **Generation** — higher = newer/better (like iPhone 15 → 16)
-- **Size** — micro → large → xlarge → 2xlarge… each step ≈ **doubles** CPU/RAM and price
-
-> **RDS Optimized Writes** — a free toggle on supported classes that batches writes to cut I/O, giving up to **2× write throughput** for write-heavy workloads.
-
----
 
 ## Storage
 
@@ -631,12 +787,7 @@ Built on **EBS** (gp2/gp3, io1, magnetic) — up to **64 TB**. You pay for **all
 
 ---
 
-## Credentials Security
 
-When you create the DB you set a **master username** (avoid \`admin\`, \`root\`, \`postgres\`…) and a password. Two ways to manage it:
-
-- **Self-managed** — you store the password yourself (often in plaintext in an app config like \`db_test.php\` on the web server). ❌ Risky: hack the public web server → get the DB.
-- **AWS Secrets Manager** ✅ — stores the password **encrypted**, gated by **IAM**, with **automatic rotation**. The app fetches the current credential at runtime — nothing plaintext on the web server. Best practice (small cost, slightly more setup).
 `,
     },
     {
