@@ -3608,20 +3608,56 @@ It nests:
 
 By default each group is dialed to 100% (route to the nearest region); lower a dial to shift traffic away (maintenance, gradual cutover).
 
+`,
+    },
+    {
+      id: "global-accelerator-super-lab-intro",
+      title: "Global Accelerator – Super Lab Introduction",
+      shortDesc: "The blueprint for a real multi-region, high-availability build: two regions, two AZs each, one Global Accelerator on top",
+      visuals: [],
+      content: `## What This Lab Builds
+
+> **Multi-Region Web Acceleration with High Availability using AWS Global Accelerator** — a complete, real-world infrastructure build combining nearly everything covered in earlier networking sections (VPC, subnets, route tables, NAT, security groups, Application Load Balancers) with Global Accelerator sitting on top as the entry point.
+
+**The goal in one sentence:** direct each user to their **nearest healthy region**, and if an entire region fails, keep the site online by automatically routing everyone to the surviving region — with zero downtime and the same static entry point throughout.
+
 ---
 
-## Super Lab — Multi-Region HA
+## The Architecture
 
-A complete real-world build:
-1. **Two regions** (e.g. India + USA), each with a **VPC** (public + private subnets, IGW, NAT, route tables)
-2. **Web servers** across **2 AZs** per region in **private subnets** (in-region high availability)
-3. An **Application Load Balancer** per region in the public subnets
-4. One **Global Accelerator** with an **endpoint group per region**, each pointing at that region's ALB
+- **Two regions** — India (Mumbai / ap-south-1) and USA (N. Virginia / us-east-1), each fully self-contained
+- **Per region**: a VPC with **public and private subnets**, following the standard best practice of keeping EC2 instances in **private subnets** with an Application Load Balancer in the **public subnets** in front of them
+- **Per region, in-region high availability**: **two EC2 instances across two Availability Zones**, so a single AZ failure within a region doesn't take the region down
+- **Cross-region high availability**: **Global Accelerator** sitting above both regions' load balancers, routing users to whichever region is nearest **and** healthy
 
-**Result:**
-- Users hit their **nearest region** (Mumbai/Singapore → India; Virginia/Brazil → USA) — low latency, localized experience
-- If a whole **region fails**, Global Accelerator reroutes **everyone** to the surviving region — **no downtime**, same static IPs
-- Make sure each ALB's **health check** passes, or the endpoint group shows unhealthy
+> This is explicitly framed as infrastructure for **multinational organizations** — Global Accelerator's value only shows up once there are genuinely multiple regions serving genuinely distributed users. A single-region app has no use for it.
+
+---
+
+## Why Two Layers of Redundancy
+
+| Failure scope | What handles it |
+|---|---|
+| **One Availability Zone goes down** | The **second EC2 instance in the other AZ**, still behind the same regional ALB — normal within-region high availability |
+| **An entire region goes down** | **Global Accelerator** detects the unhealthy region and reroutes **all** traffic to the surviving region — the "big brother" failover that a single load balancer can never provide, since a load balancer only ever operates inside one region |
+
+---
+
+## Three-Part Structure
+
+The build is deliberately split across three lab sessions, each roughly 20-30 minutes, meant to be done back-to-back:
+
+1. **Part 1** — VPC, public/private subnets, route tables, Internet Gateway, NAT Gateway (in both regions)
+2. **Part 2** — Security groups, EC2 instances (via user-data scripts), target groups, and Application Load Balancers (in both regions)
+3. **Part 3** — The Global Accelerator itself: listener, endpoint groups (one per region), endpoints, then testing global routing and simulating a full regional failure
+
+> ⚠️ **Nothing is assumed from earlier videos** — the lab deliberately rebuilds the VPC and load balancer pieces from scratch rather than pointing back at the dedicated VPC/ALB sections, specifically so the whole multi-region picture stays in one continuous, hands-on build.
+
+---
+
+## Exam Framing
+
+> This lab's scenario — **"users worldwide, multiple regions, must survive a full regional outage with no downtime"** — is close to a direct match for the kind of architecture question the exam asks about Global Accelerator specifically. The giveaway phrasing to watch for: **static entry point + automatic regional failover + non-HTTP-agnostic acceleration**, which is what separates this from a CloudFront or Route 53 answer.
 `,
     },
     {
