@@ -3455,92 +3455,98 @@ Opening the CloudFront URL initially serves the **India-region content**, confir
 `,
     },
     {
-      id: "cloudfront",
-      title: "CloudFront",
-      shortDesc: "Global CDN for low-latency content delivery",
+      id: "cloudfront-error-pages-lab",
+      title: "Lab – CloudFront Custom Error Pages",
+      shortDesc: "Swapping a raw 504 gateway timeout for a friendly branded page — routed through a second origin and a dedicated behavior",
+      visuals: [],
+      content: `## The Problem
+
+> **A CloudFront distribution passes through whatever error its origin returns — verbatim.** If the origin (e.g. an Application Load Balancer with a struggling backend) throws a raw **504 Gateway Timeout**, viewers hitting the CloudFront URL see that exact same cryptic technical error, not something a non-technical visitor can make sense of.
+
+For a business, an unhandled raw error page reads as broken and untrustworthy. Full origin-group failover (covered in the prior labs) solves this properly but costs real money — running redundant load balancers and instances around the clock. **Custom error pages are the low-cost alternative**: still show *something* reassuring, without paying for full redundant infrastructure.
+
+---
+
+## The Setup
+
+**Prerequisite: a friendly fallback page hosted separately.** In the lab, this lives in an **S3 bucket configured for static website hosting**, fully public, with the fallback page placed inside a **dedicated folder** (e.g. an "error" folder containing its own index.html) — ⚠️ **the folder is not optional**, it's what the later behavior rule specifically targets.
+
+**Step 1 — Add the S3 bucket as a second origin** on the existing distribution (alongside the original ALB origin). ⚠️ **This is NOT an origin group** — origin groups (from the prior labs) are for automatic failover between equivalent origins; here, the S3 origin serves a completely different purpose (a static fallback page), so it's added as an independent second origin instead.
+
+**Step 2 — Configure the custom error response.** **Distribution → Error pages → Create custom error response**:
+- **HTTP error code** — the specific code to intercept (e.g. **504**)
+- **Customize error response** — enabled
+- **Response page path** — pointing at the fallback page's path (e.g. **/error/index.html**, matching the S3 folder structure exactly)
+- **HTTP response code** — the code to actually send back to the viewer (can match the original error or be overridden)
+
+**Step 3 — ⚠️ Create a dedicated cache behavior to route to the fallback origin.** This is the step that makes the whole thing actually work: **Behaviors → Create behavior** → path pattern matching everything under the error folder (e.g. **/error/** followed by a wildcard) → **origin: the S3 fallback bucket**. Without this, CloudFront has no routing rule connecting the error-response path back to the correct origin — the custom error response alone doesn't know which origin to actually fetch the friendly page from.
+
+> Disable caching on this behavior too, for the same testing-speed reason as the origin-group labs — caching would make the fix or the failure state slow to observe while testing.
+
+---
+
+## Proving It Works
+
+**Baseline (before setup)**: removing port 80 from the backend EC2 instance's security group (simulating an outage) makes both the direct ALB URL and the CloudFront URL return the raw **504 Gateway Timeout** — identical, unfiltered error passed straight through.
+
+**After the custom error page + dedicated behavior are configured**: repeating the same outage simulation (removing port 80 again) — instead of the raw 504, the CloudFront URL now serves the **friendly branded fallback page** ("Oops, something went wrong... our team is on it") instead of a technical error string a typical visitor can't interpret.
+
+**Restoring port 80** on the backend brings the real site back immediately, confirming the fallback is purely a presentation layer over the underlying error — the origin itself was never touched by any of this configuration.
+
+---
+
+## Exam Framing
+
+> "Show a friendly message instead of a raw HTTP error, without paying for full redundant failover infrastructure" → **CloudFront custom error pages**, backed by a **second origin** (not an origin group) and a **dedicated cache behavior** routing the error-response path to that origin. The three pieces that must all exist together: the fallback content itself, the custom error response mapping (which code → which path), and the behavior rule connecting that path to the right origin.
+`,
+    },
+    {
+      id: "cloudfront-cache-invalidation-lab",
+      title: "Lab – CloudFront Cache Invalidation",
+      shortDesc: "Forcing a stale edge cache to drop immediately after an origin update, instead of waiting out the TTL",
       visuals: ["CacheInvalidation"],
-      content: `## CloudFront — AWS Content Delivery Network (CDN)
+      content: `## The Problem, Reproduced Live
 
-**CloudFront** is AWS's **CDN** — it delivers content (web pages, videos, APIs) with **low latency** and **high speed** by **caching** copies at 400+ **edge locations** worldwide. Netflix, Prime, Hotstar — all rely on CDNs.
+> ⚠️ **For testing this specific behavior, deliberately host the origin far from your own location** (e.g. an origin in the US while testing from India) — this makes the caching effect obvious and easy to demonstrate, rather than a coincidence of low latency.
 
-> The problem it solves: one origin (say Mumbai) serving the whole world means distant users get high latency over slow **international bandwidth**, and the origin can be overwhelmed. CloudFront caches near users, so they fetch from a nearby edge — and the origin gets far fewer requests.
+With a CloudFront distribution already deployed over an S3 static website origin:
 
----
+1. **Update the origin directly** — edit index.html, re-upload it to the S3 bucket (no versioning needed for this to matter)
+2. Opening the site via the **plain S3 static website URL** immediately shows the update — no caching layer sits in front of it
+3. ⚠️ **Opening the exact same content via the CloudFront URL — even in a fresh incognito window, ruling out browser cache — still shows the OLD version.** The edge location that served this viewer cached the pre-update content, and nothing has told it to refetch.
 
-## How It Works
-
-1. You point CloudFront at an **origin** (S3, S3 website, EC2, ELB, API Gateway…)
-2. CloudFront caches the content at **edge locations** globally
-3. A user's request goes to the **nearest edge** — if cached (a **hit**), it's served instantly; if not (a **miss**), CloudFront fetches from the origin, caches it, and serves it
-4. You get one **\`*.cloudfront.net\`** URL (HTTPS free); add your own domain with an ACM cert
-
-There are two caching layers: **Regional Edge Caches** and **Edge Locations**. **Origin Shield** adds a third centralized layer to further protect the origin (chargeable).
+> **The edge cache doesn't know the origin changed.** It will eventually refresh once its **TTL (Time To Live)** expires, but until then, every viewer routed to that edge keeps getting the stale version — regardless of how many times they refresh or clear browser-level cache.
 
 ---
 
-## Distribution Options
+## The Fix: Invalidation
 
-### Origin Settings
-- **Origin domain** — where to fetch from (EC2 isn't auto-listed; paste its **public DNS**)
-- **Origin path** — optional subfolder used as the root
-- **Custom headers** — pass auth/API keys, versioning info to the origin
-- **Origin Shield** — extra centralized cache layer (chargeable)
+> **Cache Invalidation manually clears cached content at edge locations before its TTL naturally expires** — forcing CloudFront to re-fetch fresh content from the origin on the next request.
 
-### Default Cache Behavior
-- **Path pattern** — \`*\` (all) or \`images/*\` (one folder)
-- **Compress objects** — auto-gzip (≈70% smaller); always on
-- **Viewer protocol policy** — HTTP & HTTPS · **Redirect HTTP→HTTPS** · HTTPS only
-- **Allowed HTTP methods** — GET/HEAD (static) · +OPTIONS (CORS) · ALL (dynamic CRUD)
-- **Restrict viewer access** — paid/private content via **Signed URLs** (one file) or **Signed Cookies** (many files), using **trusted key groups**
-- **Cache key & origin requests** — **Cache Policy** (what makes a unique cache entry) + **Origin Request Policy** (what's forwarded on a miss)
-- **Response headers policy** — add/remove/modify headers: CORS, **security headers** (HSTS, CSP…), custom, server-timing
+**Distribution → Invalidations → Create invalidation:**
 
-### Settings
-- **Price class** — which edge locations to use (cost vs reach)
-- **Alternate domain (CNAME)** + **Custom SSL cert** (ACM, must be in **us-east-1**)
-- **Supported HTTP versions** — enable **HTTP/2** and **HTTP/3 (QUIC)**; CloudFront picks the best the viewer supports
-- **Default root object** — \`index.html\` so the root URL resolves without typing the filename
+- Specify **exact object paths** to invalidate (e.g. a single updated image's path) for a **fast, narrow** invalidation — useful when only one or two files actually changed
+- Or use a broader wildcard (a path ending in a wildcard covering everything) to invalidate the **entire cached distribution at once** — simpler for smaller sites, but clears more than may be strictly necessary
 
-### Function Associations
-Run custom code at **4 trigger points**: **Viewer request**, **Origin request**, **Origin response**, **Viewer response**.
-- **CloudFront Functions** — lightweight, JS only, sub-ms, cheap (header/URL tweaks)
-- **Lambda@Edge** — heavier, multiple languages, more powerful (auth, dynamic content); created in **us-east-1**
+**Create invalidation** → status starts **In Progress**, typically completing within a couple of minutes. Once it shows **Completed**, refreshing the CloudFront URL (again tested in incognito, to be certain) now serves the **updated** content — the stale edge cache has been forced to drop and refetch.
 
 ---
 
-## Origin Access (S3 origins)
+## When to Use Invalidation vs. Just Waiting
 
-Lock an S3 origin so content is served **only via CloudFront** (HTTPS), never the raw S3 URL:
+| Approach | When it fits |
+|---|---|
+| **Wait for TTL to expire naturally** | Content updates that aren't time-sensitive; avoids any invalidation cost |
+| **Targeted invalidation (specific paths)** | A small number of files changed and the update needs to be visible immediately |
+| **Wildcard invalidation (entire distribution)** | Broad content refresh, smaller sites, simplicity valued over precision |
 
-| Mode | Security |
-|------|----------|
-| **Public** | Bucket exposed — accessible directly. Not best practice. |
-| **OAC** (Origin Access Control) ⭐ | Bucket fully **private**; only CloudFront can read it (via bucket policy). Modern approach. |
-| **OAI** (Origin Access Identity) | Legacy version of OAC — keep only for existing setups. |
-
-> With OAC, also set a **Default Root Object** so the bucket-origin root URL works.
+> ⚠️ The **first ~1,000 invalidation paths per month are free**; beyond that, invalidations are a chargeable operation — a reason some teams prefer **versioned filenames** (e.g. appending a version or hash to a filename) over frequent invalidation, since a new filename is automatically a cache miss with no invalidation call needed at all.
 
 ---
 
-## Caching: Hit, Miss & Invalidation
+## Exam Framing
 
-- **Cache hit** — the edge has the requested variant (identified by the **cache key**) → served instantly
-- **Cache miss** — not cached → CloudFront fetches from the **origin** (per the Origin Request Policy), caches it, then serves. An edge never asks another edge.
-- **TTL** controls how long content stays cached
-- **Invalidation** — after updating the origin, edges serve the **old** version until TTL expires. Create an invalidation (e.g. \`/*\`) to clear edge caches **immediately**. (First ~1,000/month free; or version filenames instead.)
-
----
-
-## High Availability & Restrictions
-
-### Origin Groups (Failover)
-Pair a **primary** and **secondary** origin. CloudFront uses the primary; on a failover status code (500/502/503/504) it switches to the secondary, and back when the primary recovers. Use cases: **EC2 → S3** failover, or **region-to-region** with load balancers. (Remember to point the **cache behavior** at the origin group.)
-
-### Geographic Restrictions
-Allow or block viewers by **country** — an **allow list** (only these) or a **block list** (everyone except these). Blocked users get a **403**.
-
-### Custom Error Pages
-Map origin errors (e.g. 504) to a friendly custom page served from S3 — so users see "we'll be back soon" instead of a raw gateway error.
+> "Content was updated at the origin but CloudFront keeps serving the old version" → **the edge cache hasn't expired yet (TTL) — use Cache Invalidation to force an immediate refresh.** Remember invalidation is a **manual, on-demand override** of the normal TTL-based expiration, not a replacement for it — most updates should just rely on TTL, with invalidation reserved for changes that genuinely need to go live immediately.
 `,
     },
     {
