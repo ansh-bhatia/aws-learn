@@ -765,29 +765,92 @@ A name like **db.m6g.large** breaks into four parts, and the pattern is identica
 `,
     },
     {
-      id: "rds",
-      title: "RDS – Relational Database Service",
-      shortDesc: "Managed relational databases (MySQL, Postgres, etc.)",
+      id: "rds-storage-fundamentals",
+      title: "RDS Storage – EBS-Backed Types, the 64TB Cap, and Data Striping",
+      shortDesc: "Storage options depend on the engine you pick, capped at 64TB, with automatic striping across volumes for large databases",
+      visuals: [],
+      content: `## RDS Storage Is Built on EBS
+
+> **RDS storage is the underlying system RDS uses to hold database data — built on the same EBS volumes used for EC2 instances**, providing scalable, durable, high-performance storage without any separate storage service to manage.
+
+---
+
+## Storage Types Depend on the Database Engine
+
+> ⚠️ **The exact list of available storage types changes based on which database engine is selected — not every engine offers the same options.**
+
+The storage tab typically surfaces a handful of choices — **General Purpose SSD, Provisioned IOPS SSD, and Magnetic** among them — but the actual count varies: selecting **MySQL** might surface 3 options, while selecting **MariaDB** can surface 5, including magnetic. This mirrors the same EBS volume type distinctions covered in the EC2 storage section (gp2/gp3, io1/io2, magnetic) — the underlying tradeoffs (cost, IOPS, throughput) are identical, RDS just exposes whichever subset the selected engine supports.
+
+---
+
+## The 64TB Ceiling
+
+> **RDS storage supports a maximum of 64TB, across every supported database engine** — DB2, MySQL, MariaDB, Oracle, SQL Server, and PostgreSQL all share this same hard ceiling.
+
+Concretely, the allocated storage value accepted by the console runs from **100GB up to 65,536GB (64TB)** — attempting to specify anything beyond that is simply not possible for RDS.
+
+> ⚠️ **Exam framing**: a scenario describing a database that needs to exceed 64TB is **not an RDS scenario at all** — that's specifically where **Amazon Redshift** (covered later in this section) becomes the relevant answer instead. Recognizing the 64TB number as RDS's hard limit is what flags the question as a Redshift question in disguise.
+
+---
+
+## Data Striping
+
+> **RDS Data Striping automatically splits and distributes database data across multiple EBS volumes**, specifically to improve performance for large or high-traffic databases — reads and writes get spread across several volumes working in parallel instead of bottlenecking on one.
+
+⚠️ **This is fully automatic and requires no manual configuration** — there's no toggle or setting to find for it. RDS decides when and how to stripe data based on the provisioned volume size, transparently, as part of managing the instance.
+
+---
+
+## Exam Framing
+
+> "Database needs more than 64TB of storage" → **not RDS** — that's a Redshift scenario. "Large database, need better read/write throughput without changing engine or instance class" → **Data Striping**, which RDS already handles automatically once storage is large enough to benefit from it.
+`,
+    },
+    {
+      id: "rds-storage-auto-scaling",
+      title: "RDS Storage Auto Scaling – Worked Example and Limitations",
+      shortDesc: "Paying only for what you actually use instead of provisioning for a worst case you might never reach — traced through a real growth scenario",
       visuals: ["StorageAutoScaling"],
-      content: `## RDS – Relational Database Service
+      content: `## The Problem It Solves
 
-**Amazon RDS** is a **managed relational database** service. AWS runs the database engine for you — you skip the hardware, OS patching, backups, and replication, and get a production database in **minutes**.
+> **RDS bills for allocated storage, not actually-used storage** — provisioning 500GB up front means paying for 500GB from day one, even while the database holds only 10GB of real data.
 
----
+The natural cost-conscious response — provisioning conservatively (e.g. 100GB) and manually bumping capacity later — creates a real operational risk: **teams genuinely forget to increase capacity in time**, the volume fills up, and the application goes down because the database can no longer write new data.
 
-
-
-
-## Storage
-
-Built on **EBS** (gp2/gp3, io1, magnetic) — up to **64 TB**. You pay for **allocated** space, not used.
-
-- **Storage Auto Scaling** — automatically adds capacity (e.g. +50 GB) when usage nears **90%**, up to a max you set. Avoids both a full disk (app down) and over-provisioning on day one. Not for magnetic storage, read replicas, or Multi-AZ DB Cluster.
-- **Data striping** — RDS auto-distributes data across multiple EBS volumes for better performance on large databases.
+> **Storage Auto Scaling automatically increases allocated storage when RDS detects the database is running low on space** — removing both failure modes at once: no risk of hitting a hard wall, and no need to over-provision "just in case" from the start.
 
 ---
 
+## Worked Example, Traced Step by Step
 
+1. **Initial setup**: allocate **100GB**, enable Storage Auto Scaling, set a **maximum storage limit of 500GB** (explicitly capping how far RDS is allowed to grow it automatically — RDS's own hard ceiling is 64TB, but 500GB is the self-imposed budget guardrail here)
+2. **Early state**: the database starts with **30GB** of actual data — billed for the full 100GB allocated, using only 30GB of it
+3. **Growth**: over time, usage climbs to **90GB out of the 100GB allocated** — only 10GB of headroom left
+4. **Threshold triggers**: once usage crosses roughly **90% of allocated capacity**, RDS **automatically** provisions more space — in this example, **+50GB**, bringing total allocation to **150GB**
+5. **Continued growth**: usage climbs again, reaching **140GB out of 150GB** — the same ~90% threshold trips again, adding another **+50GB**, bringing total allocation to **200GB**
+6. **The pattern repeats** as the database keeps growing, always adding capacity in increments, always staying within the **500GB ceiling** set at the start — RDS never grows the volume all the way to its own 64TB maximum unless explicitly permitted to
+
+---
+
+## Why This Actually Saves Money
+
+> **Billing tracks whatever the allocation happens to be at each point in time, not a single upfront worst-case number.** Reaching 150GB of actual usage over months means paying roughly **100GB → 150GB → 200GB** in stepped increments along the way — not 500GB starting from day one, which is what provisioning defensively for "we might need it eventually" would have cost instead.
+
+> A database might realistically take a full year to organically grow toward a 500GB ceiling — Storage Auto Scaling means the bill grows roughly in step with actual usage the entire time, rather than the company paying for capacity it won't touch for months.
+
+---
+
+## Three Limitations
+
+1. **Limited storage type support** — ⚠️ **not available for Magnetic storage**; only the newer storage types support automatic scaling
+2. **Not available for read replicas** — a read replica (covered in a later topic) does not get this automatic capacity growth
+3. **Not supported on Multi-AZ DB Clusters** — ⚠️ **this is specifically why the Storage Auto Scaling toggle appears greyed out when Multi-AZ DB Cluster is the selected deployment option** — it's only available for Single DB Instance and Multi-AZ DB Instance deployments.
+
+---
+
+## Exam Framing
+
+> "Avoid manual storage intervention while only paying for what's actually used" → **Storage Auto Scaling**. The three exceptions worth memorizing together: **Magnetic storage, read replicas, and Multi-AZ DB Clusters all lack this feature** — a scenario combining Storage Auto Scaling with any of those three is testing whether you know the feature doesn't actually apply there.
 `,
     },
     {
