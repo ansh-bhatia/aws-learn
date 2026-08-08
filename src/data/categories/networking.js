@@ -3661,6 +3661,198 @@ The build is deliberately split across three lab sessions, each roughly 20-30 mi
 `,
     },
     {
+      id: "global-accelerator-super-lab-part1-networking",
+      title: "Lab – Global Accelerator Super Lab Part 1 (Networking)",
+      shortDesc: "Building two independent regional VPCs from scratch — subnets, route tables, an Internet Gateway, and a NAT Gateway, twice",
+      visuals: [],
+      content: `## Goal for This Part
+
+Build the full **networking foundation**, in **both regions** (India / ap-south-1 and USA / us-east-1), before touching a single EC2 instance or load balancer: a custom VPC, 4 subnets, route tables, an Internet Gateway, and a NAT Gateway.
+
+> ⚠️ **The lab deletes each region's default VPC first**, specifically to avoid confusion from having a default VPC sitting alongside the custom one — cleanup is expected after the lab, with the default VPC recreatable afterward if needed.
+
+---
+
+## Step 1 — Create the VPC
+
+**Per region**, a VPC using a **private Class C range** (e.g. **192.168.0.0/24** for India, **192.168.20.0/24** for USA) — small, deliberately non-overlapping ranges since Class C provides more than enough addresses for a lab-scale network without the wasted space of Class A/B ranges.
+
+---
+
+## Step 2 — Create 4 Subnets
+
+Each region gets **4 subnets across 2 Availability Zones**: **public subnet AZ-a, public subnet AZ-b, private subnet AZ-a, private subnet AZ-b**. An online subnet calculator (given the base CIDR and a subnet count) generates the exact non-overlapping ranges for each.
+
+> The **naming convention matters for sanity later** — e.g. "public subnet 1a" placed explicitly in AZ **a**, "private subnet 1b" in AZ **b** — since nothing about a subnet's name is enforced by AWS; matching name to actual AZ placement is entirely a discipline the operator maintains.
+
+---
+
+## Step 3 — Route Tables
+
+By default, every subnet in a new VPC associates with the **main route table**. The lab creates a **dedicated route table for public subnets** (leaving the main/default table serving as the private one) and explicitly associates the two public subnets with it:
+
+> ⚠️ **Getting the subnet-to-route-table association wrong produces no error message at all** — the mistake only surfaces later as instances that can't reach the internet, or a load balancer that behaves oddly. There's no fail-fast here; double-check the association step carefully.
+
+---
+
+## Step 4 — Internet Gateway (for public subnets)
+
+**Create an Internet Gateway → attach it to the VPC → edit the public route table → add a default route (0.0.0.0/0) targeting the Internet Gateway.** This is what actually makes the public subnets public — the subnet designation itself is just a label until the routing backs it up.
+
+---
+
+## Step 5 — NAT Gateway (for private subnets)
+
+> ⚠️ **Skipping this step is the single most common cause of a "healthy load balancer, unhealthy target" failure later in the lab.** Private-subnet EC2 instances need **outbound internet access** to reach the package repositories their user-data script depends on (e.g. to install a web server) — without a NAT Gateway, that install silently fails, and the instance never becomes healthy, with nothing in the instance itself pointing at "missing NAT Gateway" as the cause.
+
+**Create a NAT Gateway inside a public subnet**, allocate it an **Elastic IP**, then — this is the step that's easy to genuinely forget even after creating the NAT Gateway itself — **edit the private route table and add a default route (0.0.0.0/0) targeting the NAT Gateway.** Creating the NAT Gateway alone does nothing without this routing entry.
+
+---
+
+## Repeat Everything for the Second Region
+
+Every single step above — VPC, 4 subnets, route tables, Internet Gateway, NAT Gateway (including its own easy-to-forget default route) — gets built again independently in the **second region**, using a **different, non-overlapping CIDR range**. Nothing is shared between the two regions at the networking layer; they're two completely separate VPCs that Global Accelerator will unify later, in Part 3.
+
+---
+
+## Exam Framing
+
+> The two gotchas worth memorizing from this part: **(1) a subnet only becomes "public" once its route table has a default route to an Internet Gateway — the name alone means nothing**, and **(2) a NAT Gateway does nothing until the private route table has an explicit default route pointing at it** — creating the NAT Gateway resource is only half the setup.
+`,
+    },
+    {
+      id: "global-accelerator-super-lab-part2-alb",
+      title: "Lab – Global Accelerator Super Lab Part 2 (Security Groups, EC2, ALB)",
+      shortDesc: "Two security groups, two user-data-provisioned web servers per region, and an Application Load Balancer tying it together",
+      visuals: [],
+      content: `## Goal for This Part
+
+With networking in place from Part 1, this part adds the actual compute and load-balancing layer: **two security groups, two EC2 web servers, and one Application Load Balancer — per region.**
+
+---
+
+## Step 1 — Two Security Groups
+
+**ALB security group**: inbound **HTTP (port 80) from anywhere (0.0.0.0/0)** — this is the public-facing entry point, so it needs to accept traffic from any source. Outbound left at its default (all traffic).
+
+**Web server security group**: inbound **HTTP (port 80) restricted to the ALB security group as the source** (not an IP range) — ⚠️ **using the ALB's security group as the source, rather than an IP range, means only traffic actually routed through the load balancer can ever reach the instances directly**, even if someone discovers an instance's private IP. An SSH rule (port 22, open broadly for lab convenience) is added too, though not actually used in the walkthrough.
+
+> ⚠️ **A common mistake here is adding the HTTP rule to the outbound rules instead of inbound** — outbound is irrelevant for controlling who can reach the web server; the inbound rule is what actually gates incoming traffic.
+
+---
+
+## Step 2 — Launch Two EC2 Instances (via User Data)
+
+Each region gets **two EC2 instances, one per private subnet/AZ** — Amazon Linux, placed with **no public IP** (they're private-subnet instances, reached only through the ALB), using the **web server security group** created above.
+
+> **A user-data script (provided ready-made) automates the entire web server setup** — installing the web server software and deploying the site content — so there's no manual SSH-in-and-configure step at all. This is deliberate: the lab explicitly favors automation over manual per-instance configuration, since this exact pattern (user data at launch time) is what makes the setup repeatable across two full regions without duplicated manual work.
+
+---
+
+## Step 3 — Target Group
+
+**Create a target group** (HTTP, targeting the region's VPC) → register **both** EC2 instances → ⚠️ **click "Include as pending below" before finishing** — skipping this leaves the target group created but empty, with no registered targets receiving traffic at all.
+
+---
+
+## Step 4 — Application Load Balancer
+
+**Create an Application Load Balancer**: internet-facing, IPv4, spanning **both public subnets** (a load balancer needs at least two subnets across two AZs for its own high availability), using the **ALB security group**, with an **HTTP:80 listener** forwarding to the target group just created.
+
+---
+
+## Verifying Before Moving On
+
+Once the ALB reaches **Active** status, opening its DNS name in a browser should load the site — and **refreshing repeatedly should visibly alternate between the two web servers** (each instance's page identifies itself), confirming the load balancer is genuinely distributing traffic rather than always hitting the same instance.
+
+> ⚠️ **If a target shows unhealthy, there are exactly three likely causes**: the security group isn't configured correctly (ALB can't reach the instance, or the instance's inbound rule doesn't actually name the ALB's security group as source), the **NAT Gateway or its route wasn't set up correctly in Part 1** (so the user-data script's package install silently failed), or the user-data script itself wasn't copied in completely.
+
+---
+
+## Repeat for the Second Region
+
+Same 4 steps — security groups, two EC2 instances via user data, target group, Application Load Balancer — built independently in the second region against its own VPC, subnets, and security groups from Part 1. By the end of this part, **both regions have a fully working, internally load-balanced website**, entirely independent of each other — Global Accelerator in Part 3 is what finally unifies them behind one entry point.
+
+---
+
+## Exam Framing
+
+> "Only the load balancer, never a direct source IP, should reach the backend instances" → **security group referencing another security group as its source**, not a CIDR range. The "healthy ALB, unhealthy target" troubleshooting triad to remember: **security group misconfiguration, missing/misconfigured NAT Gateway, or a broken user-data script** — in that rough order of likelihood.
+`,
+    },
+    {
+      id: "global-accelerator-super-lab-part3-setup-failover",
+      title: "Lab – Global Accelerator Super Lab Part 3 (Setup & Regional Failover Test)",
+      shortDesc: "Wiring both regions' load balancers into one Global Accelerator, then deleting a load balancer to prove the failover actually works",
+      visuals: [],
+      content: `## Starting Point
+
+Both regions now have a fully working, independently load-balanced website (from Part 2). This part adds the **Global Accelerator** on top, unifying both regions behind one static entry point, then **proves failover actually works** by simulating a full regional outage.
+
+---
+
+## Creating the Accelerator
+
+> ⚠️ **Global Accelerator is a global service — there is no region selector when creating one**, unlike every other resource built so far in this lab.
+
+**Global Accelerator console → Create accelerator:**
+
+- **Name** the accelerator, choose **Standard** type, **IPv4** (dual-stack is available but out of scope for this lab)
+- **Add a listener**: **TCP, port 80** (matching the web servers' HTTP port)
+- **Create one endpoint group per region** — here, **India (ap-south-1)** and **USA (us-east-1)**, each left at a **100% traffic dial** (no artificial traffic-splitting for this lab)
+- **Add an endpoint to each group**: the region's **Application Load Balancer**, selected from a dropdown populated with ALBs across all regions (since Global Accelerator is global, it can see and attach to load balancers anywhere)
+
+**Create accelerator** → provisioning takes a few minutes, similar to a CloudFront distribution deploying.
+
+> ⚠️ **A newly created accelerator can show status "Disabled" even though it should default to enabled** — if this happens, manually edit the accelerator and toggle it back to **Enabled**. This appeared to be an inconsistent UI state in the walkthrough rather than an expected step, but is worth checking if the accelerator never becomes reachable.
+
+---
+
+## ⚠️ A Real Troubleshooting Moment: The Missing Endpoint Group
+
+After deployment, opening the accelerator's DNS name only ever returned the **India** website — from every simulated global location, including ones expected to route to the US. Checking **Listener → Endpoint groups** revealed **only one endpoint group existed** (India) — the US endpoint group had never actually been added in the initial setup, despite appearing to be configured. The fix: **manually add the missing US East 1 endpoint group and its ALB endpoint** directly from the listener view, then wait for it to redeploy and show healthy.
+
+> This is presented deliberately as a **real, unscripted troubleshooting scenario** — the lesson being that when global routing looks wrong, checking **Listener → Endpoint groups** for a genuinely missing group (not just a misconfigured one) is a real, easy-to-miss failure mode worth checking first.
+
+---
+
+## Verifying Global Routing
+
+Using a geo-distributed browsing tool against the accelerator's DNS name (or either of its two static IPs):
+
+- Locations near **India** (e.g. Singapore, Australia) consistently load the **India** web servers
+- Locations near the **USA** (e.g. Virginia, Brazil, Ireland) consistently load the **US** web servers
+
+> ⚠️ **Give it several minutes after any endpoint-group change before concluding something is broken** — DNS propagation and health-check convergence both take real time, and the lab explicitly waited 5+ minutes at multiple points before results matched expectations.
+
+---
+
+## Health Checks
+
+**Listener → Endpoint group → Edit** exposes the health check configuration (protocol, port, path). ⚠️ **If the ALB isn't serving a default page at the health check path, an explicit health check path must be configured** — otherwise Global Accelerator will keep reporting the endpoint unhealthy even though the ALB itself is working fine when tested directly.
+
+---
+
+## Testing Regional Failover (The Payoff)
+
+**Simulating a full regional outage**: delete the **India Application Load Balancer** entirely (rather than just breaking a security group rule, to genuinely simulate the whole region becoming unreachable).
+
+- The India endpoint group's health status transitions to **unhealthy/unknown** within a short time
+- Re-testing global routing — including from locations that previously resolved to India (Singapore, Australia) — now shows **every single location worldwide being served the US website instead**
+- Opening the accelerator's DNS name (or static IP) directly from India itself **also now returns the US site** — confirming the reroute is genuinely global, not just a routing preference for distant users
+
+> **No downtime occurred, and the accelerator's static IPs and DNS name never changed** — from a user's perspective, the site simply kept working, routed to whichever region was actually healthy.
+
+**Recovering** would mean recreating the India ALB and re-adding it as an endpoint in the India endpoint group — left as a follow-up exercise in the lab rather than performed on camera, since the steps are identical to the original ALB creation in Part 2.
+
+---
+
+## Exam Framing
+
+> "One static entry point (IP or DNS), automatic failover across entire AWS regions, sub-second-to-seconds recovery, works below the DNS layer" → **AWS Global Accelerator**. The exam-relevant proof-point from this lab: deleting an entire region's load balancer caused **zero URL/IP changes** for users — traffic simply, automatically, rerouted to the surviving region, which is the specific capability that distinguishes Global Accelerator from DNS-based failover (Route 53), where clients can keep hitting stale cached IPs until TTL expires.
+`,
+    },
+    {
       id: "lb-intro",
       title: "Load Balancer – Why It Exists",
       shortDesc: "Getting EC2 instances out of the public subnet entirely, plus built-in health checks",
