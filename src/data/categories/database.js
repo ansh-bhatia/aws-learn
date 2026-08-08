@@ -359,10 +359,249 @@ From the MySQL prompt:
 `,
     },
     {
+      id: "rds-single-db-instance",
+      title: "RDS Availability – Single DB Instance",
+      shortDesc: "One instance, one AZ, no standby — the cheapest option, and the one that makes every other availability option make sense",
+      visuals: [],
+      content: `## What It Is
+
+> **A Single DB Instance is a standalone RDS database running in one Availability Zone, with no standby replica and no automatic failover.**
+
+This is the baseline every other availability option gets compared against — understanding its drawbacks is what makes Multi-AZ's value proposition click.
+
+---
+
+## The Appeal: Lowest Cost
+
+> **No standby instance, no extra replicated resources — just one database, priced at the lowest possible tier.** If a Multi-AZ Instance costs roughly **2×** and a Multi-AZ Cluster roughly **3×**, a Single Instance is the **1×** baseline everything else is measured against.
+
+For a genuinely non-critical application — one where the business can tolerate the database being briefly unavailable — this cost saving is a completely legitimate choice, not a compromise made out of ignorance.
+
+---
+
+## Three Drawbacks
+
+**1. No automatic failover.** If the instance (or its entire Availability Zone) fails, there's no standby anywhere to take over. Recovery means manually **creating a new DB instance in a different AZ and restoring from backup** — a real, hands-on process, not a background AWS operation.
+
+**2. No high availability.** Data lives in exactly one AZ. ⚠️ This makes it explicitly **unsuitable for mission-critical applications** — anything where downtime has a real business cost.
+
+**3. Manual backup recovery.** Automated backups exist and can be restored from, but the entire restore process — noticing the failure, initiating the restore, waiting for it to complete — is **manual and takes real time and effort**, unlike the automatic, near-instant failover Multi-AZ options provide.
+
+---
+
+## When It's Actually the Right Choice
+
+> **Not every organization needs to pay for high availability.** If a company's budget prioritizes cost savings over uptime, and the application genuinely can tolerate downtime, Single DB Instance is the financially correct choice — not a lesser one.
+
+Because RDS billing is **recurring** (paid every month, not a one-time cost), the price gap between Single and Multi-AZ compounds significantly over a year — a real budget conversation, not just a technical one.
+
+---
+
+## Exam Framing
+
+> "Cheapest option, non-critical workload, downtime is tolerable" → **Single DB Instance**. The three drawbacks above — no auto-failover, no HA, manual recovery — are exactly what the next topic's Multi-AZ Instance option exists to solve, at roughly double the cost.
+`,
+    },
+    {
+      id: "rds-multi-az-instance",
+      title: "RDS Availability – Multi-AZ DB Instance",
+      shortDesc: "A synchronous standby in a second AZ, promoted automatically in ~60 seconds — high availability with zero performance gain",
+      visuals: [],
+      content: `## What It Is
+
+> **A Multi-AZ DB Instance creates two database instances in two different Availability Zones within the same region** — one **primary**, one **standby** — specifically to provide automatic high availability for mission-critical workloads.
+
+---
+
+## How It Works
+
+1. The application always connects via the **DB endpoint** — never a raw IP address. The endpoint transparently points at whichever instance is currently primary.
+2. Every write goes to the **primary** instance first.
+3. The primary **synchronously replicates** that write to the standby's EBS volume in the second AZ, in real time — a one-way, primary-to-standby replication path.
+4. Only after the standby confirms the write does the transaction complete.
+
+> ⚠️ **The standby instance does absolutely no work under normal operation** — it exists purely as a synchronized, ready-to-promote copy, not as a second worker sharing any load.
+
+---
+
+## Automatic Failover
+
+> **If the primary fails (system failure, maintenance, an AZ-level issue), AWS automatically promotes the standby to primary — no manual intervention required, typically completing within about 60 seconds.**
+
+Because the application only ever talks to the **DB endpoint**, this failover is transparent — the endpoint itself starts pointing at the newly-promoted instance, so no connection-string change is needed on the application side.
+
+---
+
+## Where It's Used
+
+> The canonical use case: **mission-critical production applications** — banking systems, stock trading platforms, e-commerce stores — anywhere sustained downtime translates directly into lost business or lost customer trust, and near-zero downtime is worth paying for.
+
+---
+
+## Benefits
+
+- **High availability** — survives both a single-instance failure and a full AZ outage, without the operational burden of building this manually on-premises
+- **No data loss** — synchronous replication means the standby is always current
+- **Automatic, near-instant failover** — ~60 seconds, with zero manual steps
+- **Uninterrupted backup-like durability** — the continuous replication itself functions like an always-current, real-time backup
+
+---
+
+## ⚠️ The Critical Exam Point: No Performance Gain
+
+> **Multi-AZ is exclusively for availability — it provides ZERO performance benefit.** The standby instance sits idle; only the primary ever handles any traffic, read or write. Doubling your instance count does **not** double your throughput.
+
+If a question is asking about **improving database performance** rather than availability, Multi-AZ Instance is the wrong answer — the two tools for that are **read replicas** and **ElastiCache**, both covered separately later in this section.
+
+---
+
+## Costs and Constraints
+
+- **~2× the cost** of a Single DB Instance — two full instances running continuously, one of which does no work under normal conditions
+- **Slight latency** on every write, since the primary waits for the standby's replication to complete before confirming the transaction
+- **Not for scaling** — the instance count is fixed at exactly two (primary + standby), and both always live **within the same region** — there is no cross-region Multi-AZ
+
+---
+
+## Exam Framing
+
+> "High availability, near-zero downtime, standard workload" → **Multi-AZ DB Instance**. ⚠️ **The single most commonly tested trap**: a question mentioning "performance" or "scaling" is never answered by Multi-AZ Instance — that's what read replicas and ElastiCache exist for. Multi-AZ Instance buys availability, full stop.
+`,
+    },
+    {
+      id: "rds-multi-az-cluster",
+      title: "RDS Availability – Multi-AZ DB Cluster",
+      shortDesc: "One writer, two readers, semi-synchronous replication — availability AND read performance, at roughly 3× the cost",
+      visuals: ["AvailabilityOptions"],
+      content: `## What It Is
+
+> **A Multi-AZ DB Cluster is a semi-synchronous high-availability deployment with one writer instance and two readable reader instances, spread across three separate Availability Zones in the same region.** Unlike a Multi-AZ Instance's idle standby, both readers here actively serve traffic.
+
+⚠️ **This is a relatively new RDS feature** — the course explicitly flags newly-released AWS features as prime exam-question material, since AWS tends to test awareness of recent capabilities within months of release.
+
+---
+
+## Deployment Structure
+
+- **One writer instance** — handles **all write operations**, and can also serve reads
+- **Two reader instances** — handle **read-only operations**, fixed at exactly two, spread across the two remaining AZs
+- All three instances live in **different Availability Zones within the same region**
+
+**A concrete example**: booking a flight is a **write** (only the writer instance can handle it — creating the confirmed booking record). Checking that flight's status afterward via a PNR lookup is a **read** — any of the three instances (writer or either reader) can serve it.
+
+---
+
+## The Performance Difference vs Multi-AZ Instance
+
+> Picture 100 incoming requests, 20 writes and 80 reads. **With a Multi-AZ Instance**, all 100 requests hit the single working primary — the standby does nothing. **With a Multi-AZ Cluster**, the writer handles the 20 writes while the 80 reads are split across the writer and both readers — genuine load distribution across three working instances instead of one.
+
+This is the core reason Multi-AZ Cluster provides **performance benefit**, where plain Multi-AZ Instance provides **none at all**.
+
+---
+
+## Semi-Synchronous Replication (and Why It's Faster for Writes)
+
+> **In a plain Multi-AZ Instance, the primary must wait for the standby to fully acknowledge a write before handling the next request** — fully synchronous.
+
+> **In a Multi-AZ Cluster, the writer does NOT wait for the readers to fully synchronize before moving on to the next write** — this is what "semi-synchronous" means, and it's specifically why Multi-AZ Cluster delivers **lower write latency** than a plain Multi-AZ Instance, despite both replicating in real time.
+
+---
+
+## Automatic Failover
+
+If the writer fails, **one of the two reader instances is automatically promoted to writer** — no manual steps, minimal downtime, and **no data loss**, since replication to the readers was already continuously happening.
+
+---
+
+## Benefits
+
+- **High availability** — same fundamental guarantee as Multi-AZ Instance
+- **Increased read capacity** — the headline advantage over plain Multi-AZ, since two dedicated reader instances actually do work
+- **Lower write latency** — from the semi-synchronous replication model
+- **Automatic failover** with no data loss
+- **High data durability** — data lives across three AZs simultaneously
+- **Cost efficiency specifically for read-heavy workloads** — the extra cost is justified when read traffic volume makes the two working readers worth paying for
+
+---
+
+## Downsides
+
+- **Higher cost** — roughly **3×** a Single DB Instance, since three full instances run continuously
+- **Increased complexity** — genuinely harder to reason about than a single instance or a simple primary/standby pair
+- **Fixed at exactly 3 instances** — 1 writer + 2 readers, with no way to add more
+- ⚠️ **No cross-region disaster recovery** — despite the higher cost and three-AZ spread, everything still lives in **one region**; a full regional outage takes the whole cluster down
+- ⚠️ **Limited engine support** — currently only **Amazon RDS for MySQL and Amazon RDS for PostgreSQL**, and only on specific newer engine versions. Selecting an older engine version (e.g. MySQL 5.7) in the console **removes the Multi-AZ Cluster option entirely** — a real, demonstrable constraint, not a theoretical one.
+
+---
+
+## Exam Framing
+
+> "High availability AND better read performance, willing to pay the most for it" → **Multi-AZ DB Cluster**. The two numbers worth memorizing: **~35 second failover** (vs Multi-AZ Instance's ~60 seconds) and a **fixed 1 writer + 2 reader** topology. Remember the engine-support constraint too — this option isn't universally available across every RDS engine and version.
+`,
+    },
+    {
+      id: "rds-choosing-availability-option",
+      title: "Choosing an RDS Availability Option (RPO & RTO)",
+      shortDesc: "Using Recovery Point Objective and Recovery Time Objective to pick between Single, Multi-AZ Instance, and Multi-AZ Cluster",
+      visuals: ["RPORTOChooser"],
+      content: `## The Two Numbers That Decide the Question
+
+> **RPO (Recovery Point Objective)** — the maximum amount of **data loss** the business can tolerate after a failure. This is what drives **backup frequency**.
+
+> **RTO (Recovery Time Objective)** — the maximum amount of **downtime** the business can tolerate after a failure. This is what drives **which availability option to choose**.
+
+⚠️ **As a cloud engineer, you don't set RPO/RTO yourself** — the business (or, in regulated industries, a regulator) hands these numbers to you as a requirement, and your job is choosing the cheapest option that actually satisfies them.
+
+---
+
+## RPO, Worked Through an Example
+
+> If a backup runs at **10:00 AM** on an hourly schedule, and the database crashes at **10:30 AM**, exactly **30 minutes of data is lost** — everything written between the last backup and the crash.
+
+- If the company's **RPO is 1 hour**, losing 30 minutes is **within tolerance** — the backup strategy is adequate as-is
+- If the company's **RPO is 15 minutes**, that same 30-minute loss **fails to meet the requirement** — the backup interval needs to shrink (e.g. to every 15 minutes) to actually satisfy it
+
+> The lower the RPO, the more frequently backups (or replication) must happen — and a truly near-zero RPO essentially forces continuous, synchronous replication rather than periodic backups at all.
+
+---
+
+## RTO, Worked Through an Example
+
+> If a database crashes at **10:00 AM** and the company's **RTO is 1 hour**, the database must be restored and running again by **11:00 AM**.
+
+- Meeting that window (creating a new instance, restoring from backup, or failing over) **satisfies RTO**
+- Taking longer than the window **fails RTO**, and signals the recovery strategy needs to get faster — typically by moving to a higher-availability deployment option
+
+---
+
+## Mapping RPO/RTO to the Three Deployment Options
+
+| Requirement | Option | Why |
+|---|---|---|
+| **High RPO/RTO tolerance** (hours of acceptable loss/downtime) | **Single DB Instance** | Fully backup-dependent, cheapest (1×), acceptable only when the business genuinely doesn't need fast recovery |
+| **Low RPO, RTO ~60 seconds acceptable** | **Multi-AZ DB Instance** | Synchronous replication (near-zero data loss) + automatic ~60s failover, at 2× cost |
+| **Extremely low RPO, RTO ~35 seconds, AND read performance matters** | **Multi-AZ DB Cluster** | Same near-zero data loss, faster ~35s failover, at 3× cost — but that extra cost buys genuine read throughput too |
+
+---
+
+## ⚠️ The Nuance Worth Remembering About Cluster's 3× Cost
+
+> Multi-AZ Instance costs **2×** for the performance of **one working instance** (the standby contributes nothing). Multi-AZ Cluster costs **3×** for the performance of **two working reader instances plus the writer** — meaningfully more actual compute working for that extra spend, not just a bigger bill for the same idle-standby pattern.
+
+This reframes the Cluster's higher price: it isn't "paying more for the same availability," it's "paying more and getting proportionally more usable performance in return" — worth calling out explicitly when a scenario mentions both **availability** and **read-heavy performance** requirements together.
+
+---
+
+## Exam Framing
+
+> A scenario stating specific RPO/RTO numbers is testing whether the numbers map to the right deployment tier: **hours → Single**, **~60 seconds + near-zero loss → Multi-AZ Instance**, **~35 seconds + near-zero loss + read-heavy workload → Multi-AZ Cluster**. If the scenario names a regulator (e.g. a central bank) or an explicit compliance requirement, that's the tell that RPO/RTO is externally mandated, not a free choice — pick the cheapest option that still satisfies the stated numbers.
+`,
+    },
+    {
       id: "rds",
       title: "RDS – Relational Database Service",
       shortDesc: "Managed relational databases (MySQL, Postgres, etc.)",
-      visuals: ["AvailabilityOptions", "RPORTOChooser", "InstanceClassNaming", "StorageAutoScaling", "CredentialsSecurity"],
+      visuals: ["InstanceClassNaming", "StorageAutoScaling", "CredentialsSecurity"],
       content: `## RDS – Relational Database Service
 
 **Amazon RDS** is a **managed relational database** service. AWS runs the database engine for you — you skip the hardware, OS patching, backups, and replication, and get a production database in **minutes**.
@@ -370,36 +609,6 @@ From the MySQL prompt:
 ---
 
 
-## Availability & Durability — 3 Options
-
-| Option | Instances | Cost | HA | Performance | Failover |
-|--------|-----------|------|----|-----------  |----------|
-| **Single DB Instance** | 1 | 1× | ❌ none | — | Manual (restore from backup) |
-| **Multi-AZ DB Instance** | 2 (primary + standby) | 2× | ✅ | ❌ standby is idle | ~60s automatic |
-| **Multi-AZ DB Cluster** | 3 (1 writer + 2 readers) | 3× | ✅ | ✅ 2 readers serve reads | ~35s automatic |
-
-- **Single** — one AZ, cheapest, downtime on failure. For non-critical apps.
-- **Multi-AZ Instance** — synchronous standby in a 2nd AZ; auto-promoted on failure (~60s). HA but **no performance gain** (standby does nothing).
-- **Multi-AZ Cluster** — writer + 2 readers across 3 AZs; readers handle read traffic (**performance!**), **semi-synchronous** = lower write latency, ~35s failover. **MySQL & PostgreSQL only**; no cross-region DR; can't change the fixed 3-node count.
-
-> **Exam trap:** Multi-AZ is for **availability, not performance/scaling**. For read performance use **read replicas** or **ElastiCache**. Always connect via the **DB endpoint** (it auto-points to the current primary).
-
----
-
-## Choosing by RPO & RTO
-
-- **RPO** (Recovery Point Objective) — max **data loss** you can tolerate → drives **backup frequency**
-- **RTO** (Recovery Time Objective) — max **downtime** you can tolerate
-
-| Need | Pick |
-|------|------|
-| High RPO & RTO tolerance (cheap) | **Single** |
-| Low data loss, ~60s failover OK | **Multi-AZ Instance** |
-| Near-zero loss + fastest failover + read perf | **Multi-AZ Cluster** |
-
-> The **business/regulator** (e.g. RBI for banks) sets RPO/RTO; you pick the cheapest option that meets them.
-
----
 
 ## Instance Class
 
