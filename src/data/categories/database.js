@@ -6,50 +6,232 @@ export default {
   color: "#2E73B8",
   topics: [
     {
+      id: "database-fundamentals-intro",
+      title: "Database Fundamentals – What Is a Database and a DBMS?",
+      shortDesc: "From a messy 1975 notepad order log to Edgar Codd's 1970 relational model — and the 3 database families AWS supports",
+      visuals: [],
+      content: `## What a Database Actually Is
+
+> **A database is a structured collection of information, usually stored electronically, that lets you efficiently store, retrieve, and manage data.** The key word is *structured* — storing data isn't the hard part; storing it in a way that makes it easy to retrieve later is.
+
+> **A DBMS (Database Management System) is the software that creates, manages, and maintains databases** — it's the interface that lets you store, retrieve, and update data in a systematic, organized way.
+
+---
+
+## Before DBMS: The 1975 Notepad Problem
+
+Picture order records for a company kept as free-form handwritten notes: quantity sometimes written as a number, sometimes as a word; a field labeled "note" in one entry and "remark" in the next; no consistent structure at all. Three concrete problems fall out of this:
+
+1. **Free-form data** — no rule governing how anything gets written down
+2. **Inconsistent structure** — the same kind of information appears under different labels from one record to the next
+3. **Difficult to query** — asking "show me every delivered order" has no reliable way to be answered, because there's no consistent field to search against
+
+---
+
+## Edgar Codd's Relational Model (1970)
+
+> **In 1970, Edgar F. Codd, while at IBM, published "A Relational Model of Data for Large Shared Data Banks"** — proposing that data be structured into **tables of rows and columns**, a structure we now call a **schema**.
+
+Applied to the same order data: a **customers table**, an **orders table**, and a **products table**, each with a **fixed set of columns** (customer ID, customer name, address; order ID, customer ID, order date; etc.). The tables **relate to each other** — an order's customer ID points back to a row in the customers table, so "what's the status of Rajesh Kumar's order?" becomes a lookup through the customer ID linking the two tables, not a manual scan of inconsistent free text.
+
+**What this structure buys you**: consistency (a column enforces what kind of value belongs there), easy retrieval (query by a known field), fewer errors, and scalability (multiple related tables instead of one sprawling, ever-growing note).
+
+---
+
+## Three Database Families
+
+| Family | Sub-types | Popular engines | AWS's own product |
+|---|---|---|---|
+| **Relational** | — | MySQL, PostgreSQL, Oracle, MS SQL Server, MariaDB | **Amazon Aurora** |
+| **NoSQL** | Document-oriented | MongoDB, CouchDB | **Amazon DocumentDB** |
+| | Key-value | Redis | **Amazon DynamoDB** |
+| | Column-family | Cassandra, HBase | **Amazon Keyspaces** |
+| | Graph | Neo4j | **Amazon Neptune** |
+| **In-memory** | — | Redis, Memcached | **Amazon ElastiCache** (managed Redis/Memcached) |
+
+> AWS has a managed product for **every one of these database families** — a recurring exam pattern: match the workload shape (strict tabular/relational vs. flexible document vs. simple key-value vs. connected-graph vs. ultra-low-latency cache) to the right AWS service family, not just to RDS by default.
+
+---
+
+## Exam Framing
+
+> "A messy way of storing data becomes structured, queryable, and consistent" → the shift from free-form storage to a **DBMS with a defined schema**. When a scenario names a specific data shape (documents, key-value pairs, graph relationships, pure caching), the answer is almost never "just use RDS" — it's whichever AWS service matches that specific family.
+`,
+    },
+    {
+      id: "relational-database-terminology",
+      title: "Relational Database Terminology (Table, Key, Index, SQL, Normalization)",
+      shortDesc: "Every core relational term, taught through one running e-commerce example: table, row, column, schema, keys, index, SQL, relationships",
+      visuals: ["RelationalTables"],
+      content: `## The Running Example
+
+Three linked tables for an e-commerce backend — **customers**, **orders**, **products** — used throughout to ground every term below in one consistent, traceable scenario: "what's the status of Rajesh Kumar's shipment?" answered by following his customer ID from the customers table into the orders table, then the order's product ID into the products table.
+
+---
+
+## Table, Row, Column
+
+> **A table is the fundamental building block of a relational database** — structured like a spreadsheet, made of **rows** and **columns**.
+
+- **Row** — one unique record (e.g. the single row holding all of Rajesh Kumar's customer details)
+- **Column** — one attribute/characteristic shared by every row (e.g. every customer row has a customer ID, name, address, payment method column)
+
+---
+
+## Schema
+
+> **The schema is the overall blueprint of a database and its tables** — which tables exist, what columns each has, and each column's **data type**.
+
+⚠️ **A relational schema is fixed.** Adding a new field (e.g. a mobile number column not originally planned for) is a real, deliberate change — someone has to update the database schema *and* the application's input form to actually collect and store it. This rigidity is the exact contrast point relational databases have against NoSQL, which the course explicitly flags as worth remembering for later.
+
+**Data types** enforce what a column can hold — e.g. customer ID must be an integer, order date must be a date — preventing the kind of inconsistent free-text mess that predates DBMS entirely.
+
+---
+
+## Primary Key
+
+> **A primary key is a column (or set of columns) that uniquely identifies each row.** Customer ID in the customers table, order ID in the orders table.
+
+> The real-world analogy used: an Aadhaar number, a passport number, a PAN card number — all exist specifically because **names collide** (multiple "Rajesh Kumar"s), and a system needs one guaranteed-unique value to tell records apart unambiguously.
+
+---
+
+## Foreign Key
+
+> **A foreign key is a column in one table that references a primary key in another table, creating the link between them.**
+
+In the example: **customer ID appears as a foreign key inside the orders table**, referencing the customer ID primary key in the customers table. **Order ID appears as a foreign key inside the products table**, referencing the orders table. Following these links — customer → order → product — is exactly how "what did Rajesh Kumar order, and is it delivered?" gets answered across three separate tables without duplicating his details into every one of them.
+
+---
+
+## Index
+
+> **An index is a structure that speeds up data retrieval — like a book's table of contents, letting the database jump to the right row instead of scanning every single one.**
+
+A slow query against a large table is a common real-world reason to add an index on a frequently-searched column (e.g. customer name, order date) — a concept the course flags for deeper practical treatment later.
+
+---
+
+## SQL
+
+> **SQL (Structured Query Language) is the language used to create, insert, update, and retrieve data in a relational database.**
+
+Every everyday interaction with a relational-backed app is SQL running invisibly underneath: clicking "place order" generates an INSERT; clicking "cancel order" generates a DELETE (or update); filtering products by a price range on a shopping site generates a SELECT with a WHERE clause. The end user never sees SQL — it's the mechanism translating UI actions into actual table changes.
+
+---
+
+## Relationships
+
+> **Tables relate to each other as one-to-one, one-to-many, or many-to-many**, depending on how records in one table map to records in another.
+
+The customers-to-orders relationship in the running example is **one-to-many**: one customer (Rajesh Kumar) can place multiple orders over time, each becoming a **new row** in the orders table (all sharing his same customer ID as the foreign key) — not a new column crammed onto his existing customer row.
+
+---
+
+## Normalization
+
+> **Normalization is organizing data into smaller, related tables to reduce redundancy and improve data integrity**, instead of one enormous table trying to hold everything.
+
+Concretely: the orders table stores only a customer **ID**, not the customer's full name and address repeated on every single order row — those live once, in the customers table, and get looked up via the foreign key whenever needed. This keeps each table's size manageable and guarantees that updating a customer's address only ever requires changing **one** row, not every historical order row that customer ever placed.
+
+---
+
+## Exam Framing
+
+> These ten terms — **table, row, column, schema, primary key, foreign key, index, SQL, relationship, normalization** — are the baseline vocabulary every subsequent RDS topic assumes. The single most testable contrast to carry forward: **a relational schema is fixed and requires deliberate migration to change**, which is precisely the constraint NoSQL databases like DynamoDB are designed to remove.
+`,
+    },
+    {
+      id: "why-rds-onprem-buildout",
+      title: "Why RDS? The Full On-Premises Build-Out, Step by Step",
+      shortDesc: "Everything a highly-available on-prem database actually requires — hardware, hypervisor, dual power, shared storage, redundant networking, a DR site — versus RDS's 5 minutes",
+      visuals: [],
+      content: `## Three Ways to Deploy a Database
+
+Any database needs to live somewhere: **on-premises**, on **Amazon EC2**, or on **Amazon RDS**. Before comparing them on paper, this walks through what building a genuinely **highly-available, fault-tolerant** database actually requires **on-premises**, piece by piece — so the RDS comparison that follows isn't abstract.
+
+---
+
+## The Full Build-Out Chain
+
+1. **Purchase hardware** — real capital expenditure, paid upfront, before anything runs
+2. **Choose a hypervisor** (VMware, Microsoft Hyper-V, Citrix) and license it, to run virtual machines on that hardware
+3. **Create the VM**, then **install and manage an operating system** on it (patching, security updates — all manual, ongoing responsibility)
+4. **Install the database management system** (e.g. MySQL) on top of that OS
+5. **Power redundancy**: a primary electricity source, **plus** a UPS and backup generator, so a power interruption doesn't take the whole stack down
+6. **Hardware redundancy**: if the motherboard itself fails, there's no recovery without a **second physical server** — so a standby server, with its own power setup, becomes necessary too
+7. **Shared storage**: the primary and standby servers both need access to the **same data**, which means purchasing dedicated shared storage (e.g. a SAN), itself needing redundant connectivity so one failed link doesn't cut off access
+8. **Network redundancy**: redundant **Ethernet switches** connecting everything, then redundant **routers**, then **two separate ISPs** — each layer doubled specifically so no single failure takes the system offline
+9. **Disaster recovery**: all of the above, **rebuilt again at a second physical location** (the lecture uses Mumbai as primary, Hyderabad as DR) — with **database replication** running continuously between the two sites, so the DR site can take over if the entire primary site goes down
+
+> ⚠️ **Every single layer above is doubled specifically because any single point of failure defeats the whole purpose of "highly available."** This is not an exaggerated example — it's the genuine minimum shape of on-premises HA done properly.
+
+---
+
+## The Payoff Comparison
+
+> **The same outcome — a working, production-ready RDS database — takes about 5 minutes**, with **zero upfront capital cost**: no hardware, no hypervisor licensing, no shared storage purchase, no networking equipment. And **zero ongoing management** of any of it — no power supply, no hardware, no hypervisor, no VM, no OS, no Ethernet switches, no routers.
+
+> The framing offered directly: large enterprises routinely spend **millions of dollars** building out exactly the on-premises chain described above. AWS RDS collapses that entire chain into a managed service billed operationally, with the setup itself measured in minutes rather than the **weeks to months** a real on-premises HA build actually takes.
+
+---
+
+## Exam Framing
+
+> When a scenario describes **"minimize upfront capital expenditure," "reduce operational overhead," or "get a production database running quickly without managing infrastructure"** — that's the RDS value proposition stated in exam language. The specific things RDS removes from your plate are the same ones enumerated above: hardware, hypervisor, OS patching, shared storage, and networking redundancy.
+`,
+    },
+    {
+      id: "rds-vs-ec2-vs-onprem-comparison",
+      title: "On-Premises vs EC2 vs RDS – The 15-Point Comparison",
+      shortDesc: "Control, cost, scaling, backup, HA, security, compliance, and 8 more axes — laid out side by side for choosing a deployment option",
+      visuals: ["DeploymentComparison"],
+      content: `## The Three Options, Compared Point by Point
+
+| Axis | 🏢 On-Premises | 💻 EC2 | 🛢️ RDS |
+|---|---|---|---|
+| **Control** | Full control — hardware, network, software | Full control over the VM/OS/DB engine; no hardware/hypervisor access | Limited — predefined instance types, no OS access |
+| **Management** | 100% manual — hardware, scaling, backup, patching, all of it | Manual backup, patching, and scaling of the instance | Automated backups, patching, scaling, and software updates |
+| **Customization** | Complete — any hardware, any software version | Full customization of the OS and DB config | Limited — no OS access, restricted database settings |
+| **Cost** | High upfront capital expenditure (hardware, software, maintenance) | Pay-as-you-go, but you cover instance + storage costs directly | No capital expenditure; pure operational expenditure |
+| **Scaling** | Manual — buy more hardware, expect downtime during upgrades | Manual, but easier than on-prem (resize the instance) | Automatic scaling up/down with minimal or no downtime |
+| **Backup & Recovery** | Fully manual, difficult to manage reliably | Manual configuration required | Automatic backups, Multi-AZ replication, point-in-time recovery |
+| **High Availability** | Complex — requires genuinely redundant infrastructure throughout | Manual clustering/failover setup, less complex than on-prem | Multi-AZ deployment achievable with minimal setup, often within minutes |
+| **Security** | Full responsibility — physical AND network security | No physical security concern; full control over network/OS-level security config | Managed security features — encryption at rest/in transit, VPC integration built in |
+| **Maintenance** | High — hardware maintenance, software patching, all manual and time-consuming | Manual patching of the instance's OS and DB engine | Low — automated patching and maintenance |
+| **Performance Tuning** | Full hardware-level control (add CPU/RAM/IO as needed) | Full control over instance type — resize quickly for more/less capacity | Limited — select an instance type, but no deep low-level tuning |
+| **Time to Deploy** | Very high — realistically **months** for a full HA build | Medium — no procurement, but still real setup work | Very short — automated setup, ready in **minutes** |
+| **Compliance** | Full control to meet requirements, but the work is entirely yours | Some configuration needed to align with compliance needs | AWS handles most standards (SOC, PCI, HIPAA) with minimal added configuration |
+| **Disaster Recovery** | Fully manual — build, replicate, and test a second site yourself | Manual replication and backup setup | Built-in: Multi-AZ and automated snapshots |
+| **Network Latency** | Fixed to wherever the physical location is | Can deploy closer to users by choosing region/VPC | Low latency via AWS's own optimized network, plus read replicas for further reduction |
+| **Initial Setup Complexity** | Very high — full infrastructure, networking, and software build | Medium — no hardware, but still real configuration work | Very easy — automated, ready-to-use in minutes |
+
+---
+
+## The Pattern Across All 15 Points
+
+> Nearly every axis follows the same shape: **on-premises gives maximum control at maximum operational cost and complexity; RDS gives minimal control in exchange for near-zero operational burden; EC2 sits in between** — full control over the database engine and OS, but you still own all the operational work (backup, patching, scaling, HA) that RDS automates away.
+
+**When on-prem or EC2 might still win:** genuine need for **full control** (regulatory requirements demanding it, or an unusual database engine/configuration RDS doesn't support). Otherwise, RDS's 13-out-of-15 favorable columns above are the reason it's the default recommendation for a standard relational workload.
+
+---
+
+## Exam Framing
+
+> A scenario emphasizing **"minimize administrative overhead," "automate backups and patching," or "quickly stand up a highly available database"** → **RDS**. A scenario emphasizing **"need OS-level or database-engine-level control AWS doesn't expose"** → **EC2-hosted database**. Full physical/regulatory control requirements → **on-premises** remains the only option that satisfies them.
+`,
+    },
+    {
       id: "rds",
       title: "RDS – Relational Database Service",
       shortDesc: "Managed relational databases (MySQL, Postgres, etc.)",
-      visuals: ["RelationalTables", "DeploymentComparison", "AvailabilityOptions", "RPORTOChooser", "InstanceClassNaming", "StorageAutoScaling", "CredentialsSecurity"],
+      visuals: ["AvailabilityOptions", "RPORTOChooser", "InstanceClassNaming", "StorageAutoScaling", "CredentialsSecurity"],
       content: `## RDS – Relational Database Service
 
 **Amazon RDS** is a **managed relational database** service. AWS runs the database engine for you — you skip the hardware, OS patching, backups, and replication, and get a production database in **minutes**.
 
 ---
 
-## Database Foundations
-
-A **database** stores data in an organized way; a **DBMS** (database management system) is the software that creates and manages it. A **relational database** (the idea Edgar Codd published in 1970) stores data in **tables**:
-
-- **Row** — one record (e.g. one customer)
-- **Column** — one attribute (e.g. name, address), with a **data type**
-- **Schema** — the fixed blueprint of tables, columns, and types (relational schemas are rigid — adding a column is a real change)
-- **Primary key** — a unique ID per row (like a passport number)
-- **Foreign key** — a column referencing another table's primary key — this creates the **relationship**
-- **Index** — speeds up queries (like a book's table of contents)
-- **SQL** — the language used to insert/update/query data
-- **Normalization** — splitting data into related tables to avoid duplication
-
-**Relational engines RDS supports:** MySQL, PostgreSQL, MariaDB, Oracle, Microsoft SQL Server, IBM Db2, and **Amazon Aurora** (AWS's own MySQL/PostgreSQL-compatible engine).
-
-> Other database families exist too — **NoSQL** (DynamoDB, DocumentDB, Neptune, Keyspaces) and **in-memory** (ElastiCache) — but RDS is for **relational**.
-
----
-
-## Why RDS? (On-Prem vs EC2 vs RDS)
-
-Running a highly-available database **on-premises** means buying and maintaining: hardware, hypervisor licences, VMs, OS, dual power/UPS/generator, shared storage, redundant Ethernet switches and routers, dual ISPs — then replicating it all to a DR site. **Weeks to months**, huge up-front cost.
-
-| | 🏢 On-Premises | 💻 On EC2 | 🛢️ RDS |
-|--|--------------|-----------|---------|
-| You manage | Everything | OS, patching, backups, HA | Almost nothing |
-| Up-front cost | High | None | None |
-| Setup time | Weeks–months | Medium | ~5–10 min |
-| Backups / HA | Manual | Manual | Automated, Multi-AZ |
-| Patching/scaling | Manual | Manual | Automated |
-
-> On-prem gives full control (sometimes needed for compliance). EC2 gives OS/DB control without hardware. RDS removes the "undifferentiated heavy lifting" — you still own the **schema & data** (the DBA's job).
-
----
 
 ## Availability & Durability — 3 Options
 
