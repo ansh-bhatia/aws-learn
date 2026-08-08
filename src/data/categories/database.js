@@ -222,6 +222,143 @@ Any database needs to live somewhere: **on-premises**, on **Amazon EC2**, or on 
 `,
     },
     {
+      id: "rds-lab-mysql-workbench",
+      title: "Lab – First RDS Database (MySQL Workbench)",
+      shortDesc: "Launching a free-tier MySQL instance with public access and connecting graphically — plus why public access isn't the real-world way to do it",
+      visuals: [],
+      content: `## Goal
+
+Create the first hands-on RDS instance with the absolute minimum configuration, connect to it from a local machine using a GUI SQL client, and see a real database respond — deliberately deferring every advanced setting to later, dedicated lectures.
+
+---
+
+## Step 1 — Create the Database
+
+**RDS console → Create database:**
+
+- **Engine** — a list of options appears: **Aurora** (AWS's own product), MySQL, MariaDB, PostgreSQL, Oracle, Microsoft SQL Server, IBM Db2. This lab uses **MySQL**.
+- **Version** — RDS deliberately offers a **wide range of versions**, not just the newest, because companies migrating an existing on-premises database (e.g. running MySQL 5.7 for years) need to match that exact version on RDS rather than force an upgrade during migration. (A dedicated **Database Migration Service** covers the actual migration process later in the course.)
+- **Template** — Production / Dev-Test / **Free tier**. Choosing Free tier automatically **locks out the Availability & Durability options** (no Multi-AZ choice) — that comparison is covered in depth in a later lecture.
+- **DB instance identifier, username, password** — ⚠️ **the password cannot contain an "@" character** — a genuinely easy mistake to make out of habit, and one the lecture hits live.
+- **Instance class** — Free tier locks this to a small **burstable (t-class)** instance automatically; no manual selection needed at this stage.
+- **Storage** — backed by **EBS**, defaulting to **20GB** for this lab (RDS storage tops out at 64TB, covered later).
+- **Connectivity** — kept in the **default VPC**; **Public access: Yes** is deliberately chosen here specifically so the database can be reached from a home computer for this first lab.
+- **VPC security group** — left at the account's default security group for simplicity.
+
+**Create database** → provisioning takes roughly **5-7 minutes** before the status shows **Available**.
+
+> ⚠️ **This lab's configuration — public access, default security group — is explicitly flagged as NOT best practice.** It's chosen purely to get a first working connection quickly; the very next lab (EC2-to-RDS connection) rebuilds the same idea the correct way, with the database private and reachable only from inside the VPC.
+
+---
+
+## Step 2 — Connect with MySQL Workbench
+
+**MySQL Workbench** (a free GUI SQL client, downloadable directly from a web search — no account required) is used to connect graphically:
+
+- **New connection** → paste the RDS instance's **endpoint** as the hostname, **admin** as the username → **Test Connection** → enter the password when prompted → optionally save it in the credential vault
+- A successful connection opens the database, initially empty
+
+**Creating a database and understanding the boundary of responsibility:** clicking to create a new schema (e.g. named **myappdb**) is as far as the *infrastructure* work goes. **Creating tables and defining schema inside that database is explicitly framed as the database programmer's job, not the cloud engineer's** — the deliverable from an infrastructure perspective is simply: *"here's your database, its endpoint, and its credentials — go build your tables."*
+
+---
+
+## ⚠️ Cleanup — Don't Forget to Delete
+
+**RDS console → select the database → Actions → Delete:**
+
+- Declining the offer to create a final snapshot and to retain automated backups (both optional, but relevant for a real production teardown)
+- Typing **"delete me"** to confirm, and checking **"I acknowledge"** on instance deletion
+
+> Forgetting to delete a lab RDS instance is a genuine, easy-to-make cost mistake — this cleanup step is called out explicitly as something not to skip.
+
+---
+
+## Exam Framing
+
+> The core exam-relevant takeaway from this lab isn't the click-path — it's the **public-access anti-pattern the lab deliberately demonstrates and then immediately disavows**: a publicly-accessible RDS instance reachable directly over the internet is a real security exposure, and the very next lab shows the correct alternative — private subnet, access only via an EC2 instance inside the same VPC.
+`,
+    },
+    {
+      id: "rds-ec2-connection-lab",
+      title: "Lab – Connecting EC2 to RDS (The Real-World Way)",
+      shortDesc: "A private RDS instance reachable only from an EC2 MySQL client, secured with two purpose-built security groups referencing each other",
+      visuals: [],
+      content: `## Goal
+
+Rebuild the previous lab's database connection the way it's actually done in production: **RDS instance kept fully private**, reachable only from an **EC2 instance acting as a SQL client**, with security groups doing the actual gatekeeping — and everything driven from the command line, matching how database administrators genuinely work day to day (rather than a GUI tool).
+
+---
+
+## Step 1 — Two Purpose-Built Security Groups
+
+**EC2 SG (protects the SQL client instance):**
+- **Inbound**: SSH (TCP 22) from anywhere — needed to log into the instance itself
+- **Outbound**: all traffic (default) — ⚠️ **no inbound MySQL rule is needed on this security group at all.** The EC2 instance *initiates* the connection to RDS; the reply traffic coming back is automatically permitted because **security groups are stateful** — a rule only needs to exist on the side that receives the *first* packet of a connection, not on both sides.
+
+**RDS SG (protects the database instance):**
+- **Inbound**: **MySQL/Aurora (TCP 3306)**, sourced from **the EC2 security group itself** (not a raw IP range) — meaning only traffic actually originating from an instance carrying that EC2 security group can ever reach port 3306
+- **Outbound**: all traffic (default)
+
+---
+
+## Step 2 — Create the RDS Instance (Private This Time)
+
+Same MySQL/Free-tier setup as the previous lab, with two deliberate differences:
+
+- **Public access: No** — the EC2 client lives in the **same VPC**, so it doesn't need internet-routable access to reach the database
+- **VPC security group**: the purpose-built **RDS SG** from Step 1, not the account default
+
+---
+
+## Step 3 — Create the EC2 Instance (the SQL Client)
+
+While the RDS instance provisions (5-7 minutes), launch an EC2 instance in parallel: Amazon Linux, t2.micro, **same VPC** as the RDS instance, **public IP assigned** (so the instance itself can be reached over SSH from outside), using the **EC2 SG** created in Step 1.
+
+---
+
+## Step 4 — Install a MySQL Client on the EC2 Instance
+
+SSH into the EC2 instance, then install a client:
+
+**sudo yum install mariadb105 -y** (or the equivalent MariaDB client package)
+
+> ⚠️ **This installs a MariaDB client, not literally "MySQL"** — but MariaDB and MySQL share the same origin and are fully protocol-compatible, so the MariaDB client connects to a MySQL RDS instance without any issue. AWS's own documentation recommends this exact package.
+
+---
+
+## Step 5 — Connect from the EC2 Instance
+
+**mysql -h &lt;RDS endpoint&gt; -P 3306 -u admin -p**
+
+- **-h** — host (the RDS endpoint, copied from the console)
+- **-P** — port (3306)
+- **-u** — username (admin)
+- **-p** — prompts for the password interactively
+
+A successful connection drops into a **MySQL &gt;** prompt, confirming the client reached the database through the private network path — no public internet involved at any point.
+
+---
+
+## Step 6 — Create a Database, a Table, and Insert Data
+
+From the MySQL prompt:
+
+1. **CREATE DATABASE sampledb;**
+2. **USE sampledb;** — switches the active context to the new database
+3. **CREATE TABLE employee (...);** — defines a table's columns and types
+4. **INSERT INTO employee VALUES (...);** — adds records, one or more at a time
+5. **SELECT * FROM employee;** — verifies the data actually landed, returning every row currently in the table
+
+> ⚠️ **This manual command-line entry is explicitly called out as not how real applications populate a database.** In a genuine application, a **front-end/web server** writes to the database automatically as users interact with it — manual INSERT statements are purely a lab technique to prove the connection and table actually work, not a production data-entry pattern.
+
+---
+
+## Exam Framing
+
+> "Database reachable only from application servers inside the VPC, never directly from the internet" → **private RDS instance + a security group scoped to another security group as its source** (not an IP range) — the exact pattern built here. Remember the **stateful security group** detail: the EC2 client's security group needs no inbound MySQL rule at all, because the reply traffic from RDS is automatically allowed once the outbound request already matched a rule.
+`,
+    },
+    {
       id: "rds",
       title: "RDS – Relational Database Service",
       shortDesc: "Managed relational databases (MySQL, Postgres, etc.)",
