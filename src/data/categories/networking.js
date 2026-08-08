@@ -3344,10 +3344,121 @@ Using a geo-distributed browsing tool to open the CloudFront URL from multiple s
 `,
     },
     {
+      id: "cloudfront-origin-group-ec2-s3-failover-lab",
+      title: "Lab – CloudFront Origin Group Failover (EC2 → S3)",
+      shortDesc: "Automatic failover from a primary EC2 web server to a backup S3 static site — and the one setting everyone forgets",
+      visuals: ["OriginGroupFailover"],
+      content: `## What an Origin Group Actually Is
+
+> **A CloudFront origin group is a collection of multiple origins — one designated primary, one or more designated secondary — that CloudFront uses to provide automatic failover.**
+
+CloudFront always sends requests to the **primary origin first**. If the primary becomes unavailable, CloudFront **automatically switches to the secondary** — no manual intervention, no DNS changes, no user-visible outage beyond a brief switchover. When the primary recovers, CloudFront **automatically switches back**.
+
+> The business case: if a website's only server goes down and visitors see a raw connection error, many simply leave and never return. Falling back to **even a stripped-down "we'll be back soon" page** on a separate, independent backend preserves trust far better than total silence.
+
+---
+
+## The Scenario
+
+- **Primary origin**: an EC2 instance running Apache, serving the live site
+- **Secondary origin**: an S3 bucket configured for static website hosting, serving a basic fallback page
+
+---
+
+## Setup, Step by Step
+
+**Step 1 — EC2 primary.** Launch an EC2 instance (Amazon Linux, HTTP port 80 open in the security group), install **httpd**, deploy an index.html, then **systemctl start httpd** and **systemctl enable httpd**. Confirm the site loads via the instance's public IP before continuing.
+
+**Step 2 — S3 secondary.** Create a bucket, upload an index.html, remove **Block all public access**, attach a public-read bucket policy (via the Policy Generator), then enable **static website hosting** with index.html as the index document. Confirm this loads independently too.
+
+**Step 3 — Create the distribution with the first origin.** Point it at the S3 **website endpoint** initially. ⚠️ **Disable caching for this lab specifically** — with caching on, a stale cached response would mask the failover and make testing nearly impossible to observe quickly. (In a real production setup, caching should stay enabled; this is purely a lab-testing convenience.)
+
+**Step 4 — Add the EC2 origin.** ⚠️ **EC2 never appears in the origin dropdown** — copy the instance's **public IPv4 DNS** (not private DNS) and paste it manually into a new origin's domain field; CloudFront detects it as an HTTP custom origin automatically.
+
+**Step 5 — Create the origin group.** **Distribution → Origin groups → Create origin group** → select both origins → designate **EC2 as primary, S3 as secondary** → choose the **failover criteria** (which origin response status codes trigger a switch) → create.
+
+---
+
+## ⚠️ The Step Everyone Forgets
+
+Creating the origin group **alone does nothing** — the distribution's cache behavior still points at whichever single origin was configured in Step 3. The critical final step:
+
+> **Distribution → Behaviors → select the default behavior → Edit → Origin and origin groups → select the origin group** (not either individual origin) → **Save changes**.
+
+Skipping this leaves the origin group configured but **completely unused** — CloudFront keeps serving from the original single origin, oblivious to the failover setup that appears to be in place.
+
+---
+
+## Proving Failover Works
+
+With the origin group correctly wired into the behavior: opening the CloudFront URL serves the **EC2 site** (primary, working normally).
+
+**Simulating an EC2 outage**: EC2's security group → remove the inbound **HTTP (port 80)** rule → save. This makes the instance unreachable on port 80 without actually stopping it — a clean, reversible way to simulate an outage.
+
+- Refreshing the CloudFront URL initially may still show the old response briefly, then **switches to the S3 fallback site** once CloudFront detects the primary is failing
+- **Restoring the port 80 rule** on the EC2 security group and refreshing again eventually switches traffic **back to EC2** — confirming the failover genuinely runs in both directions, automatically
+
+---
+
+## Exam Framing
+
+> "Automatic failover between two origins, one primary/one backup" → **CloudFront Origin Group**. The two things that trip people up in practice: **EC2 must be added as a custom HTTP origin manually via its public IPv4 DNS** (it's never in the origin dropdown), and **the origin group must be explicitly selected in the cache behavior** — creating the group alone changes nothing.
+`,
+    },
+    {
+      id: "cloudfront-origin-group-geo-failover-lab",
+      title: "Lab – CloudFront Geographical Failover (Multi-Region Load Balancers)",
+      shortDesc: "Failing over an entire region — India-primary, US-backup — using two Application Load Balancers as CloudFront origins",
+      visuals: [],
+      content: `## The Scenario: Whole-Region Failure, Not Just One Server
+
+Building on the previous origin-group lab, this scenario raises the stakes from "one server fails" to **"an entire AWS region becomes unreachable."**
+
+> **Two Application Load Balancers, deployed in two separate regions, act as the primary and secondary origins of one CloudFront origin group** — if the primary region's ALB (and everything behind it) goes down entirely, CloudFront fails over to the ALB in the completely independent secondary region.
+
+**The concrete setup:** an ALB fronting web servers in **India (Mumbai)** as primary, and a second ALB fronting web servers in **US (N. Virginia)** as secondary — each region fully self-contained, sharing nothing but the CloudFront distribution in front of them.
+
+**Why this matters for a global business:** global reliability (users anywhere stay served even if one entire region is down) and business continuity at a regional scale — a single data center or regional outage no longer means the whole application is offline.
+
+---
+
+## Setup, Step by Step
+
+**Step 1 — Web servers in both regions.** Two (or more) EC2 instances per region, each running a simple web server with region-identifying content (e.g. a page visually flagged by region, so testing can confirm at a glance which region actually served a given request).
+
+**Step 2 — One Application Load Balancer per region**, each fronting its region's web servers independently. Confirm each ALB's DNS name serves its regional content correctly **before** involving CloudFront at all.
+
+**Step 3 — Create the CloudFront distribution** with the **India ALB as the first origin**. ⚠️ **A Load Balancer origin, unlike EC2, IS automatically listed in the origin dropdown** — CloudFront is a global service and surfaces load balancers from any region. **Disable caching for this lab** (same reasoning as the EC2/S3 lab — caching would mask the failover during testing).
+
+**Step 4 — Add the US ALB as a second origin**, then **create an origin group**: select both ALB origins, designate **India as primary, US as secondary**, choose failover criteria, create.
+
+**Step 5 — ⚠️ Wire the origin group into the cache behavior** (the same easy-to-forget step from the EC2/S3 lab): **Behaviors → default behavior → Edit → Origin and origin groups → select the origin group** → save.
+
+---
+
+## Proving Regional Failover Works
+
+Opening the CloudFront URL initially serves the **India-region content**, confirming the primary path works.
+
+**Simulating a regional outage**: on the India ALB's **security group**, remove the inbound **port 80** rule — this makes the entire Indian regional endpoint unreachable, standing in for "the whole region is down," without touching anything in the US region.
+
+- Refreshing the CloudFront URL initially may briefly still return cached/in-flight India responses, then **switches over to the US region's content** as CloudFront detects the primary origin failing
+- Multiple refreshes during the transition window can show a mix of "still switching" and confirmed US responses — this settles quickly once the failover fully takes effect
+
+**Restoring the India ALB's port 80 rule** and refreshing again brings traffic back to serving from **India** — proving the failover, exactly like the single-server lab, runs automatically in both directions with no manual re-pointing required.
+
+---
+
+## Exam Framing
+
+> "Failover an entire application across AWS regions, not just across servers within one region" → **CloudFront Origin Group with regional Load Balancers as primary/secondary origins**. This is functionally the same origin-group mechanism as the EC2/S3 lab — the only difference is what sits behind each origin (a single instance vs. an entire regional load-balanced fleet). ⚠️ **The same "must select the origin group in the cache behavior" step is required here too** — it's not a one-off gotcha specific to the simpler lab, it's a hard requirement of the origin-group feature itself.
+`,
+    },
+    {
       id: "cloudfront",
       title: "CloudFront",
       shortDesc: "Global CDN for low-latency content delivery",
-      visuals: ["OriginGroupFailover", "CacheInvalidation"],
+      visuals: ["CacheInvalidation"],
       content: `## CloudFront — AWS Content Delivery Network (CDN)
 
 **CloudFront** is AWS's **CDN** — it delivers content (web pages, videos, APIs) with **low latency** and **high speed** by **caching** copies at 400+ **edge locations** worldwide. Netflix, Prime, Hotstar — all rely on CDNs.
