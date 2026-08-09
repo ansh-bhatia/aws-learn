@@ -1170,10 +1170,63 @@ This is the intended division of labor: CloudWatch as the always-on tripwire, th
 `,
     },
     {
+      id: "rds-parameter-option-groups",
+      title: "RDS – DB Parameter Group vs Option Group",
+      shortDesc: "Parameter group changes how the engine behaves; option group adds features the engine doesn't have by default",
+      visuals: ["ParameterOptionGroups"],
+      content: `## The Common Misconception
+
+> Because RDS is platform-as-a-service, it's easy to assume the database engine and its behavior are entirely fixed, out of the operator's hands. **In reality, AWS provides two distinct mechanisms to customize a database instance: Parameter Groups (behavior) and Option Groups (features).**
+
+Both appear under **Additional configuration** when creating a database, each with a **default** already applied — and each can be replaced with a custom one built for a specific requirement.
+
+---
+
+## DB Parameter Group: Controls Behavior
+
+> **A parameter group controls settings within the database engine itself** — memory handling, connection limits, performance tuning — without touching anything outside the engine.
+
+⚠️ **RDS exposes a genuinely large number of tunable settings this way** — MySQL alone has roughly **500+ parameters** available, all adjustable through a parameter group rather than direct engine access.
+
+**Two concrete examples:**
+
+- **max_connections** — controls how many users/applications can connect to the database simultaneously. Setting this to, say, 100 caps concurrent connections at exactly that number.
+- **query_cache_size** — controls how much space is reserved for storing query results, avoiding the cost of re-running an identical query that was already answered recently.
+
+**Overall use case**: reach for a custom parameter group whenever the requirement is to **change how the engine behaves** — allow more connections, tune memory usage, adjust timeouts — none of which touches what the engine can *do*, only how it operates day to day.
+
+---
+
+## Option Group: Adds Features
+
+> **An option group adds extra features or extensions to the database engine that aren't part of its core functionality by default.**
+
+**Three concrete examples, one per major engine:**
+
+- **Oracle OEM (Oracle Enterprise Manager)** — a web interface for database monitoring and management, not included in Oracle's core engine by default; enabled by attaching it through an option group
+- **SQL Server TDE (Transparent Data Encryption)** — encrypts database files to secure data at rest, also not a default core-engine capability
+- **MySQL memcached** — caches frequently-accessed data in memory for faster retrieval, again an add-on rather than a built-in engine behavior
+
+**Overall use case**: reach for an option group whenever the requirement is to **enable a specific feature or capability the engine doesn't already have** — something no parameter setting could turn on, because it isn't part of the engine's core behavior at all.
+
+---
+
+## Applying Both Together, Concretely
+
+> A MySQL database expecting **heavy incoming traffic** might need **both** at once: a **parameter group** to raise **max_connections** (so more simultaneous users can actually connect), **and** an **option group** to enable **memcached** (so repeated reads get served from cache instead of hitting the database every time). Neither tool alone solves the whole problem — behavior tuning and feature enablement are separate levers, often needed together under real load.
+
+---
+
+## Exam Framing
+
+> The one-line distinction worth memorizing: **Parameter Group = internal database behavior (how it works); Option Group = optional features/extensions (what it can do).** A scenario mentioning connection limits, memory tuning, or query caching thresholds points to a **parameter group**. A scenario mentioning a named plugin, monitoring tool, or encryption feature not present by default points to an **option group**.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
-      visuals: ["ParameterOptionGroups", "RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
+      visuals: ["RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
       content: `## RDS Part 2 — Operations, Security & Scaling
 
 Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
@@ -1182,14 +1235,6 @@ Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, back
 
 
 
-## Parameter Group vs Option Group
-
-- **Parameter group** — changes engine **behavior** (500+ settings): \`max_connections\`, \`query_cache_size\`, memory/timeouts…
-- **Option group** — adds **features/plugins**: Oracle OEM, SQL Server **TDE**, MySQL **memcached**
-
-> Memory hook: **Parameter = behavior, Option = feature.**
-
----
 
 ## Backups
 
