@@ -2537,21 +2537,54 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
-      id: "dynamodb-2",
-      title: "DynamoDB – Advanced (Part 2)",
-      shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["SecondaryIndexes", "ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
-      content: `## DynamoDB – Advanced (Part 2)
+      id: "dynamodb-lsi-local-secondary-index",
+      title: "DynamoDB Local Secondary Index (LSI) – A Second Sort Key on the Same Partition Key",
+      shortDesc: "Adds a new query pattern without a new table — worked customerID/orderID/invoiceID example, plus the full LSI vs GSI comparison",
+      visuals: ["SecondaryIndexes"],
+      content: `## The Problem LSI Solves
 
-This part covers the advanced features and exam-critical scenarios of DynamoDB.
+**Worked example**: a customer table uses a **composite primary key — customerID (partition key) + orderID (sort key).** This supports queries like *"find all orders for customerID=1, sorted by orderID."* But now a second query pattern is needed: *"find all orders for customerID=1, sorted by invoiceID"* instead.
+
+⚠️ **A DynamoDB table can only have ONE sort key, defined at table creation** — there's no way to simply add a second sort key to the existing primary key structure. **This is exactly the gap a Local Secondary Index fills.**
 
 ---
 
+## What LSI Actually Does
 
+> **LSI lets you define an additional sort key for a table, while keeping the SAME partition key as the base table.** The base table's primary key is customerID + orderID; the LSI's "index key" becomes customerID + invoiceID — same partition key, different sort key.
 
-## Secondary Indexes (LSI vs GSI)
+**Mechanically**: creating the LSI means selecting a new attribute (invoiceID) to serve as its sort key. This unlocks the new query pattern (sort/filter by invoiceID within a given customerID) **without needing a second table.**
 
-By default you can only query by the primary key. Secondary indexes enable **new query patterns**.
+---
+
+## Shared Storage and Capacity
+
+> ⚠️ **LSI data is stored alongside the base table, and both share the base table's read/write capacity** — an LSI is not a separately-provisioned resource. This is a deliberate tradeoff: no extra storage cost mechanism to manage, but the LSI's query load competes with the base table's own RCU/WCU budget.
+
+**Updates propagate automatically** — any write to the base table is automatically reflected in the LSI, with no manual sync step.
+
+---
+
+## Attribute Projection: Controlling What Gets Copied
+
+> **Attribute projection defines which attributes from the base table are copied into the LSI**, with three options:
+> - **All** — every attribute from the base table is copied into the LSI.
+> - **Keys only** — only the key attributes (partition key + both sort keys, e.g. customerID/orderID/invoiceID) are copied — smallest footprint.
+> - **Include** — a hand-picked subset of additional attributes (e.g. keys plus just the "name" field) is copied.
+
+**The tradeoff**: broader projection (All) means the LSI can answer more queries directly without a follow-up lookup to the base table, at the cost of more storage; narrower projection (Keys-only) minimizes storage but may require an extra fetch from the base table for non-key data.
+
+---
+
+## ⚠️ Key Limitations
+
+- **Must be defined at table creation — cannot be added to an existing table.** This is the single most important limitation to remember: if an LSI wasn't planned when the table was created, it's too late to add one later (GSI, covered below, has no such restriction).
+- **Shares the base table's provisioned capacity**, which can affect performance under heavy query load if the LSI and base table compete for the same RCU/WCU.
+- **Maximum of 5 LSIs per table.**
+
+---
+
+## LSI vs GSI — Full Comparison
 
 | Feature | **LSI** (Local) | **GSI** (Global) |
 |---|---|---|
@@ -2563,9 +2596,26 @@ By default you can only query by the primary key. Secondary indexes enable **new
 | Consistency | Strong or eventual | **Eventual only** |
 | Storage | Shares base partition | Separate |
 
-**Attribute projection** (both): choose attributes to copy into the index — **All**, **Keys-only**, or **Include** (specific) — balancing speed vs storage.
+---
+
+## Exam Framing
+
+> "Need a new sort key for querying within the same partition key, and the table hasn't been created yet" → **LSI is viable.** "Table already exists and a new query pattern is needed" → **LSI is impossible (must be defined at creation) — GSI is the only option**, since GSI can be added anytime. "Need a completely different partition key for the new query pattern" → **GSI**, since LSI is locked to the base table's partition key. The table-creation-time restriction is the single most commonly tested LSI fact.
+`,
+    },
+    {
+      id: "dynamodb-2",
+      title: "DynamoDB – Advanced (Part 2)",
+      shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
+      visuals: ["ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      content: `## DynamoDB – Advanced (Part 2)
+
+This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 ---
+
+
+
 
 ## Resource-Based Policy
 
