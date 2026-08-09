@@ -2604,10 +2604,60 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
+      id: "dynamodb-resource-based-policy",
+      title: "DynamoDB Resource-Based Policies – Attaching Access Control Directly to a Table",
+      shortDesc: "Effect, Principal, Action, Resource, Condition — a JSON policy on the table itself, making cross-account access trivial without granting full account access",
+      visuals: ["ResourcePolicy"],
+      content: `## What a Resource-Based Policy Is
+
+> **A resource-based policy is a JSON policy attached directly to a DynamoDB table or index** — controlling **who** can access it, **what** actions they can perform, and **under what conditions.** It functions as a rule book scoped to the table itself.
+
+⚠️ **This is the key structural difference from a standard IAM policy**: an IAM policy attaches to a **user, group, or role** — a resource-based policy attaches to the **table/index itself.** The permission logic lives on the resource, not on the identity accessing it.
+
+---
+
+## The Headline Use Case: Cross-Account Access
+
+> **Resource-based policies make cross-account access dramatically simpler** — granting an AWS principal in a *different* AWS account permission to access a specific table, **without needing to grant that other account any broader access.** The alternative (setting up IAM roles/trust relationships for cross-account access) is more involved; a resource-based policy handles it directly on the table.
+
+**Worked example**: a "Student Data" table needs to let a specific external AWS account **read** its data (but never write or modify it), and only from a specific IP address range. A resource-based policy attached to the table expresses exactly this: *"Let account [specific account ID] read data from Student Data table, but only from this IP address range."*
+
+---
+
+## Key Features
+
+**1. Resource-level permission.** Rather than the usual "attach a policy to an IAM user, then that user can access the table," the policy is attached **directly to the resource** — the table decides who can touch it, independent of how permissions are organized on the accessing side.
+
+**2. Simplified cross-account access.** Grants AWS principals in **other accounts** table-level access without needing to extend broader trust to that entire account.
+
+**3. Fine-grained control.** Specific actions (e.g. GetItem, Query) can be allowed while others (e.g. PutItem, UpdateItem) remain denied, and **conditions** (IP address range, time window) add further restriction on top of the action-level control.
+
+---
+
+## The Five Policy Components (Exam-Critical)
+
+> A resource-based policy JSON document has five core elements:
+
+- **Effect** — Allow or Deny the specified action.
+- **Principal** — the AWS account, IAM user, or role being granted (or denied) access, identified by its **ARN (Amazon Resource Name)**.
+- **Action** — the specific DynamoDB operation(s) permitted, e.g. dynamodb:Query. A principal granted only Query cannot perform PutItem or UpdateItem — actions not listed are simply not permitted.
+- **Resource** — ⚠️ **the ARN of the DynamoDB table itself must be specified explicitly**, even though the policy is already being attached directly to that table. This can feel redundant but is a required field.
+- **Condition** — optional additional restrictions, most commonly a **source IP address range** or a **time window** during which access is valid.
+
+**Putting it together**: a policy might read "allow AWS account [X] to Query the Student Data table's ARN, but only if the request originates from IP range [Y]" — this single policy statement expresses read-only, cross-account, IP-restricted access in one place.
+
+---
+
+## Exam Framing
+
+> ⚠️ **Exam questions frequently present a JSON resource-based policy and ask what access it actually grants** — being able to read Effect/Principal/Action/Resource/Condition correctly is directly tested. Remember the core distinguishing fact: **a resource-based policy attaches to the table/index, not to an IAM identity**, which is exactly what makes simple, scoped cross-account access possible without broader account-level trust.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -2617,13 +2667,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 
 
-## Resource-Based Policy
-
-A JSON policy **attached directly to a table/index** (not to an IAM identity) controlling **who / what / under which conditions**. Great for **cross-account** access without granting full account access.
-
-Key elements: **Effect** (Allow/Deny), **Principal** (who — IAM user/role/account ARN), **Action** (e.g. \`dynamodb:Query\`), **Resource** (table ARN), **Condition** (e.g. source IP range, time).
-
----
 
 ## Global Tables
 
