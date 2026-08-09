@@ -2365,62 +2365,290 @@ def lambda_handler(event, context):
 `,
     },
     {
-      id: "lambda-2",
-      title: "Lambda – Advanced (Part 2)",
-      shortDesc: "Execution env, versions, concurrency, layers, VPC",
-      visuals: ["Concurrency", "ReservedConcurrency", "ProvisionedConcurrency", "LambdaLayers", "LambdaVPC"],
-      content: `## Lambda – Advanced (Part 2)
+      id: "lambda-concurrency",
+      title: "Lambda Concurrency – How Many Requests Run at Once, and the 1,000-Per-Region Limit",
+      shortDesc: "Worked through 10 sequential triggers reusing only 6 execution environments — plus the formula that turns request-rate into a concurrency number",
+      visuals: ["Concurrency"],
+      content: `## What Concurrency Means
 
-How Lambda actually runs in the background, plus versioning, concurrency, layers and networking.
-
----
-
-
-## Concurrency
-
-**Concurrency** = requests running at the same time. Default limit: **1,000 per region per account**, shared by all functions.
-
-> Formula: **concurrency = requests/sec × duration(sec)**. e.g. 50 req/s × 2 s = 100. Exceed 1,000 → throttling (**"429 TooManyRequests"**).
-
-Handle high demand: request a **higher limit** (support), use **multiple accounts/regions**, or manage concurrency.
+> **Concurrency is how many requests a Lambda function can handle at the same time.** Each simultaneous request that can't reuse an existing free execution environment causes a new one to be created — if 500 users trigger a function at once, Lambda creates up to 500 execution environments.
 
 ---
 
-## Reserved Concurrency
+## ⚠️ The Default Limit: 1,000 Per Region, Per Account
 
-**Guarantees** (and caps) a slice of the limit for a critical function — no extra charge. e.g. reserve **300** of 400 for the **Place-Order** function so Email/Report functions can't starve checkout. The **unreserved** pool can't drop below **100**.
-
----
-
-## Provisioned Concurrency
-
-Two concurrency types:
-- **On-Demand** (default) — environments created when requests arrive → cold-start delay.
-- **Provisioned** — N environments **pre-warmed** and kept ready → **zero cold start** for critical apps.
-
-> 📌 Requires a **version or alias** (not $LATEST). Counts against the **1,000** quota. You **pay** per provisioned instance per minute (used or not). Monitor **Throttles** & **ProvisionedConcurrencyUtilization** in CloudWatch.
+> **Every AWS account has a default concurrency quota of 1,000 concurrent execution environments per region** — ⚠️ **shared across ALL Lambda functions in that account/region**, not a separate 1,000 for each function. Exceeding it produces the classic **"429 TooManyRequestsException"** throttling error — a specific error message worth memorizing, since it has appeared directly in exam questions.
 
 ---
 
-## Lambda Layers
+## Worked Example: 10 Triggers, Only 6 Environments
 
-A **library** is reusable code you \`import\`. Some are built into Lambda (\`boto3\`, \`random\`); others aren't (\`emoji\`, \`pandas\`, \`requests\`) → \`ModuleNotFoundError\`. Three ways to provide a non-built-in library:
+**From AWS's own visualization (referenced directly in the source lecture)**: triggering a function 10 times in sequence, watching how environments get created vs reused:
 
-1. **Built-in** — just import & deploy.
-2. **Package with each function** (not recommended) — zip code + library per function; updating the library means re-packaging every function.
-3. **Lambda Layer** (smart) — zip the **library only**, upload once as a layer, attach to many functions. Update once → all functions get it. Benefits: **reusability, clean separation, easy maintenance, faster deploys**.
+- Trigger 1 → creates environment **A** (busy)
+- Trigger 2 → A is busy → creates environment **B**
+- Trigger 3 → A, B busy → creates environment **C**
+- Triggers 4, 5 → similarly create **D**, **E**
+- Trigger 6 → environment **A** has since become free → **reuses A** (a warm start) instead of creating a new one
+- Triggers 7, 8 → reuse B, then C similarly
+- Trigger 9 → all existing environments busy again → creates a **new** one (**F**)
+- Trigger 10 → an earlier environment has freed up → reused again
 
-> 🧪 Lab: CloudShell → \`mkdir python && pip install emoji -t .\` → zip the \`python/\` folder → create a **Layer** from the zip → attach to the function → re-test.
+⚠️ **Across all 10 triggers, only 6 execution environments were ever created total** — because Lambda aggressively reuses any environment that's free, rather than creating a fresh one for every single invocation. This is exactly why concurrency ≠ total invocation count.
 
 ---
 
-## VPC Connectivity
+## The Concurrency Formula
 
-By default Lambda runs **outside your VPC** with full internet — reaches public services (S3, DynamoDB) but **not** private resources (RDS, EC2, ElastiCache in private subnets).
+> **Concurrency = requests per second × duration per request (in seconds).**
 
-- **Connect to a VPC** → AWS creates an **ENI** (Elastic Network Interface) in your private subnet with a private IP. Lambda now reaches private resources — but **loses default internet**.
-- Need outbound internet again → add a **NAT Gateway**. Need only private AWS-service access (S3/DynamoDB) without internet → use a **VPC Endpoint**.
-- A VPC-attached Lambda needs a **Security Group** on its ENI: **outbound** to reach a DB, **inbound** if EC2 calls the Lambda. *(Exam favorite.)*`,
+Worked examples:
+- 50 requests/sec, 2 seconds each → 50 × 2 = **100 concurrency** — comfortably under the 1,000 limit.
+- 1,000 requests/sec, 2 seconds each → 1,000 × 2 = **2,000 concurrency** — ⚠️ **exceeds the 1,000 default limit**, and would need active management (see below) to avoid throttling.
+
+---
+
+## How Large Companies Handle the Default Limit
+
+**1. Request a higher limit** — companies like Netflix (or any AWS customer) can submit a support request to raise the 1,000 quota.
+
+**2. Use multiple accounts and/or regions** — since the 1,000 limit is scoped per-account-per-region, spreading load across multiple accounts or regions effectively multiplies available concurrency (at the cost of added architectural complexity, e.g. load balancing across accounts).
+
+**3. Provisioned Concurrency** — covered in its own topic; pre-warms environments to eliminate cold-start delay for critical functions specifically.
+
+---
+
+## Exam Framing
+
+> "Concurrency = requests/sec × duration(sec)" is a direct, testable formula. Remember the **"429 TooManyRequestsException"** error is the specific symptom of exceeding the account's concurrency limit, and that the 1,000 default is shared across every function in the account/region — not per-function.
+`,
+    },
+    {
+      id: "lambda-reserved-concurrency",
+      title: "Lambda Reserved Concurrency – Protecting a Critical Function From Being Starved",
+      shortDesc: "A 3-function e-commerce worked example — place-order vs email vs reports — and the exact minimum-40 rule that blocks over-reserving",
+      visuals: ["ReservedConcurrency"],
+      content: `## The Problem: Shared Concurrency Can Starve a Critical Function
+
+> **All functions in an AWS account/region share the same concurrency pool** — if one or two functions consume most of it, a different, more critical function can be left with too little concurrency to handle its own load, even though the account hasn't hit its overall limit.
+
+---
+
+## Worked Example: A 3-Function E-Commerce Account
+
+- **Function A — Place Order** (⚠️ **highly critical**): handles user purchases and payments. If this fails or slows down, the business loses money and customer trust directly.
+- **Function B — Confirmation Email** (moderately critical): important, but a short delay is tolerable.
+- **Function C — Generate Admin Report** (not urgent): runs hourly, purely internal, no customer-facing impact if delayed.
+
+**The account's concurrency limit in this example is 400** (⚠️ **new/lower-usage AWS accounts often start with a soft limit below the 1,000 default — visible and increasable via the Service Quotas console**, not always the full 1,000 out of the box).
+
+---
+
+## The Problem, Demonstrated
+
+> **At month-end, Function C (reports) and Function B (emails) both spike simultaneously**, together consuming **350 of the account's 400 concurrency slots** — leaving only **50** for Function A. ⚠️ **If Function A (Place Order) can't get enough concurrency during this spike, customers experience delays or errors trying to check out — directly costing revenue and trust**, exactly the outcome the business can least afford.
+
+---
+
+## The Solution: Reserve Concurrency for the Critical Function
+
+> **Reserved concurrency guarantees (and caps) a fixed slice of the account's total for one specific function — at no additional charge.** Configuring Function A with **300 reserved concurrency** means Function A **always** has 300 execution environments available, **even if B and C are completely overloaded — they cannot touch those 300.** The remaining 100 (400 total − 300 reserved) is shared between B and C.
+
+---
+
+## ⚠️ The Minimum-40 Rule
+
+> **AWS will not let the account's unreserved concurrency pool drop below 40.** Demonstrated directly: attempting to reserve 70 for Function B (leaving only 30 unreserved, when 40 is the floor) is **rejected** — the maximum reservable in that scenario is **60**, since that's the largest number that still leaves at least 40 unreserved. ⚠️ **This 40-minimum floor is a hard platform constraint, not a configurable setting** — it exists specifically so that at least some concurrency always remains available to functions without their own reservation.
+
+---
+
+## Exam Framing
+
+> "One critical function must never be starved of capacity by other, less critical functions sharing the same account" → **Reserved Concurrency** — free to configure, guarantees a fixed slice, and cannot be encroached upon by other functions. Remember the **40-unit unreserved-pool floor** as a specific, testable numeric constraint on how aggressively concurrency can be reserved.
+`,
+    },
+    {
+      id: "lambda-provisioned-concurrency-lab",
+      title: "Provisioned Concurrency Lab – Eliminating Cold Starts for Critical Functions",
+      shortDesc: "Pre-warmed environments that sit ready and waiting — but only against a version or alias, never $LATEST, and billed whether used or not",
+      visuals: ["ProvisionedConcurrency"],
+      content: `## On-Demand vs Provisioned Concurrency
+
+> **On-Demand concurrency (the default)**: execution environments are created only when a request actually arrives. If no free environment exists, a new one is spun up — introducing the cold-start delay covered in the Execution Environment topic.
+
+> **Provisioned Concurrency**: a defined number of execution environments are **pre-initialized in advance** and kept active, ready, and warm — ⚠️ **eliminating cold starts entirely for requests that land within the provisioned capacity**, since there's never a "create a new environment" step in the critical path.
+
+---
+
+## ⚠️ Prerequisite: A Version or Alias Is Required
+
+> **Provisioned Concurrency cannot be configured against $LATEST.** Since $LATEST keeps changing with every deploy, AWS has no stable target to keep pre-warmed. **A published version (or, more commonly, an alias pointing to one) must exist first.**
+
+---
+
+## Setting It Up
+
+1. **Publish a version** of the function (e.g. v2).
+2. **(Recommended) Create an alias** (e.g. "prod") pointing to that version — provisioning against an alias is the more common real-world pattern, since aliases are what triggers typically target.
+3. Go to the **alias's configuration → Provisioned Concurrency → Edit**, and specify the number of environments to keep warm (e.g. 5).
+4. Provisioning takes a few minutes to complete (status shows "In progress" until ready) — once active, up to that many requests get zero-cold-start responses.
+
+---
+
+## ⚠️ Three Exam-Critical Rules
+
+**1. Provisioned Concurrency counts against the account's overall concurrency quota.** Provisioning 5 environments against a 1,000-limit account leaves **995** available for everything else.
+
+**2. It's billed whether used or not.** ⚠️ **Payment is per provisioned instance per minute, regardless of actual invocation volume** — 5 provisioned environments are billed continuously, even during periods with zero traffic.
+
+**3. Monitor via two specific CloudWatch metrics**: **Throttles** (signals insufficient available concurrency — including provisioned) and **ProvisionedConcurrencyUtilization** (shows how much of the paid-for provisioned capacity is actually being used, directly informing whether the provisioned number should be adjusted).
+
+---
+
+## Exam Framing
+
+> "Eliminate cold starts for a latency-sensitive, critical function" → **Provisioned Concurrency**, but ⚠️ **only after establishing a version or alias** — a scenario asking to set this up directly on $LATEST is testing exactly this prerequisite. Remember it's a continuously-billed resource (per-instance, per-minute) and counts against the same 1,000-per-region quota as regular concurrency.
+`,
+    },
+    {
+      id: "lambda-layers",
+      title: "Lambda Layers – Separating Libraries From Function Code",
+      shortDesc: "Worked through random (built-in, just works) vs emoji (not built-in, ModuleNotFoundError) — and why packaging a library WITH every function doesn't scale",
+      visuals: ["LambdaLayers"],
+      content: `## Module and Library: The Prerequisite Concept
+
+> **A module or library is a collection of reusable code that can be imported into a program** — code reuse, so the same logic doesn't need to be rewritten every time. A **module** is typically a single file of reusable code; a **library** is a collection of modules. Python's Boto3 (AWS's own SDK, covered in earlier Lambda topics) is a concrete example of a widely-used library.
+
+⚠️ **Some libraries are built into the Lambda runtime by default (e.g. Python's random, or Boto3 itself); others are NOT (e.g. requests, pandas, emoji)** — using a non-built-in library requires making it available to the function somehow.
+
+---
+
+## Worked Example 1: A Built-In Library (random) — No Extra Steps
+
+A simple function using Python's random module (generating a number 1–10) can be pasted directly into the Lambda console and deployed with **zero extra configuration** — since random is part of Python's standard library, it's already present in the Lambda execution environment. No packaging, no layers, no errors.
+
+## Worked Example 2: A Non-Built-In Library (emoji) — Fails Without Help
+
+The same pattern with Python's **emoji** library (used to render text codes like "check mark button" as an actual emoji character) **fails immediately** when deployed as-is — ⚠️ **"No module named emoji found" / ModuleNotFoundError** — because emoji is not part of Lambda's built-in standard library, unlike random.
+
+---
+
+## Two Ways to Provide a Non-Built-In Library
+
+### Option 1: Package the Library With Every Function (Not Recommended)
+
+1. Install the library **locally**.
+2. Zip it together **with the function's code.**
+3. Upload the combined zip as the function.
+
+⚠️ **The drawback**: this must be repeated **separately for every function** that needs the library, and **updating the library later means repackaging and re-uploading every single function that uses it** — a repetitive, error-prone, hard-to-maintain pattern as the number of functions grows.
+
+### Option 2: Lambda Layers (The Smart Way)
+
+1. Install the library locally.
+2. Zip **only the library** — NOT the function code.
+3. Upload that zip as a **Lambda Layer** (a separate, standalone resource).
+4. **Attach the layer to any function(s) that need it** — a one-time setup per function, reusable indefinitely.
+
+**Advantages**: **reusability** (one layer, attached to many functions), **clean separation** (code and library are never bundled together), **easier maintenance** (updating the layer once updates it for every attached function automatically), and **faster deployment** (function code stays small and quick to upload — especially valuable for genuinely large libraries like pandas or OpenCV, which would otherwise bloat every single function's deployment package).
+
+---
+
+## Exam Framing
+
+> "A function needs the same third-party library as several other functions, and that library needs to stay easy to update across all of them" → **Lambda Layers**, specifically because updating a layer once propagates to every attached function — the direct opposite of the repackage-every-function drawback of bundling the library with each function individually.
+`,
+    },
+    {
+      id: "lambda-layers-lab",
+      title: "Lambda Layers Lab – Fixing a ModuleNotFoundError With a Custom Layer via CloudShell",
+      shortDesc: "Reproduce the emoji-import failure, then build and attach a layer using CloudShell so the fix works the same regardless of the student's local OS",
+      visuals: [],
+      content: `## Step 1 — Reproduce the Failure
+
+1. Create a function (e.g. "emoji-function") in Python, using code that includes \`import emoji\`.
+2. Deploy and test it — ⚠️ **this fails as expected**, with "Unable to import module... No module named emoji found," confirming the library genuinely isn't available by default.
+
+---
+
+## Step 2 — Build the Layer Zip Using CloudShell
+
+> **CloudShell is used specifically to avoid OS-specific setup differences** — students on Windows, Linux, or macOS all get an identical Linux environment with Python pre-installed, so the packaging steps are identical for everyone.
+
+1. Open **AWS CloudShell** from the console.
+2. Create the required directory structure: a top-level folder (e.g. "emoji_layer"), containing a **python** subfolder — ⚠️ **this exact "python" folder name is required by Lambda's layer convention**, not an arbitrary choice.
+3. Change into the python directory and install the library there: \`pip3 install emoji -t .\` — this installs emoji's files directly into the current folder rather than system-wide.
+4. Go back up one level and **zip the python folder** — e.g. producing "emoji_layer.zip", which now contains only the library, matching the Lambda Layers pattern from the concept topic.
+
+---
+
+## Step 3 — Download and Upload the Layer
+
+5. Use CloudShell's **Actions → Download file** feature, entering the zip's full path, to bring it down to a local machine.
+6. In the Lambda console, go to **Layers → Create layer**, name it (e.g. "emoji_layers"), upload the zip file, optionally specify a compatible runtime (e.g. Python 3.9), and create it.
+
+---
+
+## Step 4 — Attach the Layer and Retest
+
+7. Go back to the function → **Code → scroll to Layers → Add a layer → Custom layers** → select the newly-created layer and its version → Add.
+8. **Retest the function** — ⚠️ **it now succeeds**, producing the expected emoji output, proving the library is now available through the layer rather than through any change to the function's own code.
+
+---
+
+## Why This Matters Going Forward
+
+> **The layer is created once and can be attached to any number of future functions needing the same library** — this lab's real payoff isn't just fixing one function, it's establishing a reusable resource that eliminates repeating this entire process for every future function needing emoji (or any other non-built-in library packaged the same way).
+
+---
+
+## Exam Framing
+
+> The exact CloudShell mechanics (directory structure, pip install with -t ., zip, download, create layer, attach) are less likely to be tested directly than the **conceptual workflow**: install locally → package library-only into a zip → create a Lambda Layer resource from it → attach to the function(s) that need it. The ⚠️ **required "python" subfolder naming convention** is a concrete, memorable detail if a scenario tests layer packaging specifics.
+`,
+    },
+    {
+      id: "lambda-vpc-connectivity",
+      title: "Lambda VPC Connectivity – Reaching Private Resources at the Cost of Default Internet Access",
+      shortDesc: "By default Lambda has full internet but zero access to private-subnet resources — attaching it to a VPC flips both of those, unless you add a NAT Gateway or VPC Endpoint back",
+      visuals: ["LambdaVPC"],
+      content: `## The Default: Full Internet, No Private-Subnet Access
+
+> **By default, a Lambda function runs OUTSIDE any VPC**, on AWS-managed infrastructure with full internet connectivity. This means it can freely reach publicly-accessible AWS services like **S3 and DynamoDB** (both reachable over the internet) — but ⚠️ **it CANNOT reach resources sitting inside a VPC's private subnet** — an RDS instance, an EC2 instance, or an ElastiCache cluster with no inbound internet connectivity, exactly the deployment pattern those services normally use for security.
+
+**The same is also true in reverse** — an EC2 instance in a private subnet cannot reach a Lambda function either, since the private subnet has no internet path to Lambda's managed infrastructure.
+
+---
+
+## The Fix: Attach Lambda to a VPC
+
+> **Configuring a VPC connection for a Lambda function (Configuration → VPC → Edit)** — selecting the target VPC and the specific private subnet(s) where the target resources live — gives the function network access to those private resources.
+
+**What happens mechanically**: AWS creates an **ENI (Elastic Network Interface)** for the Lambda function, attached to the selected subnet, with a **private IP address** from that subnet's range. The function is now a genuine network participant inside that private subnet, able to reach anything else there.
+
+---
+
+## ⚠️ The Trade-Off: Losing Default Internet Access
+
+> **The moment Lambda attaches to a VPC, it disconnects from AWS's managed network and its automatic internet access** — it now only has whatever internet connectivity the chosen subnet itself provides. Since a private subnet typically has **no inbound** internet access and, unless explicitly configured, **no outbound** either, a VPC-attached Lambda can lose internet access entirely if nothing further is done.
+
+**Two ways to restore internet-adjacent access, each for a different need**:
+
+- **NAT Gateway** — restores general **outbound** internet access (the same pattern private EC2 instances use) — needed if the function must reach external services over the internet.
+- **VPC Endpoint** — provides access to a **specific AWS service** (e.g. S3, DynamoDB) **without any general internet access at all** — the more security-scoped option when the only need is reaching particular AWS services, not the open internet.
+
+---
+
+## ⚠️ Security Group for the Lambda ENI (Frequently Tested)
+
+> **Attaching Lambda to a VPC requires a Security Group on its ENI**, functioning exactly like a firewall for the function's network traffic. ⚠️ **The direction of the required rule depends on which side initiates the connection**: if Lambda is calling OUT to a database or EC2 instance, an **outbound** rule is needed; if an EC2 instance is calling INTO the Lambda function, an **inbound** rule is needed on Lambda's side. The specific port depends entirely on the target application/service.
+
+---
+
+## Exam Framing
+
+> "Lambda function needs to access an RDS instance / EC2 instance / ElastiCache cluster in a private subnet" → **attach Lambda to the VPC**, creating an ENI in that subnet. "That same VPC-attached Lambda also needs general internet access" → **add a NAT Gateway.** "That Lambda only needs to reach specific AWS services (S3, DynamoDB), not the open internet" → **use a VPC Endpoint instead**, the more restrictive and secure choice. The **security-group-direction** question (inbound vs outbound, based on who initiates) is explicitly flagged by the source lecture as previously tested on the real exam.
+`,
     },
     {
       id: "ecs-prereq",
