@@ -2953,6 +2953,48 @@ The process: select the table → initiate export (via console, CLI, or SDK) →
 `,
     },
     {
+      id: "dynamodb-kinesis-data-stream",
+      title: "DynamoDB Stream vs Amazon Kinesis Data Stream – Simple Triggers vs Advanced Streaming Pipelines",
+      shortDesc: "Two ways to capture real-time table changes — one built-in and free-with-DynamoDB, one a full standalone streaming platform with 365-day retention",
+      visuals: [],
+      content: `## A Second Way to Stream DynamoDB Changes
+
+> DynamoDB offers **two options for capturing real-time table changes**: the built-in **DynamoDB Stream** (covered in the prior topic) and **Amazon Kinesis Data Stream** — a completely separate, general-purpose AWS streaming service that can also be pointed at DynamoDB.
+
+---
+
+## What Kinesis Data Stream Is (Briefly)
+
+> **Amazon Kinesis Data Stream is a real-time data streaming service that collects and processes large volumes of data continuously, from any source** — not built specifically for DynamoDB. (Kinesis is actually a family of three services — Kinesis Data Stream, Amazon Data Firehose, and Managed Apache Flink — full coverage is a dedicated topic elsewhere in the course.)
+
+**Illustrative example**: a ride-hailing company like Ola needs to continuously collect real-time GPS location data from thousands of drivers simultaneously — Kinesis Data Stream is the kind of general-purpose, high-volume, low-latency ingestion platform built for exactly that. It can pull from **application logs, IoT devices, DynamoDB Streams**, and many other sources.
+
+> **When used with DynamoDB specifically**, Kinesis Data Stream captures DynamoDB's real-time changes and streams them out for **advanced use cases — analytics, machine learning pipelines, custom data processing** — that go beyond what the built-in DynamoDB Stream + Lambda Trigger pattern is designed for.
+
+---
+
+## Full Comparison: DynamoDB Stream vs Kinesis Data Stream
+
+| Aspect | **DynamoDB Stream** | **Kinesis Data Stream** |
+|---|---|---|
+| **Purpose** | Purpose-built specifically to capture DynamoDB table changes | General-purpose streaming platform; DynamoDB is just one possible source |
+| **Integration** | Built-in feature — just toggle it on | Separate AWS service that must be explicitly connected to DynamoDB |
+| **Ease of use** | Simple — enable and it works immediately | ⚠️ Requires standalone Kinesis knowledge — create the stream in Kinesis first, then connect it from the DynamoDB console |
+| **Use case complexity** | Suited to simple use cases — triggers, lightweight processing | Suited to advanced use cases — real-time analytics, large-scale custom processing |
+| **Scalability** | Scales automatically with the DynamoDB table | ⚠️ Requires manually defining capacity via **shard configuration** |
+| **Cost** | Included in DynamoDB streaming pricing | Separate cost, based on shard count/usage and data volume |
+| **Processing options** | Lambda (the Trigger pattern) or custom app | Kinesis Client Library, Lambda, or other streaming-processing tools |
+| **Data retention** | ⚠️ **24 hours only** | ⚠️ **Up to 365 days** |
+| **Feature scope** | Limited to DynamoDB-specific use | Advanced processing, aggregation, integration across many AWS services |
+
+---
+
+## Exam Framing
+
+> "Simple, lightweight trigger for real-time actions (e.g. Lambda notification on order placement)" → **DynamoDB Stream** — built-in, free with DynamoDB, 24-hour retention. "Advanced real-time analytics, machine learning pipeline, or need to retain change history well beyond 24 hours (up to 365 days)" → **Kinesis Data Stream** — a standalone service requiring its own setup and shard-based capacity planning. ⚠️ **The 24-hour vs 365-day retention gap is the single most memorable, frequently tested distinction** between the two.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
