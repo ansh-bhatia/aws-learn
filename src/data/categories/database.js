@@ -1448,6 +1448,61 @@ Skipping the certificate installation means application-to-database traffic stay
 `,
     },
     {
+      id: "rds-log-exports",
+      title: "RDS Log Exports – Audit, Error, General, and Slow Query Logs",
+      shortDesc: "Getting at database logs on a managed service that hides the OS — via CloudWatch Logs, never directly to S3",
+      visuals: [],
+      content: `## What Database Logs Actually Are
+
+> **Logs are records of database events and activity** — capturing queries, errors, connections, and access activity, giving visibility into what's actually happening inside the database. Every well-built system generates logs of some kind (a networking device, an OS, a database engine) specifically because they're essential for troubleshooting and performance tuning.
+
+**Four common log types most database engines generate:**
+
+- **Audit logs** — track user activity for compliance and security (who accessed the database, when, for how long)
+- **Error logs** — record errors, useful for diagnosing what went wrong
+- **General logs** — capture connections and commands
+- **Slow query logs** — identify specifically which queries are running slowly, for performance tuning
+
+---
+
+## The Managed-Service Problem
+
+> On an **on-premises** database, logs live in files on the operating system — with direct OS access, retrieving them is trivial. **RDS provides no such direct access to the underlying OS or engine internals**, so getting at these same logs requires a different mechanism entirely: **Log Exports.**
+
+---
+
+## How Log Exports Works
+
+**Enabling it**: RDS console → Create database → scroll to the log exports option → select which log types to export (audit, error, general, slow query — availability varies by engine).
+
+> ⚠️ **The destination for exported logs is always Amazon CloudWatch Logs — there is no option to send logs directly from RDS to S3.** This is a strict, non-configurable rule: RDS → CloudWatch Logs is the only path.
+
+**For genuine long-term retention**, logs can be exported a second time, from **CloudWatch Logs onward to S3** — but that's a separate, additional step from CloudWatch, never a direct RDS-to-S3 path.
+
+---
+
+## The Automatic IAM Role
+
+> **Enabling log export requires an IAM role granting RDS permission to publish logs into CloudWatch Logs** — one AWS service (RDS) needs explicit permission to write into another (CloudWatch), which is exactly what an IAM role exists to grant.
+
+⚠️ **This role doesn't need to be created manually** — AWS automatically creates it when log exports are enabled, unless a specific custom role is deliberately supplied instead.
+
+---
+
+## Why This Matters
+
+- **Retention** — satisfying compliance requirements that mandate keeping access/audit history for a defined period
+- **Monitoring and troubleshooting** — using slow query logs to identify exactly which queries are underperforming, or error logs to diagnose a specific failure
+- **Centralization** — logs land in one consistent place (CloudWatch Logs) regardless of which RDS instance or engine produced them, rather than being scattered and inaccessible per-instance
+
+---
+
+## Exam Framing
+
+> "Where do RDS logs go when log export is enabled?" → **always CloudWatch Logs first** — never directly to S3. "Need long-term log retention beyond CloudWatch's typical window" → **export from CloudWatch Logs to S3** as a distinct second step. The permission mechanism connecting RDS to CloudWatch is an **IAM role**, auto-created unless a custom one is specified.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
@@ -1488,8 +1543,7 @@ A **maintenance window** lets AWS apply patches, software updates, and **minor**
 - **🔀 RDS Proxy** — a connection-pooling layer between app and DB; faster, handles more users, smoother failover, credentials via Secrets Manager. **Especially for serverless (Lambda)**.
 - **⚡ Zero-ETL Integration** — auto-replicates RDS data to **Amazon Redshift** in near real-time for analytics/ML — no ETL pipeline. **Only RDS for MySQL 8.0.32+**.
 
-### Log Exports
-Export audit/error/general/slow-query logs to **CloudWatch Logs** (an IAM role is auto-created). From CloudWatch you can further export to **S3** for long-term retention — RDS can't write logs to S3 directly.
+
 `,
     },
     {
