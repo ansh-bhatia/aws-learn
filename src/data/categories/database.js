@@ -2995,10 +2995,116 @@ The process: select the table → initiate export (via console, CLI, or SDK) →
 `,
     },
     {
+      id: "dynamodb-dax-accelerator",
+      title: "DynamoDB Accelerator (DAX) – In-Memory Caching for 10x Read Performance",
+      shortDesc: "Milliseconds to microseconds — how cache hits, cache misses, and write-through updates actually work, plus the exam keywords that flag a DAX question",
+      visuals: ["DAXFlow"],
+      content: `## What DAX Is
+
+> **DAX (DynamoDB Accelerator) is a fully managed, in-memory cache for DynamoDB** — it stores frequently-read data in **RAM** (rather than DynamoDB's underlying SSD/HDD storage), and an application talks to the DAX cluster instead of talking to DynamoDB directly. ⚠️ **DAX can improve DynamoDB read performance by up to 10x.**
+
+**Why RAM matters here**: RAM delivers dramatically faster access than SSD/HDD — caching frequently-accessed items in memory is exactly what turns millisecond-scale DynamoDB reads into microsecond-scale DAX reads.
+
+---
+
+## Four Reasons to Use DAX
+
+**1. Speed.** ⚠️ **DAX delivers up to 10x performance improvement, taking latency from milliseconds down to microseconds** — even at millions of requests per second. "Microsecond latency" is a specific, deliberately-tested exam keyword for DAX.
+
+**2. Less load on DynamoDB.** Once an application is pointed at DAX (via the DAX client), requests that hit the cache **never reach DynamoDB at all** — reducing the read burden on the underlying table.
+
+**3. Ease of use.** Point the application at DAX instead of DynamoDB (via the DAX client library) — no application logic rewrite is required beyond that connection change.
+
+**4. Handles traffic spikes.** A sudden surge (e.g. a sale event) is absorbed by the cache layer without slowing down, providing built-in scalability during unpredictable load.
+
+---
+
+## How Reads Actually Work
+
+> **Cache hit**: if the requested data is already in the DAX cache, DAX returns it directly — microsecond latency, DynamoDB is never even contacted.
+
+> **Cache miss**: if the data isn't cached yet, DAX fetches it from DynamoDB, **stores it in the cache**, then returns it to the application. ⚠️ **The first request for any given item is NOT instantly fast** (it still has to hit DynamoDB) — but every **subsequent** request for that same item becomes a fast cache hit.
+
+---
+
+## How Writes Actually Work
+
+> **A write (insert/update) is sent to DynamoDB first** — DAX never becomes the source of truth. **Once DynamoDB confirms the write, DAX updates its own cache to match**, so the next read of that item is immediately served fresh from cache rather than triggering a cache-miss round-trip.
+
+---
+
+## ⚠️ Exam Keywords That Signal a DAX Question
+
+> Scenario questions rarely say "should I use DAX?" directly — they signal it through specific phrasing: **"microsecond latency"**, **"caching solution"**, **"read-intensive workload"**, **"millions of requests per second"**, **"without modifying application logic significantly."** Recognizing these phrases is often the fastest path to the right answer.
+
+**Named use-case examples** that repeatedly appear in exam scenarios: **gaming apps** (near-real-time interaction needs), **e-commerce websites** (fast browsing/checkout experience), **social media apps** (fast feed scrolling), **real-time apps like stock market tickers** (live pricing needs).
+
+---
+
+## Exam Framing
+
+> "Read-heavy DynamoDB workload needs microsecond-level latency and reduced load on the table, without a major application rewrite" → **DAX.** Remember the mechanics: **DAX is a read-through, write-through cache** — reads check the cache first (with DynamoDB as fallback on a miss), writes always go to DynamoDB first and then sync into the cache, never the reverse.
+`,
+    },
+    {
+      id: "dynamodb-dax-cluster-lab",
+      title: "Creating a DAX Cluster – Node Sizing, Networking, IAM, and How Table Caching Actually Gets Determined",
+      shortDesc: "No table name is ever specified at cluster creation — caching scope is determined entirely by which endpoint the application's DAX client connects to",
+      visuals: [],
+      content: `## Step 1 — Choose Cluster Nodes
+
+1. **Name the cluster** and choose a **node family** — this defines each node's compute capacity (vCPU, RAM, network performance), the same conceptual choice as picking an EC2 instance type. ⚠️ **R-type families are optimized for RAM** — the resource that matters most for an in-memory cache like DAX — while T-type families are a cheaper testing-oriented option.
+2. **Choose cluster size** — from 1 to 11 nodes. ⚠️ **A single node provides no high availability; AWS recommends at least 3 nodes** for HA.
+
+---
+
+## Step 2 — Configure Networking
+
+3. **Choose a subnet group** (existing or new) — this determines which VPC subnets, and therefore which Availability Zones, the cluster's nodes can be placed in.
+4. **Choose a security group** to control inbound/outbound access to the cluster — using a scoped security group rather than the default "allow all" is the safer practice.
+5. **Choose Availability Zone placement** — automatic (AWS spreads nodes across AZs for you) or manual. ⚠️ **Manual placement is constrained by which subnets were selected in step 3** — a node cannot be placed in an AZ that has no corresponding subnet in the subnet group, even if requested. Automatic placement avoids this gotcha entirely and is the safer default for genuine HA.
+
+---
+
+## Step 3 — Configure Security (IAM + Encryption)
+
+6. **Attach an IAM role** granting the DAX cluster permission to read and write the target DynamoDB table(s) — either an existing role, or one created on the spot. The role's policy specifies **read-only vs read/write** access and can be scoped to specific tables or left broad.
+7. **Encryption**: DAX encrypts cached data **at rest**, and also encrypts data **in transit** between the DAX cluster and the DynamoDB table.
+
+---
+
+## Step 4 — Parameter Group and Maintenance Window
+
+8. **Parameter group** controls fine-tuning like cache TTL (how long cached data is held before refresh). AWS provides a **default parameter group** covering standard needs; a custom group can be created if specific tuning is required.
+9. **Maintenance window**: either "no preference" (AWS updates the cluster whenever needed) or a specified low-traffic window (e.g. Saturday night), so cluster updates don't impact performance during peak usage.
+
+10. Click **create** — the cluster provisions.
+
+---
+
+## ⚠️ The Key Question: How Does DAX Know Which Table(s) to Cache?
+
+> **No table name is ever specified during DAX cluster creation** — so how does a single cluster end up caching the right tables? **The determination happens entirely on the application/client side, not at the cluster level.**
+
+**The mechanism**:
+- The **DAX cluster** has its own **endpoint.**
+- Each **DynamoDB table** also has its own **endpoint.**
+- An application server chooses which client library to install: the **DAX client** (pointed at the DAX endpoint) or the standard **DynamoDB client** (pointed directly at a table's endpoint).
+- ⚠️ **Whatever table an application queries THROUGH the DAX client is the table DAX ends up caching for that application.** An application using the DAX client and querying the "orders" table causes DAX to cache "orders" data; a different application using the DAX client and querying "users" causes DAX to cache "users" data — all from the *same* DAX cluster, with no table configured on the cluster itself.
+- An application still using the **plain DynamoDB client** (not DAX) bypasses the cache entirely, querying its target table directly — that table's data is never cached by DAX at all, regardless of how the cluster is configured.
+
+---
+
+## Exam Framing
+
+> "How does a single DAX cluster end up caching multiple different tables?" → **it's determined by which endpoint the application's client library connects to, not by any table configuration on the cluster itself.** Also remember: **3+ nodes for HA, R-type node families for RAM-optimized caching, and automatic AZ placement avoids the subnet-mismatch trap** that manual placement can hit.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["DAXFlow", "ExamCheatSheet"],
+      visuals: ["ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -3013,19 +3119,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 
 
-## DAX – DynamoDB Accelerator
-
-An **in-memory cache** for DynamoDB → up to **10× faster** reads, **milliseconds → microseconds**. The app talks to DAX (via DAX client) instead of DynamoDB.
-
-- **Cache hit** → returned from memory in microseconds (DynamoDB untouched → less load).
-- **Cache miss** → DAX fetches from DynamoDB, caches it, returns; subsequent reads are fast.
-- **Write** → write-through to DynamoDB first, then DAX cache updates.
-
-> 🎯 **Exam keywords → DAX:** "microsecond latency", "caching solution", "read-intensive", "millions of requests", "without modifying the application". Gaming, e-commerce, social media, stock-market apps.
-
-DAX clusters: choose node family (R-type for RAM), **3+ nodes** for HA across AZs, subnet group + security group, an **IAM role** to read/write the table, encryption at rest & in transit. You don't specify tables at creation — the DAX **client** + endpoint determines which tables get cached.
-
----
 
 ## Exam Cheat Sheet
 
