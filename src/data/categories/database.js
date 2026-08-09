@@ -1945,41 +1945,123 @@ Two cache engines:
 `,
     },
     {
+      id: "sql-vs-nosql-fundamentals",
+      title: "SQL vs NoSQL – The 4-Point Comparison, Worked Through a Library Example",
+      shortDesc: "Fixed schema and multi-table joins vs flexible key-value entries in a single table — and why neither replaces the other",
+      visuals: ["SQLvsNoSQL"],
+      content: `## What "NoSQL" and "Non-Relational" Actually Mean
+
+> **NoSQL means "not only SQL"** — not limited to SQL-style query languages or fixed schemas. **DynamoDB is a NoSQL, non-relational database** built for fast storage and retrieval even under heavy traffic, and is faster than standard RDS engines (though not necessarily faster than Aurora specifically).
+
+> **Non-relational** means data is stored **without the traditional row/column structure** of a relational database — instead, records can have flexible, differing structures, making it ideal for unstructured or semi-structured data (user-generated content, logs).
+
+Both scale **horizontally** (adding more servers) rather than vertically — the same underlying scaling model covered earlier for Aurora Serverless.
+
+---
+
+## Four-Point Comparison, With a Concrete Library Example
+
+**1. Data structure**
+
+> **SQL**: data lives in tables with **rows and columns**, requiring a **fixed schema defined before any data is stored**. A library members table with columns for member ID, name, and email **cannot** suddenly hold a phone number for one specific member — every row must conform to the same predefined columns.
+
+> **NoSQL**: data is stored as **key-value pairs** (DynamoDB's model — other NoSQL types include documents, graphs, and columns). The same member data as key-value pairs has **no fixed structure** — adding a phone-number field for exactly one member (say, "Amit") is trivial, since there's no schema forcing every record to match.
+
+**2. Data representation**
+
+> **SQL**: data spans **multiple tables**, linked by **foreign keys**. A library system might have separate **Members**, **Books**, and **BorrowedBooks** tables — finding out which book a specific member borrowed means following a member ID as a foreign key through the BorrowedBooks table into the Books table.
+
+> **NoSQL**: the same information typically lives in **a single table**, with each entry holding everything about one member (including their borrowed book) in one row — no cross-table lookups required. (Multiple tables are still *possible* in NoSQL, but a single wide table per entity is the more common pattern.)
+
+**3. Scalability**
+
+> **SQL scales vertically** — adding more CPU, RAM, or storage to a single, more powerful server (or adding read replicas in RDS specifically for additional read capacity).
+
+> **NoSQL scales horizontally** — adding more servers to spread the load, the same automatic-scaling model DynamoDB and Aurora Serverless both rely on.
+
+**4. Use cases**
+
+> **SQL** — applications needing **structured data, consistency, and complex querying**: banking, payment processing, accounting software.
+
+> **NoSQL** — applications needing **flexibility, speed, and scalability**: real-time apps, IoT data, gaming leaderboards, big data.
+
+---
+
+## ⚠️ Neither Replaces the Other
+
+> **SQL and NoSQL are not competing for the same use case — each is the right tool for a different job.** A scenario needing complex, accuracy-critical, structured querying belongs on SQL; a scenario needing flexible, high-speed, high-volume storage belongs on NoSQL. Choosing one over the other isn't about which is "better" in the abstract — it's about which requirement the workload actually has.
+
+---
+
+## Exam Framing
+
+> "Fixed schema, multi-table joins via foreign keys, vertical scaling, complex queries" → **SQL/relational (RDS)**. "Flexible schema, single-table key-value storage, horizontal scaling, high write speed" → **NoSQL (DynamoDB)**. The library example (Members/Books/BorrowedBooks vs one flexible table) is the exact mental model worth keeping — the next topic applies this same distinction to a real, India-specific production system (UPI) to make it concrete.
+`,
+    },
+    {
+      id: "upi-case-study-rds-vs-dynamodb",
+      title: "UPI Case Study – Why One Payment System Uses Both RDS and DynamoDB",
+      shortDesc: "Banks need ACID-guaranteed accuracy; the payment app needs millisecond logging at massive scale — two databases, two different jobs",
+      visuals: ["UPICaseStudy"],
+      content: `## The Scenario
+
+> **India's UPI (Unified Payments Interface)** lets a user scan a merchant's QR code to pay instantly, without a card. A single ₹20,000 payment from Rajesh to Anita involves **two distinct players**, each with a completely different database requirement: **the banks** (debiting/crediting the actual money) and **the UPI app** (Google Pay, PhonePe, etc. — the broker facilitating the transaction).
+
+---
+
+## Why Banks Use RDS
+
+**1. Structured, consistent data.** Every transaction needs the same fixed fields — sender, receiver, amount, timestamp, status — and **two different banks must communicate using a standardized, predictable format**. RDS's fixed schema enforces exactly this consistency across every transaction, every time.
+
+**2. High accuracy via ACID properties.** This is the core reason banking data belongs on a relational database:
+
+- **Atomicity** — a transaction is either **fully completed or fully rolled back**. ₹20,000 is only debited from Rajesh if it's successfully credited to Anita; if anything fails partway, the whole transaction undoes itself automatically. This is exactly why UPI users never worry about money vanishing mid-transaction.
+- **Consistency** — the database only ever moves between **valid states** — a rule like "account balance can't go negative" is enforced, and a transaction violating it simply isn't allowed to proceed.
+- **Isolation** — concurrent transactions **don't interfere with each other** — while one transaction against an account is processing, a second transaction against that same account can't modify it until the first completes.
+- **Durability** — once a transaction **commits**, it's permanently saved via mechanisms like **transactional logs**, recoverable even after a server crash.
+
+**3. Data integrity (permanent records).** Once a transaction is recorded, ⚠️ **neither Rajesh, Anita, nor even the bank itself can alter or delete it** — a bank statement is permanent and immutable, even in the case of a later dispute. This is a direct consequence of RDS's durability guarantee, called out separately here because it's specifically what makes financial records trustworthy.
+
+---
+
+## Why UPI Apps (Google Pay, PhonePe, etc.) Use DynamoDB
+
+**1. Real-time logging.** The app needs to log details — payment initiation, device used, session info, bank response — **instantly**, for real-time monitoring and troubleshooting. NoSQL databases are optimized for **high write throughput**, logging events with minimal delay, at millisecond latency.
+
+**2. High volume.** India runs on a **small handful of UPI apps** (Google Pay, PhonePe, Paytm, and a few others) but **thousands of banks** — meaning transaction load that's spread across many banks funnels through very few apps, each handling **millions of transactions and billions of resulting logs**. DynamoDB's horizontal scalability — adding servers to absorb growing volume — is the natural fit.
+
+**3. Flexibility (schema-less structure).** Unlike a bank's rigid transaction format (which must match a counterpart bank's format exactly), a UPI app's own logs are **for its own internal reference** — it can freely add new fields (e.g. geolocation, network type) as features evolve, **without disturbing existing log records**. NoSQL's schema-less model supports this kind of organic, incremental change directly.
+
+**4. Speed over accuracy.** ⚠️ **Logs don't need the same rigorous correctness guarantees as the actual money movement** — they're for monitoring and analytics, not the financial transaction itself. Prioritizing **write speed** over strict validation is the right tradeoff here, precisely because DynamoDB doesn't carry RDS's ACID overhead.
+
+---
+
+## The Exam Cheat Sheet Version
+
+> **RDS (relational)**: handles transactional data — high accuracy and consistency, fixed schema, ACID properties, data integrity, structured data support.
+
+> **DynamoDB (non-relational)**: handles activity logs and metadata — speed and scalability, schema-less structure, real-time logging, prioritizes write speed, efficiently captures session information.
+
+> **Together**, they let UPI achieve both **reliable transactions** (via RDS) and **real-time monitoring at massive scale** (via DynamoDB) — a genuine example of choosing the right database per job, not a single database trying to do both.
+
+---
+
+## Exam Framing
+
+> Any scenario testing "why would a system use both a relational AND a non-relational database together" is testing this exact pattern: **accuracy-critical, structured, low-volume-relative-to-logs data → RDS; high-volume, flexible, speed-prioritized logging/metadata → DynamoDB.** The UPI example is specifically useful because it's real, concrete, and maps every abstract SQL-vs-NoSQL tradeoff onto an actual production system most learners can relate to directly.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["SQLvsNoSQL", "UPICaseStudy", "CoreComponents", "TableClass", "StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["CoreComponents", "TableClass", "StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
 
 ---
 
-## SQL vs NoSQL
-
-**NoSQL = "Not only SQL"** — not limited to SQL queries or fixed schemas. DynamoDB is **non-relational** and stores data as **key-value pairs**.
-
-| | SQL (Relational) | NoSQL (DynamoDB) |
-|---|---|---|
-| **Data structure** | Tables/rows, **fixed schema** defined first | Key-value pairs, **flexible schema** |
-| **Representation** | Multiple tables joined via **foreign keys** | All data in a single item/entry |
-| **Scalability** | **Vertical** (bigger server) | **Horizontal** (add servers) |
-| **Use cases** | Banking, payments, accounting | Real-time apps, IoT, gaming leaderboards, big data |
-
-> Neither replaces the other — each has its own use case.
-
----
-
-## UPI Case Study — Why Both?
-
-When Rajesh pays ₹20,000 to Anita via UPI, **two players** store data with **different** databases:
-
-- **Banks → RDS (relational):** transactional data needs **structure**, **ACID** (Atomicity, Consistency, Isolation, Durability) for accuracy, and permanent **data integrity** (statements can't be edited).
-- **UPI app (Google Pay) → DynamoDB (non-relational):** activity logs & metadata need **real-time logging** (ms latency), **high volume** (billions of logs, horizontal scale), **flexibility** (schema-less), and **speed over accuracy**.
-
-> 📌 **Exam cheat sheet:** RDS = transactional data + ACID + fixed schema. DynamoDB = logs/metadata + speed + scalability + schema-less.
-
----
 
 ## Core Components & Keys
 
