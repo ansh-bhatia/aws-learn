@@ -2190,6 +2190,52 @@ SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services
 - *multi-region / low latency global / region failover* → **Global Tables**`,
     },
     {
+      id: "rds-restore-from-s3",
+      title: "RDS Restore from S3 – Importing a SQL Dump File Into a New Instance",
+      shortDesc: "A 2-in-1 shortcut for migrating an on-premises database: create the instance and import the .sql dump in one step",
+      visuals: [],
+      content: `## What It Actually Does
+
+> **"Restore from S3" creates a brand-new RDS instance directly from a database backup file (a .sql dump) stored in an S3 bucket** — combining what would otherwise be two separate steps (create an empty database, then manually import the dump) into one seamless process.
+
+⚠️ **This is a genuinely different feature from restoring an automated backup or a manual snapshot** — those are separate, dedicated RDS mechanisms covered in earlier topics. Restore from S3 exists specifically for importing an **externally-created SQL dump file**, most commonly from an on-premises database being migrated to RDS.
+
+---
+
+## The Process, Step by Step
+
+1. **Export** the source database (on-premises, another cloud, anywhere) to a **.sql dump file** — containing both schema and data
+2. **Upload that dump file to an S3 bucket** — ⚠️ **the bucket must be in the same AWS region** as the RDS instance being created
+3. **RDS console → Create database → Restore from S3** (instead of the standard "Create database" path) → specify the **S3 source** (bucket and file location)
+4. RDS reads the dump file, **initializes a new instance**, and **imports the schema and data** into it, all in one operation
+5. **Validate** the newly-created database once the process completes, to confirm the restore succeeded
+
+---
+
+## The Required IAM Role
+
+> **RDS needs an IAM role granting it permission to read the .sql file from the S3 bucket** — without this, RDS has no way to access the file at all. The role can be created **in advance**, or generated directly from within the Restore-from-S3 wizard itself (just provide a role name, and grant KMS access if the source data is encrypted).
+
+This is the same underlying pattern seen elsewhere in AWS: one service (RDS) needs an explicit IAM role to act on another service's resource (an S3 object) on your behalf.
+
+---
+
+## ⚠️ Three Things Frequently Confused on the Exam
+
+**1. Not the same as restoring an automated backup or snapshot.** Those have their own dedicated restore mechanisms. Restore from S3 is exclusively for **externally-sourced .sql dump files** — mixing these up is a common, well-flagged exam trap.
+
+**2. Not the same as AWS DMS (Database Migration Service).** Restore from S3 is fundamentally an **offline** migration path: export → upload → import, with the source database's data frozen at export time. **DMS performs live migration** — ongoing replication from a still-running source database, allowing a cutover with minimal downtime once ready. Restore from S3 is the right tool for a one-time, already-static backup file; DMS is the right tool for migrating a database that's actively being used right up until the switch.
+
+**3. Engine support is narrow.** ⚠️ **Restore from S3 only supports MySQL and Aurora MySQL as the target** — it does **not** support PostgreSQL, MariaDB, Oracle, or SQL Server. A scenario naming any other target engine rules this feature out immediately, regardless of how well the rest of the scenario otherwise fits.
+
+---
+
+## Exam Framing
+
+> "Migrate an on-premises database to RDS using an existing SQL dump file, as a one-time operation" → **Restore from S3** — but only if the target is **MySQL or Aurora MySQL**. "Migrate a live, currently-running database with minimal downtime" → **AWS DMS**, not Restore from S3. "Restore from an automated backup or manual snapshot already taken inside RDS" → neither of these — that's the dedicated backup/snapshot restore mechanism covered separately.
+`,
+    },
+    {
       id: "aurora",
       title: "Aurora",
       shortDesc: "Cloud-native MySQL/PostgreSQL-compatible high-performance DB",
