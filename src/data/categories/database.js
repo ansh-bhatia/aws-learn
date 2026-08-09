@@ -3101,36 +3101,89 @@ The process: select the table → initiate export (via console, CLI, or SDK) →
 `,
     },
     {
-      id: "dynamodb-2",
-      title: "DynamoDB – Advanced (Part 2)",
-      shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
+      id: "dynamodb-exam-cheat-sheet",
+      title: "DynamoDB SAA-C03 Exam Cheat Sheet – Scenario Keywords Worked Through Real Questions",
+      shortDesc: "The exam never asks 'which feature' directly — it describes a scenario and expects you to spot the keyword. Ten worked examples, contrasted pair by pair.",
       visuals: ["ExamCheatSheet"],
-      content: `## DynamoDB – Advanced (Part 2)
+      content: `## The Core Exam Skill: Keyword Spotting
 
-This part covers the advanced features and exam-critical scenarios of DynamoDB.
+> ⚠️ **SAA-C03 DynamoDB questions are scenario-based, not definitional** — they rarely ask "what does On-Demand mode do?" directly. Instead they describe a business situation, and the correct answer depends on recognizing which specific phrase points to which specific feature. The fastest way to build this skill is comparing near-identical questions with opposite answers, side by side.
 
 ---
 
+## Capacity Mode: On-Demand vs Provisioned
 
+**Question A**: *"An application experiences unpredictable traffic with moderate to high read/write throughput and requires automatic scaling to handle demand fluctuations. Which capacity mode is best?"*
+→ Keywords: **unpredictable traffic**, **automatic scaling** → **On-Demand mode.**
 
+**Question B**: *"A company has a steady and predictable DynamoDB workload and wants to optimize cost while maintaining performance."*
+→ Keywords: **steady and predictable**, **optimize cost** → **Provisioned mode.**
 
+**The pairing that matters**: "unpredictable" and "automatic scaling" always point to On-Demand; "steady/predictable" and "optimize cost" always point to Provisioned — these two questions are near-mirror images of each other specifically to test whether you catch the distinction.
 
+---
 
+## Secure/Private Access: VPC Endpoint vs IAM Role
 
+**Question C**: *"An application in a private subnet needs to access a DynamoDB table while ensuring traffic does not leave AWS."*
+→ Keyword: **traffic does not leave AWS** (and "private subnet," implying no internet access) → **VPC Endpoint** for DynamoDB — this establishes private connectivity without needing internet access at all.
 
+**Question D**: *"A Lambda function needs secure read and write access to a DynamoDB table. What is the best approach?"*
+→ Keywords: **Lambda needs access to another service** → **IAM Role** — whenever one AWS service needs to act on another service, an IAM role is the standard mechanism, not embedded credentials.
 
+---
 
-## Exam Cheat Sheet
+## Improve Read Performance: DAX (Two Different Phrasings, Same Answer)
 
-SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services:
-- *unpredictable traffic / auto-scaling* → **On-Demand mode**
-- *steady & predictable / optimize cost* → **Provisioned mode**
-- *private subnet / traffic stays in AWS* → **VPC Endpoint**
-- *Lambda needs secure access* → **IAM Role**
-- *microsecond / caching / read-intensive / millions of requests* → **DAX**
-- *manual backup / retain indefinitely* → **On-Demand Backup**
-- *accidental deletion / last 35 days* → **PITR**
-- *multi-region / low latency global / region failover* → **Global Tables**`,
+**Question E**: *"A read-intensive application is experiencing latency issues. The company wants to optimize read performance without modifying the application."*
+→ Keywords: **read-intensive**, **latency issue**, **without modifying application** → **DAX** — an app switches its endpoint to DAX with no code rewrite required.
+
+**Question F**: *"An application experiences millions of daily requests and wants to reduce latency retrieving product details. What is the best caching solution?"*
+→ Keywords: **millions of requests**, **reduce latency**, **caching solution** → **DAX** again — different phrasing, same underlying need (fast, cached reads at scale).
+
+⚠️ **DAX questions can be phrased very differently** ("without modifying the application" vs "best caching solution") but both point to the same answer — train on recognizing the underlying need, not just a fixed keyword list.
+
+---
+
+## Backup and Restore: On-Demand Backup vs PITR
+
+**Question G**: *"A company wants to take a manual backup of its DynamoDB table for on-demand recovery, retaining the backup indefinitely without setting up an automated policy."*
+→ Keywords: **manual backup**, **retain indefinitely** → **On-Demand Backup.**
+
+**Question H**: *"A company needs to protect its DynamoDB table from accidental deletion or overwrite, and wants the ability to restore to a previous state within the last 35 days."*
+→ Keywords: **accidental deletion**, **restore to a previous state**, **last 35 days** → **PITR (Point-in-Time Recovery)** — the 35-day figure is a direct giveaway, since it's PITR's exact retention ceiling.
+
+---
+
+## Multi-Region: Global Tables (Two Different Framings)
+
+**Question I**: *"A company requires a high-availability DynamoDB solution that ensures low-latency access for users across multiple AWS regions, with automatic data replication."*
+→ Keywords: **low latency**, **multiple regions**, **automatic replication** → **Global Tables.**
+
+**Question J**: *"A company wants a disaster recovery strategy for its DynamoDB data, allowing automatic failover to another region in case of a regional outage."*
+→ Keywords: **disaster recovery**, **automatic failover**, **region outage** → **Global Tables** again — the same feature answers both the "performance" framing (low latency) and the "resilience" framing (failover), since Global Tables genuinely provides both benefits simultaneously.
+
+---
+
+## The Complete Keyword Reference Table
+
+| Scenario Keywords | Answer |
+|---|---|
+| Unpredictable traffic / auto-scaling | **On-Demand mode** |
+| Steady & predictable / optimize cost | **Provisioned mode** |
+| Private subnet / traffic stays in AWS | **VPC Endpoint** |
+| Lambda (or any service) needs secure access to a table | **IAM Role** |
+| Microsecond latency / caching solution / read-intensive / millions of requests | **DAX** |
+| Manual backup / retain indefinitely | **On-Demand Backup** |
+| Accidental deletion / restore within last 35 days | **PITR** |
+| Multi-region / low-latency global access / automatic regional failover | **Global Tables** |
+
+---
+
+## Exam Framing
+
+> The pattern across every example here is the same: **identify the 2-3 distinguishing keywords in the scenario, then match them against the table above.** Questions are frequently written in near-identical pairs (unpredictable vs predictable, manual-indefinite vs automated-35-day) specifically to test whether the keyword distinction registers — read the full scenario before jumping to an answer, since a single swapped word (indefinitely vs 35 days) changes the correct choice entirely.
+`,
     },
     {
       id: "rds-restore-from-s3",
