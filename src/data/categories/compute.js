@@ -2651,56 +2651,174 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-prereq-the-problem",
+      title: "Why Containers Exist – Leo's Single-Point-of-Failure Story",
+      shortDesc: "Leo hosts three apps on one EC2 instance to save money — a marketing spike in one app takes all three down at once",
+      visuals: ["LeoStory"],
+      content: `## The Setup: Two Characters
+
+> **This series teaches ECS through storytelling** — two recurring characters: **Leo**, a startup founder and hands-on builder (fast-moving, curious, sometimes skips best practices), and **Ray**, an experienced cloud architect and mentor (methodical, best-practices-first). Leo represents the learner asking the questions; Ray represents the AWS-recommended, correct way of doing things.
+
+---
+
+## Leo's Setup: Two Apps, One EC2 Instance
+
+> Leo runs an ed-tech startup with two applications: a **learner portal (LMS)** — where students watch videos, download PDFs, and write code — and a **support app**, for handling student issues. ⚠️ **To save money, Leo hosts BOTH applications on a single EC2 instance.**
+
+---
+
+## The Mistake: Adding a Third App to the Same Instance
+
+> As the business grows, Leo's team builds a new **enrollment portal** for marketing-driven signups. ⚠️ **Instead of provisioning a new server, Leo deploys this third app onto the SAME existing EC2 instance** — reasoning that it "wouldn't cause an issue."
+
+---
+
+## The Crash
+
+> **A marketing campaign drives a traffic spike to the enrollment app**, which starts consuming disproportionate memory/CPU. ⚠️ **Because all three apps share the same instance with no resource boundary between them, the enrollment app's spike drags down the ENTIRE EC2 instance — crashing all three applications simultaneously.** Existing students lose LMS access, the support team can't log in to help them, and the enrollment app itself goes down too — the exact traffic surge it was built to handle becomes the thing that kills it.
+
+---
+
+## Ray's Diagnosis and First Fix
+
+> **Ray's core lesson: isolate workloads so that one application's problem can't take down unrelated applications.** The real-world pattern this reflects: production environments typically run separate servers for separate concerns (database server, application server, email server, etc.) — specifically to prevent exactly this kind of cascading failure.
+
+**Ray's immediate advice**: isolate the enrollment app onto its **own, separate EC2 instance.** But this reveals the next problem — since EC2 instances are virtual machines, Leo has to **manually recreate the entire environment from scratch**: correct OS, correct Java version, correct application server configuration (Tomcat/Spring Boot), matching environment variables and paths. ⚠️ **Getting this identical setup right is slow and error-prone** — exactly the pain point that motivates the rest of this prerequisite series: is there a faster, more reliable way to isolate workloads than spinning up a full new virtual machine every time?
+
+---
+
+## Exam Framing
+
+> This narrative sets up the core motivating question behind containers, Docker, and eventually ECS: **how do you isolate workloads from each other without paying the full cost (in time, complexity, and resources) of a brand-new virtual machine for every single one?** Every subsequent topic in this prerequisite cluster builds toward answering that question.
+`,
+    },
+    {
+      id: "ecs-prereq-os-architecture",
+      title: "How an Operating System Actually Works – Kernel and Application Layer",
+      shortDesc: "Applications never touch hardware directly — every request passes through the application layer, then the kernel, then finally the hardware",
+      visuals: ["OSArchitecture"],
+      content: `## Why This Foundation Matters
+
+> ⚠️ **Understanding containers and their real difference from virtual machines requires first understanding operating system architecture** — specifically, how an application actually reaches hardware. Skipping this foundation makes the container-vs-VM distinction impossible to reason about clearly, rather than just memorize.
+
+---
+
+## Four Hardware Components
+
+> **Every computer — laptop, desktop, or server — is fundamentally CPU, RAM, disk, and network.** Humans (and applications) can't communicate with this hardware directly — that's exactly what an operating system exists to mediate.
+
+---
+
+## The Two Core OS Components
+
+**1. Kernel** — ⚠️ **the core part of the OS that directly communicates with and manages hardware.** No application, no matter what it is, ever talks to hardware directly — every hardware interaction is mediated by the kernel.
+
+**2. Application Layer** — sits between applications and the kernel, providing **standard libraries, APIs, and services** that applications use to make requests. ⚠️ **Without the application layer, every application would need to handle raw, complex system calls to the kernel directly** — making development dramatically more complicated and less safe. The application layer is what makes writing ordinary applications tractable.
+
+---
+
+## The Communication Flow
+
+> **Application → Application Layer → Kernel → Hardware.**
+
+**Worked example**: a MySQL server wanting to read from disk cannot touch the disk directly — it issues a request through the application layer, which is forwarded to the kernel, which is the only component that actually interacts with the physical hardware to fulfill it (reading a file, writing data, sending something over the network, allocating memory). ⚠️ **The application never directly interacts with hardware, ever — the kernel handles everything through this managed, mediated access.**
+
+---
+
+## Exam Framing
+
+> This kernel/application-layer split is the exact mechanism containers exploit: a container **shares its host's kernel** while getting its own isolated application layer — versus a virtual machine, which duplicates BOTH components (its own full kernel and its own full application layer) inside every single VM. Understanding this distinction now is what makes the "why are containers lighter than VMs" answer, covered in the next topics, actually make sense rather than being a memorized fact.
+`,
+    },
+    {
+      id: "ecs-prereq-how-vms-work",
+      title: "How Virtual Machines Actually Work – Hypervisor, vCPU, vRAM, and Isolation",
+      shortDesc: "One physical server, three isolated guest OSes — each thinking it has its own dedicated hardware, enforced entirely by the hypervisor",
+      visuals: ["VMvsContainer3D"],
+      content: `## Before Virtualization: One Physical Server, One OS
+
+> ⚠️ **A single physical machine can only run ONE operating system directly.** Wanting Leo's three apps (LMS, support, enrollment) fully isolated from each other, in the pre-virtualization world, meant **purchasing three separate physical servers** — expensive to buy, expensive to run (electricity, maintenance contracts), and operationally heavier to manage.
+
+---
+
+## Virtual Machines Solve This — Step by Step
+
+**Step 1 — Physical hardware.** Virtual machines always ultimately run on top of real physical hardware (CPU, RAM, storage, network) — there's no virtualization "in the air," it's always hosted somewhere physical underneath.
+
+**Step 2 — Install a hypervisor.** ⚠️ **A hypervisor is software that allows multiple virtual machines to run on one physical server.** Installed directly on bare metal (a "Type 1" hypervisor — the type relevant here, as opposed to "Type 2" hypervisors like Oracle VirtualBox that run atop an existing OS). Real examples: **VMware ESXi** (VMware, released ~2000), **Hyper-V** (Microsoft), and AWS's own **Xen/Nitro-based virtualization** underlying EC2.
+
+**Step 3 — Create virtual machines via the hypervisor.** The hypervisor provides each VM with **virtual CPU (vCPU), virtual RAM, virtual disk, and virtual network** — carved out of the real physical resources it controls. ⚠️ **Each VM believes it has its own dedicated hardware, even though it's actually a slice of shared physical resources** — e.g. assigning 2GB of a physical server's 8GB RAM to one VM means that VM operates as if it has exactly 2GB total, with no visibility into (or ability to exceed) the rest.
+
+**Step 4 — Install a guest OS inside each VM.** ⚠️ **There is no difference between an OS installed on physical hardware and one installed inside a VM — the same ISO image, the same installation process.** Each VM gets its own **full kernel and full application layer**, exactly like a standalone physical machine would.
+
+---
+
+## Genuine Isolation, Despite Shared Hardware
+
+> **Every kernel request for hardware access is mediated by the hypervisor**, not granted directly. This is exactly what makes isolation real: if the enrollment app's VM tries to consume excessive resources, it's capped at whatever was allocated to it during VM creation — ⚠️ **it CANNOT starve the LMS or support app VMs of their own allocated resources**, even though all three ultimately share the same underlying physical CPU/RAM/disk. If one VM crashes internally, the others are unaffected — solving exactly the single-point-of-failure problem from the opening story.
+
+---
+
+## Exam Framing
+
+> "Multiple isolated operating systems sharing one physical server, each with its own full kernel and application layer, mediated by a hypervisor" → **virtual machines.** Remember the specific mechanism of isolation: **the hypervisor enforces the resource caps assigned at VM creation time** — that's what prevents one VM's runaway resource usage from affecting any other VM on the same host.
+`,
+    },
+    {
+      id: "ecs-prereq-vm-limitations",
+      title: "Virtual Machine Limitations – The Five Pain Points That Led to Containers",
+      shortDesc: "Every VM still carries a full OS — heavy resource use, slow boot, bulky images, complex patching, and low density, all traced back to the same root cause",
+      visuals: ["VMLimitations"],
+      content: `## Physical vs Virtual: Differences and Similarities First
+
+**Differences**: a physical machine can only run ONE operating system, with no hypervisor involved — the kernel has direct, exclusive control over the CPU/RAM/disk. A virtual machine setup adds a hypervisor between the hardware and multiple guest operating systems, each with its own kernel and application layer sliced from the shared physical resources.
+
+**Similarities**: both a physical machine and a VM have a **full operating system** (kernel + application layer), both run applications safely on top of that OS, and both feel like a genuinely independent, complete server to whoever is using them.
+
+---
+
+## Why Virtualization Was a Genuine Revolution
+
+> **Before virtualization**: one physical server = one operating system = a huge amount of wasted compute capacity, since most workloads don't need 100% of a dedicated server's resources. **After virtualization**: one physical server can run multiple VMs, using hardware efficiently, avoiding the cost of purchasing multiple physical servers, and enabling easy creation/destruction/snapshotting of environments. ⚠️ **This is exactly what gave rise to the cloud** — AWS EC2 (and equivalents on Azure/GCP) are fundamentally virtualization-as-a-service. Widespread production adoption is often dated to **2007**, when VMware released vCenter Server and enterprises began trusting VMs with genuine production workloads.
+
+---
+
+## ⚠️ Five Limitations That Emerged With Wide VM Adoption
+
+**1. Heavy resource consumption.** ⚠️ **Every VM runs its own full operating system, with its own kernel and application layer** — even a tiny microservice still pays the overhead cost of an entire OS underneath it, consuming meaningful memory, CPU, and storage just to exist.
+
+**2. Slow boot time.** Starting a VM means booting a full operating system from scratch — typically **1–2 minutes.** In an auto-scaling context (needing new capacity *right now* during a traffic spike), this delay is a real operational cost.
+
+**3. Portability issues.** A full guest OS image is genuinely large — **4–5GB for a minimal Linux install without a GUI, ~20GB+ for Windows.** ⚠️ **Moving these bulky images between systems is slow and impractical**, directly because of the full-OS overhead baked into every VM image.
+
+**4. Complex management.** A full OS inside every VM means a full OS's worth of ongoing maintenance — patching, security updates, version management — multiplied across however many VMs are running.
+
+**5. Limited density.** Since every VM needs its own full OS overhead, a single physical server can only host a limited number of VMs before running out of capacity — ⚠️ **wanting 40 VMs on one server means finding room for 40 full operating systems**, which is rarely practical.
+
+---
+
+## The Common Thread
+
+> **Every single one of these five limitations traces back to the exact same root cause: each VM carries a complete, full-weight operating system.** This is precisely the problem containers were built to solve — by sharing the host's kernel instead of duplicating it in every isolated unit, eliminating most of this overhead while still providing meaningful isolation. That mechanism is covered in full in the next topic.
+
+---
+
+## Exam Framing
+
+> "Why is a container lighter-weight than a virtual machine, specifically?" → **because a VM duplicates a full OS (kernel + application layer) per instance, while a container shares the host's kernel** — every one of the five VM limitations here (resource use, boot time, image size, maintenance burden, density) is a direct symptom of that duplicated-OS overhead, not five unrelated problems.
+`,
+    },
+    {
       id: "ecs-prereq",
       title: "ECS – Prerequisites (Containers & Docker)",
       shortDesc: "VMs vs containers, Docker, orchestration — the foundation for ECS",
-      visuals: ["LeoStory", "OSArchitecture", "VMvsContainer3D", "VMLimitations", "DockerLifecycle", "Orchestration", "OrchestratorCompare"],
+      visuals: ["DockerLifecycle", "Orchestration", "OrchestratorCompare"],
       content: `## ECS Prerequisites — Containers & Docker
 
 Before ECS (a **container orchestration** service), you must understand containers. We learn through a story: **Leo** (the builder — asks the questions) and **Ray** (the architect — teaches best practices).
 
 ---
 
-## The Story (the problem)
-
-Leo hosts his **LMS**, **Support**, and a new **Enrollment** app on **one EC2 instance** to save money. A marketing spike makes the Enrollment app devour all CPU/memory — there's no resource boundary — and the whole instance crashes, taking **all three apps** down. Ray's lesson: **isolate** workloads so one can't kill the others.
-
-> The journey: **physical machines → virtual machines → containers → ECS.**
-
----
-
-## How an OS Works (foundation)
-
-Every OS has two key parts:
-- **Kernel** — the core; the only part that talks **directly to hardware** (CPU, RAM, disk, network).
-- **Application Layer** — libraries/APIs apps use to make **system calls**, forwarded to the kernel.
-
-Flow: **Application → Application Layer → Kernel → Hardware**.
-
----
-
-## Physical → Virtual Machines
-
-A **hypervisor** (VMware ESXi, Hyper-V, AWS Nitro/Xen) installed on physical hardware lets you run **multiple VMs**, each with its **own full OS** (kernel + app layer) and capped resources → **isolation** without buying multiple servers. This **hardware virtualization** birthed the cloud (EC2 is a VM).
-
----
-
-## VM Limitations → Containers
-
-VMs carry a **full OS** each, causing:
-- **Heavy resource use** (OS overhead), **slow boot** (1–2 min), **bulky images** (GBs), **complex management** (patching), **limited density**.
-
-**Containers** (2013) fix this: ship only the **application layer** and **share the host kernel**.
-
-| | Virtual Machine | Container |
-|---|---|---|
-| Virtualizes | Hardware (full OS each) | OS (shares host kernel) |
-| Weight | Heavy | Lightweight |
-| Boot | 1–2 minutes | ~1 second |
-| Image size | GBs | MBs |
-| Isolation | Full | App-layer + resource limits |
-
----
 
 ## Docker
 
