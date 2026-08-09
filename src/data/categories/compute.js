@@ -3002,50 +3002,188 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-app-architectures",
+      title: "Application Architectures – Monolithic vs Microservices, Worked Through Amazon.in's Scaling Math",
+      shortDesc: "Home page scales for 100,000 visitors, Cart for 10,000, Payment for 4,000 — independent scaling is the single biggest reason companies moved to microservices",
+      visuals: ["MonolithVsMicroservices"],
+      content: `## Two Application Architectures
+
+> **Monolithic ("tightly coupled")** — the entire application is a single unified codebase with a single deployment unit. ⚠️ **Outdated for modern development, but understanding it is the prerequisite for understanding why microservices exist.**
+
+> **Microservices ("loosely coupled")** — the application is broken into multiple small, independently deployable services, each with its own codebase. Used by modern applications like **Netflix, Amazon, Uber, Spotify.**
+
+---
+
+## Twelve Points of Comparison
+
+| Aspect | Monolithic | Microservices |
+|---|---|---|
+| Structure | Single codebase, single deployment | Multiple small services, independent codebases |
+| Coupling | Tightly coupled — components depend heavily on each other | Loosely coupled — each component is an independent service |
+| Deployment | One deployment for the entire app | Separate deployment per microservice |
+| Scalability | ⚠️ Difficult to scale parts independently | ⚠️ Easy to scale services individually |
+| Testing | End-to-end testing of the whole app | Test each microservice separately |
+| Updates | Updating requires touching the whole app | Update and test one microservice independently |
+| Failure impact | One failure can bring down the entire app | A failing service affects only that service |
+| Tech stack | Usually one single tech stack throughout | Different services can use different languages/stacks |
+| Database | One shared database | Each microservice can have its own database |
+| DevOps/CI-CD | Complex for large teams | Separate, manageable CI/CD pipelines per service |
+| Examples | Traditional ERP systems, early web apps | Netflix, Amazon, Uber, Spotify |
+| Hosting | Virtual machines | ⚠️ Containers (ECS / EKS / Kubernetes) |
+
+---
+
+## ⚠️ The Killer Reason: Independent Scaling, Worked Through Amazon.in
+
+**The scenario**: Amazon.in runs a sale, and traffic surges. The site has (at minimum) three components — **Home page, Cart, Payment.**
+
+- **100,000 people** visit the home page — it must scale to handle **100,000 visitors.**
+- Only **~10%** of visitors actually add something to their cart — the Cart component only needs to scale to **~10,000 users.**
+- Of those, only **~4%** actually complete a purchase — the Payment component only needs to scale to **~4,000 users.**
+
+> ⚠️ **With microservices, each component scales independently to its own actual demand** — Home at 100,000, Cart at 10,000, Payment at 4,000, each provisioned exactly for its own real load. **With a monolith, this is impossible** — since everything is one deployment unit, the entire application must be scaled as a single unit to handle the peak (100,000-visitor) load, massively over-provisioning the Cart and Payment logic that only a fraction of those visitors ever touch.
+
+**This single scaling asymmetry** — different components genuinely needing different capacity — is the clearest, most concrete reason microservices architectures dominate modern large-scale applications.
+
+---
+
+## Why This Matters Before Learning ECS
+
+> **Microservices are hosted in containers, and containers at scale need a container orchestration service** — exactly what ECS, EKS, and Kubernetes provide. Understanding the monolith-vs-microservices distinction (and specifically the independent-scaling advantage) is the direct motivation for everything ECS does.
+
+---
+
+## Exam Framing
+
+> "An application needs different components to scale to very different levels of demand independently" → **microservices architecture**, hosted via container orchestration (ECS/EKS/Kubernetes) — a monolith cannot achieve this since it scales as one indivisible unit. The Home/Cart/Payment percentage cascade (100,000 → 10,000 → 4,000) is the concrete mental model worth retaining for "why microservices" scenario questions.
+`,
+    },
+    {
+      id: "ecs-what-is-ecs",
+      title: "What Is Amazon ECS – Six Reasons to Choose It Over Self-Managed Kubernetes",
+      shortDesc: "Fully managed with zero server setup, deeply woven into ALB/IAM/CloudWatch/ECR/CodePipeline — the AWS-native path to running containers at scale",
+      visuals: ["ECSBasics"],
+      content: `## The Definition
+
+> **Amazon ECS (Elastic Container Service) is a fully managed container orchestration service that makes it easy to deploy, manage, and scale containerized applications on AWS.** ⚠️ **"Fully managed" is the key differentiator** — no servers to set up, no container orchestration software to install or maintain; clicking "Get Started → Create Cluster" is genuinely the entire setup burden on the user's side.
+
+---
+
+## ⚠️ Six Reasons to Choose ECS Over Self-Managed Kubernetes
+
+**1. Fully managed.** Self-managed Kubernetes requires setting up and operating the control plane infrastructure yourself. ECS requires none of that.
+
+**2. Deep AWS integration.** ECS is woven directly into AWS's broader ecosystem — **Application Load Balancer** (traffic distribution), **IAM** (security/permissions), **CloudWatch** (monitoring), **ECR** (container image storage), and **CodePipeline** (CI/CD) all connect to ECS natively, without needing separate integration work.
+
+**3. Intelligent scheduling.** ECS handles the decision of which container runs on which underlying host automatically.
+
+**4. Cost efficient.** Two infrastructure options — traditional **EC2** or serverless **Fargate** — let cost be optimized based on the actual workload pattern, covered in depth in the Infrastructure comparison topic.
+
+**5. Secure.** Native IAM integration means container-level security follows the same identity and access model as the rest of an AWS account, rather than a separate parallel security system.
+
+**6. Scalable.** Inherits AWS's underlying cloud-scale elasticity — scaling from a few hundred to millions of visitors is the same scaling model ECS applies to container workloads.
+
+---
+
+## Use Cases
+
+- **Microservices-based applications** — the primary, most common use case.
+- **Batch processing workloads.**
+- **CI/CD pipelines** — via integration with AWS CodePipeline.
+- **Monolith-to-microservices / monolith-to-container migration** — moving an existing application into a container-based architecture.
+
+---
+
+## Exam Framing
+
+> "Container orchestration with zero infrastructure to manage, deeply integrated with the rest of an AWS-native stack (ALB, IAM, CloudWatch, ECR)" → **ECS.** The six-reasons framing (fully managed / deep integration / intelligent scheduling / cost efficient / secure / scalable) is specifically the "ECS vs self-managed Kubernetes" comparison — a scenario emphasizing zero operational overhead on AWS specifically points to ECS over a self-hosted Kubernetes cluster.
+`,
+    },
+    {
+      id: "ecs-cluster-concept",
+      title: "ECS Cluster – The First Thing You Create, and Why It Solves the Single-Point-of-Failure Problem",
+      shortDesc: "A cluster turns multiple uncoordinated Docker hosts into one resource pool that ECS can schedule containers across",
+      visuals: ["ECSCluster"],
+      content: `## What a Cluster Is
+
+> **An ECS cluster represents a group of Docker hosts acting as a unified environment for container orchestration.** ⚠️ **Creating a cluster is the very first step** in setting up ECS — nothing else can happen before it.
+
+---
+
+## Why a Cluster Is Necessary: Revisiting Single Point of Failure
+
+> **A single Docker host running multiple containers is a single point of failure** — if that host goes down, every container on it goes down together. The fix (redundancy — multiple Docker hosts) only actually works if those hosts **coordinate** — otherwise they're just several independent machines with no shared awareness of each other's health or workload.
+
+> **A cluster is exactly that coordination layer**: at minimum **two Docker hosts** are added into a cluster, and once inside it, they act as a team — ECS (the container orchestrator) decides which host runs which container, handles failover if one host goes down, and pools their combined resources.
+
+---
+
+## Resource Pooling
+
+> **Adding multiple hosts to a cluster combines their resources into one pool.** Worked example: three hosts with 4 vCPU each, once added to the same cluster, together form a **12 vCPU resource pool** that ECS can schedule containers across — treating the cluster's combined capacity as one logical unit rather than three separate, individually-managed machines.
+
+---
+
+## Two Infrastructure Types
+
+> **ECS clusters support two infrastructure options for running containers: Amazon EC2 and AWS Fargate** — chosen when creating the cluster (name it, then select the infrastructure type). The detailed comparison between the two is covered in the next topic.
+
+---
+
+## Exam Framing
+
+> "First step in setting up ECS, and the mechanism that turns several independent Docker hosts into one coordinated, resource-pooled team" → **an ECS cluster.** Remember the minimum-two-hosts framing for genuine high availability — a cluster with only one host still carries the original single-point-of-failure risk the cluster concept exists to solve.
+`,
+    },
+    {
+      id: "ecs-infrastructure-ec2-vs-fargate",
+      title: "ECS Cluster Infrastructure – EC2 (Self-Managed) vs Fargate (Serverless), Twelve Points of Comparison",
+      shortDesc: "Full control and cheaper steady-state cost vs zero server management and pay-only-for-what-runs — the same self-managed-vs-serverless trade-off as everywhere else in AWS",
+      visuals: ["EC2vsFargate"],
+      content: `## Two Infrastructure Choices for a Cluster
+
+> **Amazon EC2 ("self-managed")** — the cluster's Docker hosts ARE EC2 instances, created and managed directly. **AWS Fargate ("serverless")** — AWS provisions the underlying infrastructure automatically, on demand, with no Docker hosts to create or manage at all.
+
+---
+
+## Twelve Points of Comparison
+
+**1. Infrastructure provisioning.** EC2: launch and manage EC2 instances yourself (with Docker installed, joined to the cluster). Fargate: AWS provisions infrastructure automatically, on demand — no server ever explicitly created.
+
+**2. Control level.** EC2: ⚠️ **full control** — OS, instance type, storage, AMI, all configurable. Fargate: ⚠️ **no access to the underlying OS or compute layer** — a genuine trade-off, not purely a downside, since it also means nothing to patch or maintain.
+
+**3. Launch time.** EC2: slower — actual EC2 instances must be created and joined to the cluster. Fargate: fast — infrastructure is provisioned on demand as needed.
+
+**4. Billing model.** EC2: pay for instance uptime (On-Demand, Spot, or Savings Plans pricing — the same options as standalone EC2). Fargate: ⚠️ **pay per vCPU and memory usage, per second, for each running task** — billing tracks actual container resource consumption, not pre-provisioned instance time.
+
+**5. VPC selection timing.** EC2: VPC/subnet/security-group/public-IP settings are chosen **at cluster creation**, since real EC2 instances are being created. Fargate: no VPC selection at cluster creation — ⚠️ **VPC selection happens later, at task/service creation time instead.**
+
+**6. Auto scaling configuration.** EC2: an Auto Scaling Group is created during cluster setup, with desired/min/max capacity configurable — the user manages the scaling policy. Fargate: ⚠️ **ECS handles task scaling automatically** — no Auto Scaling Group to configure at all.
+
+**7. Scaling flexibility.** EC2: ⚠️ **scale the EC2 instances FIRST, then the containers** — a container can't use more CPU than its underlying EC2 instance actually has. Fargate: scale tasks/containers **directly** — AWS provisions whatever infrastructure the task needs on demand.
+
+**8. Maintenance responsibility.** EC2: patch, scale, and maintain the instances yourself. Fargate: AWS manages the underlying infrastructure entirely.
+
+**9. Task placement.** EC2: ECS decides which of the available EC2 hosts runs which task, based on available resources. Fargate: ECS places the task directly onto Fargate's own managed compute — no host-selection decision exposed to the user.
+
+**10. Container isolation.** Multiple containers can share the same EC2 instance's resources (normal Docker behavior). ⚠️ **Fargate gives each task its own isolated environment with its own dedicated Elastic Network Interface** — a stronger isolation guarantee than EC2's shared-instance model.
+
+**11. Use-case fit.** EC2: best when OS-level access or **GPU support** is required, or for long-running applications needing OS customization. Fargate: best for standard microservices, batch jobs, quick deployment, fast-scaling APIs, and short-lived workloads.
+
+---
+
+## Exam Framing
+
+> "Need full OS-level control or GPU access for containerized workloads" → **EC2 launch type.** "Serverless, no infrastructure management, pay strictly for actual task resource consumption" → **Fargate.** ⚠️ **The scaling-order distinction is a frequently tested trap**: on EC2, containers cannot scale past what their underlying EC2 instances provide — the instances must be scaled first; on Fargate, tasks scale directly with no instance layer to worry about at all.
+`,
+    },
+    {
       id: "ecs",
       title: "ECS – Elastic Container Service",
       shortDesc: "Run Docker containers at scale on AWS",
-      visuals: ["MonolithVsMicroservices", "ECSBasics", "ECSCluster", "EC2vsFargate", "ClusterInfraSetup", "ECSAnywhere", "ECSStorage", "TaskVsService"],
+      visuals: ["ClusterInfraSetup", "ECSAnywhere", "ECSStorage", "TaskVsService"],
       content: `## ECS – Elastic Container Service
 
-### Application Architectures (background)
-
-- **Monolithic (tightly coupled)** — one codebase, one deployment, one database. Hard to scale parts independently; one bug can crash everything; single tech stack; hosted on **VMs**. *(Outdated.)*
-- **Microservices (loosely coupled)** — independent services, each with its own code, deployment, and database. Used by Netflix, Amazon, Uber.
-
-> **Killer feature — independent scaling:** during a sale, scale **Home** for 100,000 visitors, **Cart** for the ~10% who add items, **Payment** for the ~4% who buy. Each service scales to its own demand. Microservices are hosted in **containers** → ECS / EKS / Kubernetes.
-
----
-
-## What is ECS?
-
-**Amazon ECS** is a **fully managed container orchestration** service to deploy, manage & scale Docker containers on AWS. Six reasons to choose it over self-managed Kubernetes: **fully managed**, **deep AWS integration** (ALB, IAM, CloudWatch, ECR, CodePipeline), **intelligent scheduling**, **cost efficient**, **secure**, **scalable**.
-
-Use cases: microservices, batch processing, CI/CD, monolith → container migration.
-
----
-
-## ECS Cluster
-
-A **cluster** = a group of Docker hosts acting as one unified environment. ECS schedules containers across them and **pools their resources** (e.g. 3 × 4 vCPU = 12 vCPU). It's the **first thing you create**. Members of a cluster work as a team — coordinated scheduling, failover, and resource pooling.
-
----
-
-## Launch Types: EC2 vs Fargate
-
-| Aspect | EC2 (self-managed) | Fargate (serverless) |
-|---|---|---|
-| Provisioning | You launch & manage instances | AWS provisions automatically |
-| Control | Full (OS, type, AMI, storage) | None |
-| Billing | Per EC2 uptime | Per vCPU + memory/sec per task |
-| Scaling | Scale EC2 first, then tasks | Scale tasks directly |
-| Maintenance | You patch | Fully managed |
-| Isolation | Tasks share an instance | Each task isolated (own ENI) |
-| Best for | OS access, GPU, long-running | Serverless microservices, batch, fast scale |
-
-> VPC/subnet/SG is chosen at **cluster creation** for EC2, but at **task/service creation** for Fargate.
-
----
 
 ## Cluster Setup (Fargate, Spot & EC2)
 
