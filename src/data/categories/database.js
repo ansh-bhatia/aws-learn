@@ -2100,10 +2100,56 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 `,
     },
     {
+      id: "dynamodb-table-class",
+      title: "DynamoDB Table Class – Standard vs Standard-Infrequent Access",
+      shortDesc: "Two costs, opposite tradeoffs — pick by access frequency, and switch anytime without touching table operations",
+      visuals: ["TableClass"],
+      content: `## The Two Cost Components Every DynamoDB Table Has
+
+> **DynamoDB bills for two separate things**: **data storage cost** (how much data is stored — e.g. 100GB stored means paying for 100GB every month) and **request cost** (read and write operations — e.g. 1 million read requests and 1 million write requests are each billed separately). The **table class** you choose changes **how the storage-cost side of this equation is calculated**, letting the pricing model be optimized to match a table's actual access pattern.
+
+---
+
+## DynamoDB Standard
+
+> **Access pattern: frequent data access.** Storage cost is **higher**, but request (read/write) cost is **lower**. For a table that's read and written constantly, this combination works out cheaper overall than the alternative.
+
+**Best for**: real-time, high-frequency workloads — a live gaming leaderboard, a stock-price ticker, anything being hit continuously.
+
+---
+
+## DynamoDB Standard-Infrequent Access (Standard-IA)
+
+> **Access pattern: infrequent data access.** Storage cost is **lower**, but request cost is **higher**. For a table that's rarely read or written, this combination costs less overall — the lower storage rate dominates when request volume stays low.
+
+**Best for**: archival data or rarely accessed workloads — data being retained for compliance or historical reference rather than active use.
+
+---
+
+## ⚠️ Choosing Wrong Is Expensive in the Opposite Direction
+
+> **Picking Standard-IA for a table that actually gets accessed frequently backfires** — the storage savings get wiped out (and then some) by the much higher per-request cost once real traffic starts hitting it. The table class must match the **real** access pattern, not a guess.
+
+---
+
+## Practical Guidance: Start Standard, Switch Later
+
+> **The table class can be changed at any time, with zero impact on table operations** — switching is not a migration or a recreation, just a setting change.
+
+**The recommended workflow when unsure**: start with **Standard** by default, then use **CloudWatch metrics to monitor actual access patterns** over time — and switch to **Standard-IA** only once the data genuinely justifies it (consistently low read/write volume against a given table).
+
+---
+
+## Exam Framing
+
+> "Table storage cost is higher but read/write request cost is lower — designed for tables accessed frequently" → **DynamoDB Standard**. "Table storage cost is lower but request cost is higher — designed for rarely accessed, archival-style data" → **DynamoDB Standard-IA**. "Can the table class be changed after creation without disrupting the table?" → **yes, anytime, with no operational impact** — this switchability is exactly why "start Standard, monitor with CloudWatch, switch later if justified" is the safe default answer to memorize.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["TableClass", "StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2112,16 +2158,6 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 
 
 
-## Table Class
-
-DynamoDB charges for **storage** + **request** (read/write) costs.
-
-- **DynamoDB Standard** — higher storage cost, **lower** request cost → best for **frequent** access (gaming dashboards, stock pricing).
-- **DynamoDB Standard-IA** (Infrequent Access) — **lower** storage cost, higher request cost → best for **archival / rarely accessed** data.
-
-> 🔁 You can switch table class anytime without affecting operations. Use CloudWatch to monitor access patterns.
-
----
 
 ## Distributed Storage Architecture
 
