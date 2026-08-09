@@ -2698,6 +2698,55 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
+      id: "dynamodb-global-tables-lab",
+      title: "DynamoDB Global Tables Mini Lab – Building a Two-Region Active-Active Table",
+      shortDesc: "Create a source table in Mumbai, add a replica in N. Virginia, then write from both regions and watch the two-way sync happen live",
+      visuals: [],
+      content: `## Step 1 — Create the Source (Primary) Table
+
+1. In the primary region (Mumbai / Asia Pacific), create a new DynamoDB table — e.g. **order-table**, with **orderID as the partition key.**
+2. Once the table status shows **Active**, explore its items and **create one item** (e.g. orderID = 101, name = a test value) — this item will be used to verify replication once the replica is created.
+
+---
+
+## Step 2 — Add a Replica Table in a Second Region
+
+3. ⚠️ **Before creating the replica, check the source table's Exports and Streams tab — DynamoDB Streams is OFF by default on a freshly created table.**
+4. From the source table, choose **Create Replica** and select the target region (e.g. **US East / N. Virginia**). ⚠️ **DynamoDB Streams is automatically enabled at this point — it is mandatory for Global Tables and cannot be skipped.**
+5. The replica creation is a **cross-region operation and takes several minutes** (the source lecture notes it took 5-6 minutes in one run, vs the usual 1-3) — status shows "Creating" until it flips to **Active.**
+6. Once Active, switch to the N. Virginia console and confirm the replicated table exists there with the **same item (orderID 101)** already present — proving the initial replication succeeded.
+
+---
+
+## Step 3 — Prove Two-Way (Active-Active) Writes
+
+7. **Write from the primary region**: in Mumbai, add a new item (orderID 102). Switch to the N. Virginia console and confirm the same item appears there shortly after.
+8. **Write from the replica region**: in N. Virginia, add another new item (orderID 103). Switch back to Mumbai and confirm this item now appears there too.
+
+⚠️ **This proves Global Tables is genuinely active-active** — writes succeed from either region independently, and each write propagates automatically to every other replica, regardless of which region originated it.
+
+---
+
+## What's Happening Behind the Scenes
+
+> **DynamoDB Streams tracks item-level changes (insert/update/delete) on every table involved in a Global Table** — each change is sent to all other replica tables in the background, arriving shortly after the original write completes (not instantaneously — this is **eventually consistent** replication, not synchronous).
+
+**Conflict resolution**: if the same item is modified in two regions at nearly the same time, DynamoDB resolves the conflict using **last-writer-wins**, based on timestamp — the most recent write, by timestamp, is the one that survives across all replicas.
+
+---
+
+## The ShopX Example, Applied End to End
+
+> A ShopX customer in the US places an order — the write lands in the **US East replica** first. DynamoDB Streams detects this change and replicates it to the India (and any other configured) replica. **Once replication completes, customers connecting through any region see the same, consistent, updated inventory** — regardless of which region's replica actually received the original write.
+
+---
+
+## Exam Framing
+
+> "Global Tables replication is confirmed to be eventually consistent, not strongly consistent — a write is local-first, then propagates" is directly tested. Also remember: **DynamoDB Streams turns on automatically the moment a replica is added** (it cannot be created without it), and conflicting concurrent writes to the same item across regions resolve via **timestamp-based last-writer-wins**, not any manual merge process.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
