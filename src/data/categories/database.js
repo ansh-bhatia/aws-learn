@@ -1563,10 +1563,109 @@ This is explicitly flagged as one of the most exam-relevant details in the whole
 `,
     },
     {
+      id: "rds-read-replica",
+      title: "RDS Read Replica – Offloading Read Traffic, Same-Region or Cross-Region",
+      shortDesc: "A read-only copy that splits load off the primary — and the 3 reasons to send one to another region entirely",
+      visuals: [],
+      content: `## What a Read Replica Is
+
+> **A read replica is a copy of the primary database that stays continuously in sync with it, but is read-only** — it can serve read queries, but never handles writes, updates, or deletes.
+
+---
+
+## The Problem It Solves, Worked Through
+
+> Picture a single primary instance handling **1,000 write requests and 1,000 read requests simultaneously** — 2,000 total requests on one instance. Past a certain point, that combined load slows the whole database down for everyone.
+
+**Creating a read replica splits the load**: the primary keeps handling all **1,000 writes**, while the read replica takes over the **1,000 reads** — each instance now handles roughly half the original load, and neither is overwhelmed. The primary becomes free to focus specifically on writes, making the whole system faster and more efficient.
+
+---
+
+## How Data Stays in Sync
+
+> **The read replica continuously receives data updates from the primary** — any change made to the primary (an insert, update, or delete) gets replicated to the replica automatically.
+
+**Concrete example**: booking an airline ticket writes a new record to the primary. Checking that same booking's status moments later (a read) gets served from the read replica — which already has the newly-written data, because replication happened right after the write completed.
+
+---
+
+## Four Benefits
+
+1. **Performance** — splitting read and write responsibility across separate instances
+2. **Scalability** — adding more read replicas during high-demand periods (e.g. a festival-season traffic spike) scales read capacity on demand
+3. **Reliability/backup-like protection** — since a read replica holds a continuously up-to-date copy of the data, it provides a form of resilience even though it isn't a formal backup mechanism
+4. **Reduced primary load**, freeing the primary to focus on write-heavy critical operations
+
+---
+
+## ⚠️ Three Things Worth Getting Very Clear On
+
+**1. A read replica cannot automatically become the primary.** If the primary fails, the read replica keeps working exactly as before — read-only, unaffected — but ⚠️ **promoting it to primary is always a manual action**, and that promotion **restarts the instance**.
+
+**2. Read replicas are not a substitute for Multi-AZ.** They serve fundamentally different purposes: **Multi-AZ provides automatic failover with no performance benefit; a read replica provides a performance benefit with no automatic failover.** Both can be combined when both HA and read scaling are needed.
+
+**3. This is one of the most heavily tested distinctions in the exam** — precisely because it's easy to conflate "some kind of replica/standby" into one mental bucket. They are not interchangeable.
+
+---
+
+## Same-Region vs Cross-Region Read Replicas
+
+**Same-region**: deployed in the same AWS region as the primary, typically in a **different Availability Zone** for better fault tolerance. Ideal for a genuinely local user base (the lecture's example: a regional food-delivery app whose users are all in one country) — distributing read traffic locally improves performance for exactly the people actually using the app.
+
+**Cross-region**: deployed in a **different AWS region** entirely. Three distinct reasons to do this:
+
+1. **Reduced latency for global users** — an international airline booking platform with a primary database in India can place a read replica in the US, so US-based users get fast local reads instead of crossing international bandwidth for every query
+2. **Disaster recovery** — if the primary's entire region goes down, a cross-region read replica can be **promoted to primary**, keeping the application running from the surviving region
+3. **Data migration** — a read replica in a target region can eventually be promoted to become the new primary there, effectively relocating the database's home region over time
+
+---
+
+## Exam Framing
+
+> "Reduce load on a primary database by splitting off read traffic" → **read replica**. "Global user base needs fast local reads, or DR/migration across regions" → **cross-region read replica** specifically. Remember: **a read replica never fails over automatically** — that's a Multi-AZ capability, not a read replica one.
+`,
+    },
+    {
+      id: "rds-readable-standby-vs-read-replica",
+      title: "RDS Readable Standby vs Read Replica – The 7-Point Comparison",
+      shortDesc: "Both look like 'another copy of the database' — but only one can take over automatically when the primary fails",
+      visuals: ["ReadReplicaVsStandby"],
+      content: `## Where Each One Comes From
+
+> **A Readable Standby Instance is created automatically as part of a Multi-AZ DB Cluster deployment** — the writer plus two readable standby instances, all provisioned together at creation. **A Read Replica is created on demand, afterward, from an existing instance** (any deployment type) via the console's "Create read replica" action.
+
+---
+
+## The Full 7-Point Comparison
+
+| | **Readable Standby Instance** | **Read Replica** |
+|---|---|---|
+| **1. Primary purpose** | **Two purposes at once**: high availability/disaster recovery with automatic failover, AND offloading read traffic | **One purpose only**: scaling read capacity by offloading read traffic — never high availability |
+| **2. Replication type** | **Synchronous** — near real-time | **Asynchronous** — a small, non-zero lag |
+| **3. Failover support** | ✅ **Automatic** — any standby can become primary instantly if the primary fails | ❌ **Manual only** — promoting a read replica requires an explicit action, and it **restarts the instance** |
+| **4. Read/write capability** | Read-only normally, switches to read-write automatically upon becoming primary during failover | Read-only always, unless manually promoted (again, a deliberate, restart-triggering action) |
+| **5. Location** | Same region as the primary, different AZ — ⚠️ **cannot be placed in a different region** | ⚠️ **Can be same-region OR a completely different region** — the flexibility read replicas have that readable standbys don't |
+| **6. Use case** | High availability where minimizing downtime is essential, **plus** read-traffic offloading as a secondary benefit | Purely for read-heavy applications needing to scale read operations — no HA benefit at all |
+| **7. Promotion to primary** | **Automatic**, triggered by failure detection | **Manual**, initiated by an operator, and only when explicitly needed |
+
+---
+
+## The One-Sentence Version
+
+> **A readable standby is fundamentally about availability, with read-offloading as a bonus. A read replica is fundamentally about read performance, with zero availability guarantee.** Confusing the two on the exam almost always comes from treating "another database copy that can serve reads" as a single concept — it's actually two very differently-purposed features that happen to share a surface-level resemblance.
+
+---
+
+## Exam Framing
+
+> "Automatic failover is required" → only a **Readable Standby (Multi-AZ DB Cluster)** satisfies this — a read replica never does, no matter how many are created. "Need a replica in a different region" → only a **Read Replica** supports this — readable standbys are locked to the primary's own region. A scenario combining **both** requirements (automatic failover AND cross-region presence) needs **both features together**, since neither alone covers both needs.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
-      visuals: ["ReadReplicaVsStandby", "RDSAdvanced"],
+      visuals: ["RDSAdvanced"],
       content: `## RDS Part 2 — Operations, Security & Scaling
 
 Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
@@ -1577,19 +1676,6 @@ Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, back
 
 
 
-
-## Read Replica vs Readable Standby
-
-| | 📖 Read Replica | 🛡️ Readable Standby (Multi-AZ Cluster) |
-|--|----------------|----------------------------------------|
-| Purpose | **Scale reads** (performance) | **HA + auto failover** (and reads) |
-| Replication | Asynchronous (small lag) | Synchronous (near real-time) |
-| Failover | ❌ Manual promotion (restarts) | ✅ Automatic |
-| Location | Same **or another region** 🌍 | Same region, different AZ only |
-
-> **Read Replica = performance, no auto-failover, can be cross-region** (global low-latency, DR, migration). **Multi-AZ standby = automatic high availability.** Combine both if you need HA *and* read scale.
-
----
 
 
 ## Advanced Features
