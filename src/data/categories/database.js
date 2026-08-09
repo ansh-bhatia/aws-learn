@@ -975,10 +975,205 @@ This is one more item on the growing list of things Multi-AZ DB Cluster doesn't 
 `,
     },
     {
+      id: "rds-performance-insights",
+      title: "RDS Monitoring – Performance Insights (Database Engine)",
+      shortDesc: "Watching the SQL side of a slow database — top queries, load, and wait events, free for 7 days of retention",
+      visuals: [],
+      content: `## The Problem It Solves
+
+> A production application is running slowly and users are complaining. Since a DB instance has exactly **two components — the database engine and the operating system** — troubleshooting means monitoring both. Performance Insights is the tool for **one specific half of that picture: the database engine.**
+
+---
+
+## What It Is
+
+> **Performance Insights is an RDS tool that shows how well the database engine itself is performing** — not the operating system underneath it, and not a specific database or table, but the engine as a whole (MySQL, PostgreSQL, MariaDB, or whichever engine is running).
+
+> ⚠️ **RDS is a platform-as-a-service, so there's no direct access to the underlying OS or engine internals** — Performance Insights (and, for the OS side, Enhanced Monitoring) exists specifically to give visibility into that otherwise-opaque layer without granting actual access to it.
+
+---
+
+## What It Monitors
+
+Every metric Performance Insights surfaces relates to **SQL query performance and load patterns**:
+
+- **Top SQL queries** — which queries are running, and how they're performing
+- **Database load** — how busy the engine is
+- **Wait events** — what queries are waiting on when they're not running at full speed
+
+> The two keywords worth remembering: **SQL query performance** and **load pattern** — both squarely about the engine, never the host machine underneath it.
+
+---
+
+## Enabling It
+
+**RDS console → Monitoring section → Performance Insights checkbox.** ⚠️ **This is a fully optional feature** — leaving it unchecked is a valid choice, and enabling it doesn't retroactively affect anything already running.
+
+---
+
+## Retention Period
+
+> **Retention determines how far back historical performance data can be viewed and analyzed.**
+
+- **7 days — free**, the default
+- **Up to 2 years** — available, but ⚠️ **anything beyond 7 days incurs additional storage charges**
+
+A company with a compliance or analysis requirement to retain performance history longer than a week would extend this deliberately, accepting the added cost.
+
+---
+
+## Encryption
+
+> **Performance Insights data is stored encrypted, using AWS Key Management Service (KMS).** Collected performance data — which can reveal query patterns and usage details — stays protected the same way any other sensitive AWS-managed data would.
+
+---
+
+## Exam Framing
+
+> "Diagnose slow SQL queries or understand database load/wait patterns" → **Performance Insights**. Remember it covers **only the database engine half** of a DB instance — for the operating system side (CPU, memory, disk I/O), the answer is **Enhanced Monitoring**, covered next.
+`,
+    },
+    {
+      id: "rds-enhanced-monitoring",
+      title: "RDS Monitoring – Enhanced Monitoring (Operating System)",
+      shortDesc: "Real-time OS metrics down to 1-second intervals — the half of the picture Performance Insights doesn't cover",
+      visuals: [],
+      content: `## What It Is
+
+> **Enhanced Monitoring provides real-time, detailed metrics about the operating system hosting the DB instance** — filling in exactly the half of the picture Performance Insights doesn't cover. Where Performance Insights watches the database engine, Enhanced Monitoring watches the **host OS underneath it**.
+
+> Even though there's no direct management responsibility for that OS (RDS is platform-as-a-service), **visibility into it is still available** — and it offers **deeper-level insight than standard CloudWatch metrics** provide on their own.
+
+---
+
+## What It Monitors
+
+**OS-level metrics**: CPU usage, memory usage, disk I/O, file system usage, network throughput.
+
+> ⚠️ **A database is fundamentally a storage-heavy workload** — if the underlying disk is struggling, the entire database can degrade regardless of how well-tuned the SQL itself is. This is exactly why OS-level disk monitoring matters even though nobody manages that OS directly.
+
+---
+
+## Real-Time Frequency
+
+> **Enhanced Monitoring can update as frequently as every 1 second** — a genuinely real-time view, configurable via a frequency setting in the console (toggle it on, then choose the interval).
+
+This stands in contrast to CloudWatch's default granularity (minutes, not seconds), making Enhanced Monitoring the right choice specifically when near-instant visibility into host-level resource pressure matters.
+
+---
+
+## Integration with CloudWatch Logs
+
+> **Enhanced Monitoring data is published to Amazon CloudWatch Logs**, where it can be viewed, stored, and analyzed further — rather than living in an isolated dashboard of its own.
+
+---
+
+## Customizable Monitoring Levels
+
+The level of detail and frequency can be adjusted based on actual need — a small, low-traffic database doesn't need the same monitoring intensity as a large, high-throughput one, and the setting scales accordingly.
+
+---
+
+## Performance Troubleshooting, Concretely
+
+> **CPU utilization sustained above roughly 80%** signals a real problem — the response is upgrading to an instance class with more CPU headroom. **Disk read/write I/O metrics** similarly point toward whether storage itself needs upgrading (e.g. moving to a faster storage type).
+
+---
+
+## Exam Framing
+
+> "Real-time, second-by-second visibility into CPU/memory/disk/network at the OS level" → **Enhanced Monitoring**. Remember the pairing: **Performance Insights = database engine / SQL side; Enhanced Monitoring = operating system side** — a scenario naming CPU, memory, disk I/O, or network throughput specifically is pointing at Enhanced Monitoring, not Performance Insights.
+`,
+    },
+    {
+      id: "rds-cloudwatch-monitoring",
+      title: "RDS Monitoring – CloudWatch (Unified, With Alarms)",
+      shortDesc: "The one monitoring tool that watches both halves of the instance AND can actually alert or act on what it sees",
+      visuals: [],
+      content: `## What It Is
+
+> **CloudWatch is AWS's general-purpose monitoring tool**, used across the platform — EC2 instances, load balancers, Auto Scaling groups, and (relevant here) RDS instances all get monitored through the same underlying service.
+
+---
+
+## The Key Differentiator: Unified Coverage
+
+> **CloudWatch is the only one of the three RDS monitoring tools that covers BOTH the database engine and the operating system in one place.** Performance Insights only sees the engine; Enhanced Monitoring only sees the OS; CloudWatch sees both, combined.
+
+---
+
+## The Real Differentiator: Alarms and Automation
+
+> ⚠️ **Neither Performance Insights nor Enhanced Monitoring can trigger an alarm or an automated action — CloudWatch is the only one of the three that can.**
+
+Concretely: setting up an alert when database CPU exceeds 90%, or triggering an automated response when utilization crosses 80%, is only possible through **CloudWatch alarms** — the other two tools simply present data, with no mechanism to notify anyone or react automatically to it.
+
+CloudWatch can also **track specific logs**, adding another capability neither of the other two tools offers on its own.
+
+---
+
+## The Tradeoff: Granularity
+
+> **CloudWatch's monitoring granularity is coarser than the other two tools** — typically **5-minute (basic) or 1-minute (detailed) intervals**, compared to Performance Insights' query-level detail or Enhanced Monitoring's down-to-1-second real-time updates.
+
+---
+
+## The Practical Workflow
+
+> **Start monitoring with CloudWatch first** — it gives the unified view and the ability to set alarms. **When an alarm fires or something looks off, dig deeper using Performance Insights (for query-level engine detail) or Enhanced Monitoring (for real-time OS detail)** to actually diagnose the root cause.
+
+This is the intended division of labor: CloudWatch as the always-on tripwire, the other two as the detailed diagnostic tools reached for once CloudWatch flags a problem.
+
+---
+
+## Exam Framing
+
+> "Set an alarm or trigger an automated response based on database metrics" → **CloudWatch is the only option among the three that can do this at all** — this single fact is the most commonly tested distinction. "Unified view of both engine and OS in one dashboard" → also CloudWatch, though at coarser granularity than the specialized tools.
+`,
+    },
+    {
+      id: "rds-monitoring-comparison",
+      title: "RDS Monitoring – Performance Insights vs Enhanced Monitoring vs CloudWatch",
+      shortDesc: "A 7-point side-by-side comparison to lock in which tool answers which kind of question",
+      visuals: ["RDSMonitoring"],
+      content: `## The Full 7-Point Comparison
+
+| | **Performance Insights** | **Enhanced Monitoring** | **CloudWatch** |
+|---|---|---|---|
+| **1. Main focus** | Database engine | Operating system | Both (general AWS tool) |
+| **2. Monitoring level** | Detailed — in-depth query and wait statistics | Detailed, near real-time — as fast as 1-second intervals | Basic — 5-minute (or 1-minute detailed) intervals |
+| **3. Metric types** | SQL-related: database load, query performance | OS-level: CPU, RAM, disk, I/O | Mixed: CPU, memory, storage, I/O, and logs |
+| **4. Log integration with other AWS services** | ❌ Not possible | ❌ Not possible | ✅ Can integrate with other AWS services |
+| **5. Alarms and automation** | ❌ None | ❌ None | ✅ **The clear differentiator** — alarms + automated actions |
+| **6. Main use case** | Analyze slow queries and bottlenecks in high-traffic databases to optimize performance | Real-time OS metrics for critical applications needing instant detection | Tracking trends and setting up automated actions over 1-5 minute windows |
+| **7. Cost** | Free for 7 days retention; paid beyond that | Charged based on instance size | Basic (5-min) monitoring is free; detailed (1-min) monitoring is paid |
+
+---
+
+## The One-Sentence Version of Each
+
+> **Performance Insights** — "what's slow inside my SQL?" **Enhanced Monitoring** — "is the host machine itself under strain?" **CloudWatch** — "give me one dashboard for everything, and let me know the moment something crosses a line."
+
+---
+
+## How to Actually Use All Three Together
+
+1. **CloudWatch is the starting point** — set alarms on the metrics that matter most (CPU, storage, connections), and let it run continuously as the first line of detection
+2. **When an alarm fires**, reach for the specialized tool that matches the symptom: **Performance Insights** if the concern looks query/SQL-related, **Enhanced Monitoring** if it looks like an OS-resource problem (CPU/memory/disk/network)
+3. Neither Performance Insights nor Enhanced Monitoring **replaces** CloudWatch — they're deeper zoom-ins for after CloudWatch has already flagged where to look
+
+---
+
+## Exam Framing
+
+> A question describing **"need to set an alarm"** or **"trigger automated action"** has exactly one correct answer among these three: **CloudWatch**, every time — neither of the other two tools supports it at all. A question naming **specific SQL/query terminology** (top queries, wait events, load) points to **Performance Insights**. A question naming **specific OS terminology** (CPU, memory, disk I/O, network throughput) with an emphasis on **real-time/1-second granularity** points to **Enhanced Monitoring**.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
-      visuals: ["RDSMonitoring", "ParameterOptionGroups", "RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
+      visuals: ["ParameterOptionGroups", "RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
       content: `## RDS Part 2 — Operations, Security & Scaling
 
 Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
@@ -986,19 +1181,6 @@ Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, back
 ---
 
 
-## Monitoring — 3 Tools
-
-A DB instance = **engine** + **OS**. Watch them with:
-
-| Tool | Focus | Granularity | Alarms |
-|------|-------|-------------|--------|
-| **Performance Insights** | Database engine (slow SQL, load) | Query-level | ❌ |
-| **Enhanced Monitoring** | Operating system (CPU/mem/disk I/O) | **1 second** | ❌ (→ CloudWatch Logs) |
-| **CloudWatch** | Both (general AWS tool) | 5 min / 1 min | ✅ **alarms + automation** |
-
-> Exam cues: **Performance Insights = slow SQL**; **Enhanced Monitoring = OS, 1-second**; **CloudWatch = the only one with alarms**. Start at CloudWatch, dig deeper with the other two.
-
----
 
 ## Parameter Group vs Option Group
 
