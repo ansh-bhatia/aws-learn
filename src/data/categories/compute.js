@@ -3400,27 +3400,102 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
-      id: "ecs",
-      title: "ECS – Elastic Container Service",
-      shortDesc: "Run Docker containers at scale on AWS",
+      id: "ecs-task-concept",
+      title: "ECS Task – Why AWS Calls It a 'Task' Instead of Just 'a Container'",
+      shortDesc: "A worked contact-form frontend+backend example shows exactly what a bare Docker container can't do that a task can: its own IAM role, security group, and ENI",
       visuals: ["TaskVsService"],
-      content: `## ECS – Elastic Container Service
+      content: `## What a Task Is
 
+> **Running an application in ECS means running it as a task** — the ECS equivalent of "create an EC2 instance" when hosting on a VM. ⚠️ **Think of a task as a container in action** — it runs an application based on a container image, can be started manually and stopped when done, and ⚠️ **ECS will NOT restart it automatically if it stops.**
 
+**Good fits for a plain task**: testing a new web app quickly (no need for high availability — just run it, check the output, stop it), or a one-time job like generating a report or resizing an image (runs once, doesn't need to stay alive).
 
-## Task vs Service
+---
 
-A **task** = a running unit of one or more containers, with its own **ENI, IAM role & security group** (things a bare Docker container can't have — enabling S3 access, fixed IP, etc.).
+## ⚠️ Why "Task" and Not Just "Container"
+
+> **In plain Docker, you run a container directly** — a single running application, nothing more. ⚠️ **ECS deliberately does NOT run containers directly — it runs a task, which is a more advanced, cloud-ready wrapper around one or more containers.**
+
+**A task is a complete unit that can include one or more containers, and — critically — can have things a bare Docker container simply cannot:**
+- **An IAM role attached directly to the task.**
+- **A security group** to control network access.
+- ⚠️ **A dedicated Elastic Network Interface (ENI)** — giving it its own private IP, exactly like an EC2 instance has its own NIC.
+
+---
+
+## Worked Example: A Contact-Form App With Two Containers
+
+**The scenario**: a simple contact-form application with a **frontend container** (displays the form, collects name/email/message) and a **backend container** (a MySQL database storing the submitted data).
+
+**⚠️ Running this with plain Docker, several things become genuinely hard**:
+- Each container must be started manually, one at a time.
+- A **custom Docker network** must be manually created so the two containers can actually communicate.
+- ⚠️ **No IAM role can be attached to a container at all** — if the contact form also lets a user upload a PDF that needs to go to S3, the container has no way to get that permission directly; the role would have to be attached to the entire Docker HOST instead, not scoped to just this application.
+- No security group can be attached to a container directly.
+- No subnet/VPC IP can be assigned directly to a container.
+- Restarts, health checks, and logs must all be managed manually.
+- No way to assign a fixed public/Elastic IP to a container specifically.
+
+**⚠️ With an ECS task, all of this is solved at once**: both containers are defined together inside **one task definition**, ECS runs them together as a single task, and AWS gives that task its own **ENI** — meaning a private IP, a security group, an attachable IAM role (solving the S3-upload permission problem directly), and built-in logging/health-check support, all scoped to that specific application rather than the entire underlying host.
+
+---
+
+## ⚠️ The Limitation: No High Availability
+
+> **A task, on its own, has no high availability and cannot be attached to a load balancer.** If the task stops or crashes, nothing brings it back automatically. This is exactly the gap that **ECS Services** (covered in the next topic) exists to close.
+
+---
+
+## Exam Framing
+
+> "Why does ECS use the term 'task' rather than just running Docker containers directly?" → **because a task can have things a bare container cannot: an attachable IAM role, a security group, and its own dedicated ENI** — capabilities that would otherwise require managing permissions and networking at the Docker host level instead of at the individual application level. Remember tasks do NOT auto-restart on failure — that capability specifically belongs to Services.
+`,
+    },
+    {
+      id: "ecs-service-concept",
+      title: "ECS Service – Keeping Tasks Running 24×7 With Auto-Restart, Scaling, and Load Balancing",
+      shortDesc: "Six differences between a task and a service, and why every production ECS workload is deployed as a service rather than a bare task",
+      visuals: [],
+      content: `## What a Service Adds on Top of a Task
+
+> **A service is what's used when an application needs to run continuously — even after failure.** ⚠️ **Directly analogous to an EC2 Auto Scaling Group**: just as an ASG automatically replaces a failed EC2 instance, an **ECS Service keeps a task running continuously — if a task fails, the service automatically creates a replacement to restore the desired count.**
+
+---
+
+## Key Capabilities a Service Provides
+
+- **24×7 availability** — the app is kept running continuously, automatically restarted if it stops.
+- **Multiple copies for load balancing** — running several identical task copies simultaneously, distributing traffic across them.
+- **Auto-scaling support** — scaling the number of running task copies up or down based on demand.
+- **Load balancer integration** — a service can be directly attached to an Application/Network Load Balancer, distributing incoming traffic across its task copies.
+
+**Good fits for a service**: a shopping site or any web application accessed anytime, a blog or chat service that needs to stay alive and self-heal, anything needing to handle multiple concurrent users at scale — in short, ⚠️ **any genuinely production workload.**
+
+---
+
+## Six Differences: Task vs Service
 
 | Aspect | Task | Service |
 |---|---|---|
-| Restart | Runs once, no auto-restart | Auto-restarts failed tasks |
-| Use case | One-time / temporary | Long-running production |
-| Auto-scaling | ❌ | ✅ |
-| Load balancer | ❌ | ✅ |
-| Example | Testing, batch/report | Web server, API 24×7 |
+| Restart behavior | Runs once, stops — ⚠️ **no auto-restart** | ⚠️ **Restarts automatically if stopped** |
+| Use case | One-time / temporary job | Long-running application |
+| Number of containers | Typically one or a few | One or many (replicated copies) |
+| Load balancing | ❌ Not supported | ✅ Fully supported |
+| Auto-scaling | ❌ Not supported | ✅ Fully supported |
+| Example | Testing a new app, batch job/report | Web server, API, backend server — 24×7 mission-critical |
 
-> Both need a **task definition** (blueprint: image(s), CPU/memory, ports, IAM role, networking). Flow: **Cluster + Docker image → Task Definition → Task / Service**.`,
+---
+
+## Both Still Require a Task Definition First
+
+> **Whether launching a standalone task or a service, a task definition must exist first** — it's the blueprint (image(s), CPU/memory, networking, IAM role) that both a task and a service are ultimately built from. **The overall flow**: create the ECS cluster → build/have a Docker image ready → create a task definition from that image → launch either a standalone **task** (temporary) or a **service** (long-running, scalable, load-balanced) from that same task definition.
+
+---
+
+## Exam Framing
+
+> "Application must self-heal after a crash, scale with demand, and sit behind a load balancer" → **ECS Service**, not a standalone task — tasks provide none of those three capabilities on their own. "Run something once, check the result, and it's done" → a plain **task** is sufficient, and creating a full service would be unnecessary overhead. Both still require a task definition as their common starting point — the next topics in this series build one from scratch.
+`,
     },
     {
       id: "eks",
