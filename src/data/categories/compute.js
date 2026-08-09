@@ -3178,10 +3178,89 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-anywhere",
+      title: "ECS Anywhere – Managing On-Premises and Other-Cloud Servers Through ECS",
+      shortDesc: "Four things a non-AWS machine needs before ECS will treat it like a normal cluster member: outbound internet, a container runtime, SSM, and the ECS agent",
+      visuals: ["ECSAnywhere"],
+      content: `## What ECS Anywhere Does
+
+> **ECS Anywhere lets ECS run tasks on external machines** — physical or virtual servers on-premises, or virtual machines running on a different cloud provider entirely. ⚠️ **This extends ECS's management to infrastructure AWS doesn't own or host** — a genuine hybrid/multi-cloud capability, distinct from the standard EC2 and Fargate infrastructure options (both of which are AWS-only).
+
+⚠️ **External hosts cannot be added during cluster creation** — the cluster must be created first (with Fargate and/or EC2 as usual), and external machines are added **afterward.**
+
+---
+
+## Four Requirements, Step by Step
+
+**1. Outbound internet connectivity.** ⚠️ **The external machine needs outbound internet access — NOT a public IP.** "Behind NAT" outbound connectivity is sufficient; ECS just needs to be able to communicate outward to the machine, not the reverse. No VPN or special networking is strictly required, though options like VPC endpoints can be used if preferred.
+
+**2. A container runtime.** The machine needs something capable of actually running containers — ⚠️ **ECS Anywhere supports both Docker and containerd** as the runtime, installed normally regardless of the machine's OS (Linux or Windows).
+
+**3. SSM Agent (AWS Systems Manager).** ⚠️ **The SSM Agent must be installed and the machine registered with Systems Manager's Fleet Manager** before ECS can manage it at all. Once registered (via "hybrid activation"), the machine **automatically assumes an IAM role specified during that activation** — this is exactly how a non-AWS machine gets IAM-based permissions in the first place, since it isn't natively part of any AWS account. That IAM role grants the specific permissions needed to register with ECS, report to Systems Manager, run ECS tasks, and send heartbeat/log data.
+
+**4. ECS Agent.** The final piece — installed on top of everything else, this agent is what actually **communicates with the ECS control plane**, letting the machine join the ECS cluster, receive task definitions, and run containers. ⚠️ **Once the ECS agent is installed and running, the external machine behaves exactly like a normal ECS-managed EC2 instance** from the cluster's perspective.
+
+---
+
+## Exam Framing
+
+> "Manage on-premises servers or other-cloud VMs as part of an ECS cluster" → **ECS Anywhere.** Remember the requirement order and reasoning: **outbound internet (not a public IP) → container runtime (Docker or containerd) → SSM Agent + hybrid-activation IAM role (this is how a non-AWS machine gets AWS permissions) → ECS Agent (the actual ECS control-plane connection).** External hosts are always added to an already-existing cluster, never during initial cluster creation.
+`,
+    },
+    {
+      id: "ecs-storage-encryption",
+      title: "ECS Storage and Encryption – Fargate Ephemeral Storage vs Managed Storage (EFS/EBS)",
+      shortDesc: "One vanishes the moment the task stops, the other survives it — and cluster-level KMS encryption is a decision that can never be changed after creation",
+      visuals: ["ECSStorage"],
+      content: `## ECS-Level Encryption
+
+> **ECS cluster-level encryption automatically encrypts all data in the cluster using a KMS key** — protecting container tasks and secrets from unauthorized access. ⚠️ **This encryption option must be enabled at cluster creation time — there is no way to turn it on afterward for an already-existing cluster.** Getting this decision right up front matters specifically because it's irreversible.
+
+---
+
+## Fargate Ephemeral Storage
+
+> **Temporary disk space that exists only for the duration of a task's execution.** ⚠️ **Supported ONLY on Fargate** — EC2-backed clusters don't use this storage type at all.
+
+- **Default capacity: 20GB**, expandable up to **200GB** (charges apply beyond the default 20GB).
+- **Encryption**: automatically encrypted if cluster-level encryption is enabled (via the KMS key provided at cluster creation).
+- **Lifecycle**: ⚠️ **data vanishes completely the moment the task stops** — there is no persistence across task restarts or task deletion.
+- **Best for**: temporary processing files, application cache, short-lived logs — anything that genuinely doesn't need to outlive the task.
+
+---
+
+## Managed Storage (EFS / EBS)
+
+> **Persistent storage that survives beyond the task's own lifetime** — ⚠️ **supported by BOTH Fargate and EC2** (unlike ephemeral storage, which is Fargate-only). Two storage types fall under "managed storage": **Elastic File System (EFS)** and **Elastic Block Storage (EBS)** (EBS being the more natural fit specifically for EC2-backed clusters, since EC2 instances already have EBS volumes).
+
+- **Encryption**: EFS has encryption **enabled by default**, independent of whether cluster-level encryption was configured — data stored there is encrypted regardless.
+- **Lifecycle**: data **persists through the task's lifetime and beyond** — stopping or deleting a task does NOT erase this data.
+- **Best for**: databases, user uploads, configuration files — anything that genuinely needs to survive a task restart or replacement.
+
+---
+
+## Side-by-Side Summary
+
+| Aspect | Fargate Ephemeral Storage | Managed Storage (EFS/EBS) |
+|---|---|---|
+| Nature | Temporary | ⚠️ Persistent |
+| Launch type support | Fargate only | Both Fargate and EC2 |
+| Default encryption | Only if cluster-level encryption enabled | EFS encrypted by default regardless |
+| Data on task stop | Vanishes | Survives |
+| Best for | Cache, temp files, short-lived logs | Databases, uploads, config files |
+
+---
+
+## Exam Framing
+
+> "Task-local scratch space that disappears when the task stops" → **Fargate ephemeral storage** (Fargate only). "Data that must survive a task restart or replacement" → **managed storage — EFS (works with both launch types) or EBS (typically paired with EC2).** ⚠️ **Cluster-level encryption is a one-time, creation-only decision** — a scenario asking how to add encryption to an already-running cluster is testing exactly this limitation; the real answer is that it cannot be done directly, and a workaround (like recreating the cluster) would be required.
+`,
+    },
+    {
       id: "ecs",
       title: "ECS – Elastic Container Service",
       shortDesc: "Run Docker containers at scale on AWS",
-      visuals: ["ClusterInfraSetup", "ECSAnywhere", "ECSStorage", "TaskVsService"],
+      visuals: ["ClusterInfraSetup", "TaskVsService"],
       content: `## ECS – Elastic Container Service
 
 
@@ -3197,19 +3276,6 @@ The same pattern with Python's **emoji** library (used to render text codes like
 
 ---
 
-## ECS Anywhere
-
-Run ECS tasks on **external machines** (on-prem or other clouds), managed from ECS. Setup (after cluster creation): **outbound internet** → install **container runtime** → install **SSM agent** (hybrid activation + IAM role) → install **ECS agent** → the machine joins the cluster like a normal instance.
-
----
-
-## Storage & Encryption
-
-Cluster-level **KMS encryption** must be enabled **at creation** (can't add later).
-- **Fargate Ephemeral Storage** — temporary disk, exists only while the task runs; default **20 GB** (up to 200 GB); vanishes when the task stops. For temp files, cache, short-lived logs.
-- **Managed Storage (EFS / EBS)** — **persistent**, supported by **both** Fargate & EC2. EFS encrypted by default. For databases, uploads, config.
-
----
 
 ## Task vs Service
 
