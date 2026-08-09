@@ -1662,29 +1662,94 @@ This is explicitly flagged as one of the most exam-relevant details in the whole
 `,
     },
     {
-      id: "rds-2",
-      title: "RDS – Operations & Scaling (Part 2)",
-      shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
+      id: "rds-proxy",
+      title: "RDS Proxy – Connection Pooling Between Application and Database",
+      shortDesc: "A layer that pools connections, smooths failover, and hides credentials — especially valuable for serverless apps like Lambda",
       visuals: ["RDSAdvanced"],
-      content: `## RDS Part 2 — Operations, Security & Scaling
+      content: `## What It Is
 
-Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
+> **RDS Proxy sits as a layer between the application and the database**, instead of the application connecting directly to RDS. The application connects to the **proxy's endpoint**; the proxy manages the actual connection to the database on the application's behalf.
 
 ---
 
+## The Problem Without It
 
+Picture multiple services — AWS Lambda functions, ECS tasks, EKS pods — **all connecting directly to one RDS instance**, each managing its own database connection independently. Two real problems follow:
 
+1. **Performance bottleneck** — a large number of simultaneous direct connections can overwhelm the database, degrading performance for everyone
+2. **Difficult failover handling** — with many services each holding their own direct connection, coordinating a clean failover across all of them is genuinely hard
 
+> ⚠️ **This is a specific, well-known pain point for serverless architectures like AWS Lambda** — a burst of concurrent Lambda invocations can each try to open a fresh database connection simultaneously, exhausting the database's connection limit almost immediately. **RDS Proxy solving this for Lambda specifically is a commonly tested exam association** worth remembering as a direct pairing.
 
+---
 
+## Three Concrete Advantages
 
-## Advanced Features
+**1. Connection pooling.** Instead of opening and closing a new database connection for every single incoming request (genuinely expensive, repeated constantly), **RDS Proxy maintains a pool of pre-established connections** and reuses them — the application connects to the proxy, and the proxy reuses its already-open connections to RDS behind the scenes, saving significant overhead.
 
-- **🔵🟢 Blue/Green Deployment** — clone production (blue) into a synced staging copy (green), test upgrades/schema changes safely, switch over with minimal downtime, roll back if needed. Only **MariaDB / MySQL / PostgreSQL**. → full deep-dive in the next topic.
-- **🔀 RDS Proxy** — a connection-pooling layer between app and DB; faster, handles more users, smoother failover, credentials via Secrets Manager. **Especially for serverless (Lambda)**.
-- **⚡ Zero-ETL Integration** — auto-replicates RDS data to **Amazon Redshift** in near real-time for analytics/ML — no ETL pipeline. **Only RDS for MySQL 8.0.32+**.
+**2. Smoother failover handling.** With a **Multi-AZ** database behind it, RDS Proxy **automatically redirects to the newly-promoted standby during a failover** — the application never needs to know a failover even happened, since it was only ever talking to the stable proxy endpoint, not the database directly.
 
+**3. Simplified, more secure credential management.** RDS Proxy can integrate with **AWS Secrets Manager** to hold database credentials centrally — the application no longer needs the actual database username/password embedded anywhere in its own code or config; the proxy handles authentication to the database on the application's behalf.
 
+---
+
+## Setting It Up
+
+**RDS console → select an existing database → Actions → Create RDS Proxy** (or via the dedicated Proxies section) — select the database engine family and the target database, and the proxy is provisioned with its own endpoint.
+
+---
+
+## Exam Framing
+
+> "Reduce connection overhead and handle many simultaneous connections, especially for a serverless/Lambda-based application" → **RDS Proxy**. The three benefits worth memorizing together: **connection pooling (performance), smoother Multi-AZ failover (availability), and Secrets Manager integration (security)** — RDS Proxy touches all three at once, which is exactly why it's positioned as a default recommendation for serverless database access patterns.
+`,
+    },
+    {
+      id: "rds-zero-etl-integration",
+      title: "RDS Zero-ETL Integration – Automatic Replication to Redshift for Analytics",
+      shortDesc: "Skipping the manual extract-transform-load pipeline entirely — RDS data flows into Redshift in near real-time, MySQL 8.0.32+ only",
+      visuals: [],
+      content: `## What ETL Actually Is
+
+> **ETL stands for Extract, Transform, Load** — the traditional process of moving data from one system to another, typically to make it usable for analytics and reporting.
+
+**Worked through a concrete scenario** (a food-delivery platform discovering its most-ordered dish):
+
+1. **Extract** — pull raw order data (order ID, dish, timestamp, customer location) out of the transactional order database
+2. **Transform** — process that raw data into something meaningful: count orders per dish, group by city, identify trends (e.g. "biryani was ordered 100 million times")
+3. **Load** — store the transformed, aggregated data into a separate analytics/reporting system (traditionally something like Amazon Redshift, visualized via a BI tool)
+
+> This is the standard, well-established pattern behind virtually every "here's what our data shows" business insight — and it traditionally requires building and maintaining a **real ETL pipeline** to move data from the transactional database to the analytics system.
+
+---
+
+## What Zero-ETL Removes
+
+> **RDS Zero-ETL Integration automatically replicates data from RDS directly into Amazon Redshift**, eliminating the need to build and maintain a traditional manual ETL pipeline entirely.
+
+- **Near real-time replication** — as data is written to RDS, it flows into Redshift automatically, without a scheduled batch job or manual extraction step
+- **Simplified workflow** — the data pipeline itself is automated and managed by AWS, not hand-built
+- **Ideal for analytics and ML on transactional data without delay** — the analytics side of the house always has fresh data to query, without waiting for a nightly ETL run
+
+---
+
+## Setting It Up (Conceptually)
+
+**RDS console → select an existing database → Actions → Create Zero-ETL integration** → name the integration → select the **source** (the RDS database) and the **target** (a Redshift cluster — this must already exist; Zero-ETL doesn't create one). ⚠️ **The target is fixed to Redshift only** — no other analytics destination is supported.
+
+---
+
+## ⚠️ The Hard Limitation Worth Memorizing
+
+> **Zero-ETL Integration currently only supports Amazon RDS for MySQL — specifically version 8.0.32 or higher.** It does **not** support PostgreSQL, MariaDB, Oracle, or SQL Server as a source, regardless of version.
+
+This is a genuinely narrow, specific constraint — a scenario describing Zero-ETL with any engine other than MySQL 8.0.32+ is describing something that isn't actually possible yet.
+
+---
+
+## Exam Framing
+
+> "Automatically feed transactional RDS data into Redshift for analytics without building a manual ETL pipeline" → **Zero-ETL Integration**. ⚠️ Remember the narrow engine requirement — **MySQL 8.0.32+ only** — since a scenario naming a different engine (PostgreSQL, Oracle, etc.) rules this feature out entirely, no matter how well it otherwise fits the described need.
 `,
     },
     {
