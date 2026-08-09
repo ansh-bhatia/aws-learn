@@ -1756,55 +1756,155 @@ Watch each state change appear in the console. Type **exit** to leave.
 `,
     },
     {
+      id: "lambda-intro",
+      title: "AWS Lambda – Running Code Without Provisioning a Server",
+      shortDesc: "The OLX watermark example — event-driven, pay-per-execution compute that never provisions a VM",
+      visuals: ["ServerlessFlow3D"],
+      content: `## The Core Definition
+
+> **AWS Lambda's own tagline: "run your code without thinking about servers."** The definition, stripped to its essence: **run code without provisioning a server.**
+
+**Contrast with EC2**: running Java code on EC2 means creating a virtual machine, provisioning CPU and RAM for it, installing an operating system (Linux or Windows), installing the Java Runtime Environment, and only then running the code. Every one of those steps is a **provisioning** step. ⚠️ **With Lambda, none of that happens** — code is uploaded directly as a **Lambda function**, and it runs. This is exactly why Lambda is called **serverless**: not that there's literally no server anywhere, but that the developer never provisions or manages one.
+
+---
+
+## Event-Driven: How a Function Actually Gets Run
+
+> **Lambda is event-driven** — a function does nothing on its own; it runs only when triggered by an event from an integrated AWS service (S3, API Gateway, EventBridge, and many others), or from a VPC.
+
+---
+
+## Worked Example: Automatic Watermarking on OLX
+
+**The scenario**: a marketplace site (the lecture uses OLX as the example) lets users upload photos of items for sale — and every uploaded photo automatically gets an OLX watermark added.
+
+**How this maps to Lambda**: the uploaded photo is stored in **S3** (the near-universal storage choice for this kind of app). S3 supports event-driven triggers — the moment a new photo upload event fires, a Lambda function is triggered automatically, and that function's code applies the watermark. ⚠️ **The whole process is fully automatic and entirely event-driven** — no photo upload, no trigger, no execution, no cost.
+
+---
+
+## Pay-As-You-Go: The Direct Consequence of Event-Driven Execution
+
+> **Lambda is billed only when a function actually runs.** If nobody uploads a photo today, the watermarking function never triggers, and the bill for that function is zero. This pay-as-you-go model is a direct structural consequence of being event-driven, not a separate pricing feature bolted on afterward.
+
+---
+
+## Multiple Languages via Runtimes
+
+> **Lambda supports many programming languages through "runtimes"** — when creating a function, a runtime environment is selected first: **.NET, Java, Node.js, Python, Ruby, Go**, among others. Whatever language the existing code is written in, there's very likely a matching runtime — no server-level installation of a language runtime is ever required, since Lambda handles that behind the scenes.
+
+---
+
+## Exam Framing
+
+> "Run code without provisioning or managing any server, triggered automatically by an event from another AWS service" → **Lambda.** The OLX/S3-watermark pattern (storage event → automatic function trigger → automatic processing, zero cost when idle) is the canonical mental model for virtually every "why would you use Lambda here" scenario.
+`,
+    },
+    {
+      id: "lambda-serverless-model",
+      title: "What 'Serverless' Actually Means – IaaS vs Managed vs Serverless",
+      shortDesc: "Three tiers of cloud responsibility, and the full honest list of serverless trade-offs — cold starts, the 15-minute ceiling, vendor lock-in, and reduced control",
+      visuals: ["ServerlessSpectrum", "ServerlessTradeoffs"],
+      content: `## Three Tiers of Cloud Responsibility
+
+> **Cloud computing execution models fall into three broad tiers, each handing off progressively more operational responsibility to the cloud provider.**
+
+**1. Infrastructure as a Service (IaaS) — e.g. EC2.** The customer deploys the server, manages the operating system, sets memory and CPU, and is responsible for securing the OS itself. Full control, full operational burden.
+
+**2. Managed services — e.g. RDS.** The customer still provisions resources (choosing RAM, CPU when creating a DB instance) and is still responsible for things like Multi-AZ high availability configuration — but AWS handles the operating system and database engine updates. A middle ground: some provisioning still required, but OS/engine maintenance is offloaded.
+
+**3. Serverless — e.g. Lambda.** ⚠️ **No provisioning of any server at all.** AWS handles provisioning, scaling, and server maintenance entirely. Instead of running continuously (like an EC2 instance or an RDS database), a serverless function **executes only when triggered by an event.**
+
+---
+
+## The Benefits of Serverless
+
+**1. No server management.** Nothing to provision — no CPU/RAM sizing, no operating system choice (Linux vs Windows, which Linux distribution), no patching responsibility.
+
+**2. Automatic scaling.** With EC2, scaling (vertical or horizontal) is the customer's responsibility, typically via an Auto Scaling Group. With serverless, scaling is handled entirely by the cloud provider — automatically, with no configuration.
+
+**3. Cost efficiency.** Directly tied to the pay-as-you-go, event-driven billing model — covered in depth in the Lambda-vs-EC2 comparison.
+
+**4. High availability.** Achieving HA with EC2 means deploying servers across multiple Availability Zones and setting up a load balancer — real, ongoing infrastructure work. With serverless, high availability is **managed entirely by the cloud provider.**
+
+**5. Faster deployment.** No server to design, provision, or configure — code can be loaded directly and executed, dramatically shortening the path from "written" to "running."
+
+---
+
+## ⚠️ The Trade-Offs (Not Disadvantages — Trade-offs)
+
+**1. Cold starts.** An EC2 instance running 24×7 executes triggered code immediately, since everything is already provisioned. A Lambda function that has been **idle** must have its resources provisioned in the background **at the moment it's triggered** — producing a noticeably slower first execution. This delay is called a **cold start.**
+
+**2. Limited execution time.** ⚠️ **Lambda enforces a hard maximum execution time of 15 minutes** — EC2 has no such ceiling; code can run for any duration. This is a heavily tested exam fact: **any scenario stating an execution time greater than 15 minutes immediately rules Lambda out**, regardless of how well the rest of the scenario otherwise fits serverless.
+
+**3. Vendor lock-in.** Code running on an EC2 instance with, say, Ubuntu as the OS can be moved to another cloud provider by simply standing up an equivalent Ubuntu server there — the execution environment is portable. Lambda-specific code, however, typically requires modification to run on another provider's equivalent serverless offering — a real (if not insurmountable) migration cost.
+
+**4. Less control over infrastructure.** EC2 gives full control over the underlying virtual machine — any framework, any configuration. With Lambda, the underlying execution environment is opaque — code is handed to AWS, and AWS runs it, with no visibility or control over what's happening underneath. For very large, complex applications needing fine infrastructure control, this can be a genuine limitation.
+
+---
+
+## Exam Framing
+
+> "Cloud provider fully manages provisioning, scaling, and maintenance — customer supplies only code" → **serverless (Lambda)**, distinct from managed services (still some provisioning, e.g. RDS) and IaaS (full provisioning, e.g. EC2). Memorize the trade-off list as a set, not just cold starts alone — vendor lock-in and reduced infrastructure control are just as testable as the 15-minute ceiling.
+`,
+    },
+    {
+      id: "lambda-vs-ec2",
+      title: "Lambda vs EC2 – Ten Differences, Worked Through a Course-Enrollment Example",
+      shortDesc: "Both are compute services — the enrollment-trigger worked example makes the pricing difference (and when each one wins) concrete",
+      visuals: ["LambdaVsEC2"],
+      content: `## Both Are Compute Services
+
+> **EC2 and Lambda both live under AWS's "Compute" service category** — the question isn't "which is a compute service" (both are), but **which compute model fits a given workload.**
+
+---
+
+## Ten Points of Comparison
+
+**1. Compute model.** EC2 = a provisioned virtual machine (create VM → install OS → configure runtime → upload code). Lambda = fully managed, **event-driven** function execution — no provisioning step at all.
+
+**2. Use cases.** EC2 fits hosting applications, databases, and **long-running (24×7) processes.** Lambda fits **short-lived tasks** — microservices, API backends, event-driven automation.
+
+**3. Pricing.** EC2 bills **per instance**, hourly or per-second, **regardless of whether the instance is actually doing anything.** Lambda bills **per execution and memory usage** — see the worked example below for why this distinction matters enormously in practice.
+
+**4. Scaling.** EC2 requires manually configuring an Auto Scaling Group. Lambda scales **automatically and instantly** based on incoming load.
+
+**5. Management responsibility.** EC2: the user is responsible for OS-level maintenance and patching. Lambda: **fully managed**, no server maintenance required at all.
+
+**6. Startup time.** A powered-off EC2 instance takes **minutes** to start once triggered. Lambda's cold-start provisioning takes **milliseconds** — dramatically faster, though still not instantaneous for a truly idle function.
+
+**7. Execution time.** EC2: **unlimited** — code can run for any duration. Lambda: ⚠️ **capped at 15 minutes maximum.**
+
+**8. Networking.** EC2 gives full control over networking — security groups, subnets, Elastic IPs, all configured directly. Lambda **can** connect to a VPC too, but with more limited functionality than a full EC2 setup.
+
+**9. Customizability.** EC2: full OS-level control, install anything. Lambda: limited to its **predefined runtimes** — whatever languages/versions Lambda supports, nothing more, without resorting to a container image.
+
+**10. Security responsibility.** EC2: the user is responsible for OS patching, firewall configuration, and general system hardening. Lambda: fully managed — the underlying infrastructure's security is AWS's responsibility.
+
+---
+
+## Worked Example: Course Enrollment Pricing
+
+**The scenario**: a website is running 24×7 (so it's naturally hosted on an EC2 instance, or similar). Whenever a user purchases/enrolls in a course, a specific piece of code needs to run to process that enrollment. Enrollment volume is unpredictable — some days 10 students enroll, other days (e.g. a holiday) zero students enroll.
+
+> **If the enrollment-processing code runs on Lambda**: 10 enrollments today means the function executes 10 times, and the bill reflects **10 executions.** Zero enrollments tomorrow means the function executes 0 times, and the bill is **₹0.**
+
+> **If the same code runs on an EC2 instance kept running 24×7 specifically to handle this**: the instance is billed **continuously, regardless of enrollment volume** — 10 executions today, 0 tomorrow, the EC2 bill is identical either way, since the instance itself (not the execution count) is what's being paid for.
+
+⚠️ **This is the single clearest illustration of the EC2-vs-Lambda pricing difference**: EC2 charges for *time the resource exists*, Lambda charges for *work actually performed.* For unpredictable, bursty, event-driven workloads, this makes Lambda structurally cheaper; for genuinely constant, always-on workloads, EC2's flat per-instance cost can be the more economical choice instead.
+
+---
+
+## Exam Framing
+
+> "Should this workload run on EC2 or Lambda?" almost always reduces to two questions: **is the execution time under 15 minutes, and is the workload long-running/constant vs short-lived/event-driven?** Long-running or execution-time-over-15-minutes → **EC2.** Short-lived, event-triggered, execution time comfortably under 15 minutes → **Lambda**, with the added benefit of paying only for actual executions rather than idle uptime.
+`,
+    },
+    {
       id: "lambda",
       title: "Lambda – Fundamentals (Part 1)",
       shortDesc: "Serverless compute — run code without managing servers",
-      visuals: ["ServerlessFlow3D", "ServerlessSpectrum", "ServerlessTradeoffs", "LambdaVsEC2", "FunctionAnatomy", "AuthoringOptions", "ExecutionRole", "EC2Automation", "LambdaTriggers"],
-      content: `## AWS Lambda – Fundamentals (Part 1)
-
-**AWS Lambda** lets you **run code without provisioning servers** — "serverless". With EC2 you'd create a VM, install an OS + runtime, then run code. With Lambda you just upload code as a **function** and AWS runs it. It's **event-driven**: an AWS service **triggers** the function, and you pay only when it runs (**pay-as-you-go** — no triggers, no cost).
-
-> Example: a user uploads an image to **S3** → the upload event triggers a Lambda → the function adds a watermark automatically. Idle days cost nothing.
-
-Lambda supports many languages via **runtimes**: Python, Node.js, Java, .NET, Ruby, Go.
-
----
-
-## What is Serverless?
-
-Cloud services sit on a spectrum:
-- **IaaS (EC2)** — you manage OS, scaling, HA, capacity. Most control, most work.
-- **Managed (RDS)** — AWS manages OS + engine; you still size capacity & configure HA.
-- **Serverless (Lambda)** — you bring **only code**; AWS handles provisioning, scaling, HA, and maintenance.
-
-**Benefits:** no server management, automatic scaling, cost efficiency, built-in high availability, faster deployment.
-
-**Trade-offs (know for the exam):**
-- **Cold starts** — an idle function must provision resources first → slower first run.
-- **15-minute max execution** — code running longer **cannot** use Lambda (use EC2). *Common exam trap.*
-- **Vendor lock-in** — Lambda-specific code needs changes to move clouds.
-- **Less infrastructure control** — you only supply code + pick a runtime.
-
----
-
-## Lambda vs EC2
-
-Both are **compute** services. Deciders:
-
-| Aspect | EC2 | Lambda |
-|---|---|---|
-| Model | Provisioned VM | Event-driven function |
-| Use case | Long-running, 24×7 | Short tasks, automation |
-| Pricing | Per instance (pay even if idle) | Per execution + memory (pay only when run) |
-| Scaling | Manual (ASG) | Automatic, instant |
-| Startup | Minutes | Milliseconds (cold start if idle) |
-| Execution time | Unlimited | **Max 15 min** |
-| Customizability | Full OS control | Predefined runtimes |
-
-> 💡 A function that runs 10× today costs 10 runs; 0× tomorrow costs ₹0. An EC2 instance costs the same regardless. **>15-min job → EC2. Bursty/event-driven → Lambda.**
-
----
-
+      visuals: ["FunctionAnatomy", "AuthoringOptions", "ExecutionRole", "EC2Automation", "LambdaTriggers"],
+      content: `
 ## Your First Function
 
 \`\`\`python
