@@ -2493,10 +2493,54 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
+      id: "dynamodb-warm-throughput",
+      title: "DynamoDB Warm Throughput – Standby Capacity That Absorbs Spikes Instantly",
+      shortDesc: "Scaling up isn't instant — warm throughput pre-reserves capacity so a sudden traffic spike doesn't throttle users while auto-scaling catches up",
+      visuals: ["WarmThroughput"],
+      content: `## The Problem Warm Throughput Solves
+
+> ⚠️ **Increasing DynamoDB capacity is not instantaneous — scaling from, say, 100 RCU to 200 RCU takes real time (on the order of minutes) to actually complete in the background.** During that scaling window, if traffic has already doubled, the table doesn't yet have the capacity to serve it — this produces **throttling**: users see slowdowns, errors, and failed requests, precisely during the moment of highest demand.
+
+**Without warm throughput** (hypothetically, since it's on by default), a sudden spike would mean: delayed scaling, a bad user experience during that delay, throttling, and a real risk of lost business opportunity during exactly the traffic surge a business most wants to capture.
+
+> **Warm throughput solves this by pre-reserving standby capacity in advance**, so a spike gets absorbed **instantly** from that standby pool rather than waiting for new capacity to be provisioned from scratch.
+
+---
+
+## How It Works in On-Demand Mode
+
+> **Default behavior**: when an On-Demand table is created, DynamoDB pre-allocates **12,000 RCU and 4,000 WCU as standby capacity** — available immediately, ready to absorb a spike with zero scaling delay.
+
+⚠️ **This default figure isn't permanent** — once the table has been in use for a while, DynamoDB **learns the table's actual usage pattern** and adjusts the pre-allocated standby amount to better match real behavior (a table steadily using 100 RCU won't keep an oversized 12,000 RCU standby reservation forever).
+
+**Pricing**: there's **no charge just for the standby reservation existing** — billing is only for capacity **actually used**. If a spike consumes 10,000 RCU out of the 12,000 reserved, the bill reflects 10,000 used, not the full 12,000 reserved.
+
+**Raising the default**: a customer with unusually large infrastructure needs can request a **higher** standby reservation than the 12,000/4,000 default — say, 15,000 RCU instead. ⚠️ **This incurs a one-time fee, but only for the incremental amount above the default** (requesting 15,000 when the default is 12,000 means paying the one-time fee for the extra 3,000, not for all 15,000). Actual usage is still billed separately and normally on top of that.
+
+---
+
+## How It Works in Provisioned Mode
+
+> **Default behavior**: a Provisioned table's warm throughput standby matches whatever was provisioned — 100 RCU provisioned means 100 RCU held in standby, ready for immediate scale-up.
+
+**No one-time fee at the default** — usage above the provisioned baseline (e.g. scaling from 100 to 120 RCU during a spike) is billed for the actual amount used (120), pulled instantly from the pre-warmed standby.
+
+**Raising the default**: requesting a higher standby than what's provisioned (e.g. provisioning 100 RCU but requesting a 150 RCU warm-throughput reservation) incurs a **one-time fee for the extra 50** — the same incremental-fee pattern as On-Demand.
+
+⚠️ **Warm throughput applies to BOTH auto-scaling AND manual scaling in Provisioned mode** — whether capacity increases automatically (auto-scaling enabled) or is increased by hand in the console (auto-scaling disabled), the pre-warmed standby is what makes that increase happen instantly rather than after a delay.
+
+---
+
+## Exam Framing
+
+> "Why doesn't a sudden traffic spike cause throttling while DynamoDB is still in the process of scaling up?" → **Warm Throughput** — pre-reserved standby capacity absorbs the spike immediately, with the scaling operation happening in the background. Remember the default numbers (**12,000 RCU / 4,000 WCU for On-Demand**), that usage-based billing applies regardless of how much is reserved, and that raising the reservation above default triggers a **one-time fee only for the incremental amount.**
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["WarmThroughput", "SecondaryIndexes", "ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["SecondaryIndexes", "ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -2504,16 +2548,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 ---
 
 
-## Warm Throughput
-
-Scaling capacity up **takes time** (minutes) — during which spikes cause **throttling**. **Warm Throughput** pre-allocates standby capacity so spikes are absorbed **instantly**.
-
-- **On-Demand default:** pre-warms **12,000 RCU + 4,000 WCU** (auto-tunes to your usage pattern).
-- **Provisioned default:** pre-warms the same number you provisioned.
-- No one-time fee at default values; you pay only for capacity actually **used**. Raising the warm value above default = a **one-time fee for the extra** units.
-- Works in both modes (and during manual scaling).
-
----
 
 ## Secondary Indexes (LSI vs GSI)
 
