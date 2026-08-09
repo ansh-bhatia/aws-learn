@@ -2798,10 +2798,113 @@ DynamoDB offers exactly **two backup options**, each solving a different problem
 `,
     },
     {
+      id: "dynamodb-export-to-s3-full-vs-incremental",
+      title: "DynamoDB Export to S3 – Full Export vs Incremental Export, Worked Through Real Dates",
+      shortDesc: "Export data without touching table performance — requires PITR on, and incremental exports only make sense once a full export already exists",
+      visuals: ["ExportToS3"],
+      content: `## What Export to S3 Does, and Why
+
+> **Export to S3 sends DynamoDB table data directly into an S3 bucket** — enabling four main use cases: **analytics** (DynamoDB data can't be analyzed directly; exporting to S3 unlocks tools like Athena/Glue/Redshift), **compliance** (regulatory requirements to store data in a separate system), **archival/long-term backup**, and **sharing data across different systems.**
+
+⚠️ **Exporting does not affect table performance** — the same non-disruptive guarantee seen with DynamoDB backups applies here too.
+
+---
+
+## ⚠️ Prerequisite: Point-in-Time Recovery Must Be ON
+
+> **Export to S3 requires PITR to be enabled on the table — attempting to export with PITR off produces an error.** This is a hard mandatory dependency, not optional configuration.
+
+---
+
+## Setting Up the Export
+
+The process: select the table → initiate export (via console, CLI, or SDK) → choose a **destination S3 bucket.** ⚠️ **The bucket does NOT need to be in the same AWS account** — cross-account export is supported, as long as the correct permissions are configured.
+
+---
+
+## Full Export — Two Sub-Options
+
+> **Full export sends all table data to S3** — either the table **as it currently stands**, or **as it existed at some earlier point within the last 35 days** (the same 35-day PITR-driven ceiling from the backups topic).
+
+**Worked example**: a table was created on **1st December 2024**; today's date is **28th January.**
+
+- **Full export, current time**: exports **everything from table creation (1 Dec) to today** — no time restriction, the complete history to date.
+- **Full export, earlier point in time (e.g. 5th January at 5 PM)**: exports the table state **as of that specific moment.** ⚠️ **This is still bounded by the 35-day PITR window** — since "today" is 28th January, the earliest reachable point is **16th December** (28 Jan minus 35 days). Any data from before 16th December is **not** included, since it falls outside PITR's retention. Any data created/updated **after** the chosen 5th January cutoff is also excluded, since the export reflects the table's state only up to that selected moment.
+
+---
+
+## Incremental Export — Only Makes Sense After a Full Export
+
+> ⚠️ **Incremental export captures only the data that changed within a specific time window — and is meaningless without a prior full export to build on.**
+
+**Worked example continuing the scenario**: a full export was taken on **1st January 2025**, capturing everything from table creation (1 Dec) through that date. Over the next 10 days (1–10 January), new orders were added and existing orders updated. Rather than re-running a full export of the entire table again, an **incremental export for just 1–10 January** captures only those recent changes. Combined with the earlier full export, this produces complete coverage (1 Dec through 10 Jan) **without ever re-exporting the unchanged early data.**
+
+**The practical pattern**: start with one full export as the baseline, then use periodic incremental exports to capture ongoing changes cheaply — avoiding the cost and time of repeatedly re-exporting data that hasn't changed.
+
+---
+
+## Exam Framing
+
+> "Export requires PITR to be ON" and "the 35-day earlier-point-in-time ceiling mirrors PITR's own retention limit" are both directly testable facts. Remember the operational sequencing: **incremental export is only useful as a follow-up to an existing full export** — it is not a standalone alternative to a full export, but a cost-saving supplement to one.
+`,
+    },
+    {
+      id: "dynamodb-export-file-format",
+      title: "DynamoDB Export File Format – DynamoDB JSON vs Amazon Ion",
+      shortDesc: "Choosing the export format comes down to one question: will this data be re-imported into DynamoDB, or analyzed by a different tool?",
+      visuals: ["ExportToS3"],
+      content: `## Two File Format Options
+
+> **DynamoDB offers two export file formats: DynamoDB JSON and Amazon Ion.** The choice isn't cosmetic — it directly determines what the exported data is realistically useful for afterward.
+
+---
+
+## DynamoDB JSON
+
+> **DynamoDB JSON explicitly includes each attribute's data type alongside its value** — e.g. a string value is tagged with an "S" type marker, a boolean with "BOOL", and so on. ⚠️ **This format is limited to the data types DynamoDB itself supports** — it cannot represent types outside DynamoDB's own type system.
+
+**Best use case**: ⚠️ **re-importing the exported data back into DynamoDB later.** Since the type information travels with the data, re-importing preserves the exact original schema and types with no ambiguity.
+
+---
+
+## Amazon Ion
+
+> **Amazon Ion does NOT explicitly tag each value with a DynamoDB-specific data type** — the tradeoff is that Ion can represent a **richer range of data types** than DynamoDB JSON's DynamoDB-only type system.
+
+**Best use case**: ⚠️ **analytics** — feeding the exported data into tools like **Amazon Athena, AWS Glue, or Amazon Redshift.** These tools work naturally with Ion's broader type flexibility, whereas DynamoDB JSON's DynamoDB-specific typing is a poor fit for general-purpose analytics tooling.
+
+---
+
+## The Decision Rule
+
+> **"Will this data go back into DynamoDB?" → DynamoDB JSON. "Will this data be analyzed by a different tool?" → Amazon Ion.** This single question resolves the format choice in essentially every real scenario — migrating/shrinking a DynamoDB table or building another DynamoDB-specific application both point to DynamoDB JSON; analyzing or transforming the data with an external analytics tool points to Amazon Ion.
+
+---
+
+## Encryption of the Exported Data
+
+> Exported data in S3 can be encrypted two ways: **SSE-S3** (the S3 default — fully transparent, AWS manages the encryption key entirely) or **SSE-KMS** (customer-managed keys via AWS KMS — needed when key auditing, rotation control, or compliance requirements demand it). Sensitive or compliance-driven data should use **SSE-KMS.**
+
+---
+
+## Additional Key Features
+
+- **Point-in-time export scoping** — an export can be scoped to just a specific window (e.g. only the last 5 days of sales data), not necessarily the whole table history.
+- **High scalability** — S3's effectively unlimited storage means exporting terabytes of data is never a storage-capacity concern.
+- **Integration** — exported data connects directly into the broader AWS analytics ecosystem: Amazon Athena, AWS Glue, Amazon Redshift, and others.
+
+---
+
+## Exam Framing
+
+> "Data will be re-imported into DynamoDB" → **DynamoDB JSON** (explicit types preserved). "Data will be analyzed with Athena/Glue/Redshift or another analytics tool" → **Amazon Ion** (broader type support, no DynamoDB-specific tagging). Also remember the encryption pairing: **SSE-S3 for the transparent default, SSE-KMS when key control or compliance is required** — the same encryption choice pattern seen elsewhere in S3.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -2814,16 +2917,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 
 
-## Export to S3
-
-Export data to S3 for **analytics, compliance, archival, sharing** — no performance impact. **Requires PITR ON.**
-
-- **Full export** — all data at current time, or from an earlier point (within last 35 days).
-- **Incremental export** — only changes in a time window (must follow a full export).
-- **File format:** **DynamoDB JSON** (explicit types — for re-import into DynamoDB) or **Amazon Ion** (for analytics with Athena/Glue/Redshift).
-- Bucket can be same or different account. Encrypt with **SSE-S3** or **SSE-KMS**.
-
----
 
 ## Streams & Triggers
 
