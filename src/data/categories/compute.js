@@ -2809,40 +2809,197 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
-      id: "ecs-prereq",
-      title: "ECS – Prerequisites (Containers & Docker)",
-      shortDesc: "VMs vs containers, Docker, orchestration — the foundation for ECS",
-      visuals: ["DockerLifecycle", "Orchestration", "OrchestratorCompare"],
-      content: `## ECS Prerequisites — Containers & Docker
+      id: "ecs-prereq-what-is-container",
+      title: "What Is a Container – Sharing the Kernel Instead of the Hardware",
+      shortDesc: "Same isolation as a VM, minus the duplicated kernel — that's the entire reason a container is lightweight and a VM isn't",
+      visuals: ["VMvsContainer3D"],
+      content: `## Recap: Where the Story Left Off
 
-Before ECS (a **container orchestration** service), you must understand containers. We learn through a story: **Leo** (the builder — asks the questions) and **Ray** (the architect — teaches best practices).
-
----
-
-
-## Docker
-
-A machine with the **Docker daemon** installed is a **Docker host** (no hypervisor needed). Lifecycle:
-1. \`yum install docker\` → host ready
-2. \`docker pull ubuntu\` → image from **Docker Hub** (Ubuntu image ~80 MB vs 5.9 GB ISO — no kernel inside)
-3. \`docker run -it ubuntu\` → container starts in **~1 second**
-4. \`docker build -t myapp .\` → bake your app into a custom image via a **Dockerfile** (e.g. \`FROM nginx\` + \`COPY index.html\`)
-5. \`docker run -d -p 80:80 myapp\` → publish a port so it's reachable from outside
-
-> Images push to a registry — **Docker Hub** or AWS's **ECR** — so any host can pull & run them.
+> Leo's three apps crashed together on one shared EC2 instance. Physical-server isolation (buying 3 servers) works but is expensive. **Virtual machines solve the cost problem** — one physical server, multiple isolated VMs via a hypervisor — but ⚠️ **every VM still carries a full duplicated operating system**, so the overhead problem remains even though the cost problem is solved.
 
 ---
 
-## Container Orchestration
+## Setting Up a Container Host
 
-One Docker host = a **single point of failure**. Use **multiple hosts** — but they don't coordinate by default ("players with no captain"). You need a **container orchestrator** (the captain): it creates a cluster, places containers intelligently, restarts failed ones, and **auto-scales**.
+> **To use containers, install Docker (the "Docker daemon") directly on top of a normal operating system** (Linux, Windows, or Mac) — running on either a physical machine or a virtual machine, no hypervisor required for Docker itself. **Docker runs inside the OS's application layer, exactly like any other installed application** — and once running, it enables creating containers.
 
-**Three orchestrators:**
-- **Docker Swarm** — native, easy, but no auto-scaling/rollback; for small teams/learning.
-- **Amazon ECS** — fully managed by AWS, deep integration (ALB, IAM), no control-plane management; **AWS-only**.
-- **Kubernetes** — runs anywhere, most powerful (auto-scaling, rollback), open-source; but **complex** to set up.
+---
 
-> Leo picks **ECS** — he's already on AWS (great integration) and his small 3-app startup doesn't need Kubernetes' complexity. *(EKS = AWS-managed Kubernetes — covered after ECS.)*`,
+## ⚠️ The Core Difference From a VM: No Kernel Inside the Container
+
+> **A virtual machine has BOTH a full kernel and a full application layer inside it.** ⚠️ **A container has ONLY an application layer — it has NO kernel of its own.** Instead, **every container shares the kernel of the host operating system it's running on.**
+
+**This is the entire mechanism behind "containers are lightweight"**: there's no duplicated kernel to install, boot, or maintain per container — just an isolated application layer, layered on top of one shared kernel underneath.
+
+---
+
+## Isolation Is Still Real — Just Enforced Differently
+
+> **Containers still support hard resource limits, exactly like VMs** — e.g. capping a container at 8GB RAM out of a 16GB host means that container genuinely cannot exceed 8GB, since **each container has its own separate application layer** (not shared with other containers) even though the kernel underneath is shared. ⚠️ **One container consuming excessive resources still cannot starve a sibling container** — the isolation guarantee from VMs is preserved, just achieved by isolating the application layer rather than duplicating the entire OS.
+
+---
+
+## Two Names for Two Virtualization Models
+
+> **VMs share HARDWARE, each running a full duplicated OS on top — this is called "hardware virtualization."** **Containers share the KERNEL (part of the OS itself), each running only its own application layer on top — this is called "operating system virtualization."** ⚠️ **This single naming distinction is the cleanest way to remember the core architectural difference** between the two technologies.
+
+---
+
+## Exam Framing
+
+> "Why are containers dramatically lighter and faster to start than virtual machines?" → **containers share the host's kernel instead of each carrying a duplicated one** — isolation is preserved via a separate application layer per container plus hard resource limits, not by duplicating the entire OS. This is the direct mechanical answer beneath every "containers vs VMs" comparison table.
+`,
+    },
+    {
+      id: "ecs-prereq-docker-faq-lab",
+      title: "Docker FAQ Lab – Building a Docker Host, Pulling Images, and Running Your First Container",
+      shortDesc: "Ubuntu's Docker image is 80MB vs a 5.9GB ISO — because it carries no kernel at all, just the application layer",
+      visuals: ["DockerLifecycle"],
+      content: `## Q1: Is It Complex to Create a Docker Host?
+
+> **No — installing the Docker daemon on any machine (physical or virtual, Linux/Windows/Mac) converts it into a "Docker host."** On Amazon Linux, this is as simple as \`yum install docker\` after logging in as root — a couple minutes, no complex setup.
+
+---
+
+## Q2: Do Containers Use ISO Images Like VMs?
+
+> ⚠️ **No.** A VM's ISO image contains a full operating system (kernel + application layer) — the SAME image used for a physical machine install. A container's image contains **only the application layer** — no kernel, since it borrows the host's. ⚠️ **This is exactly why a Docker image is so much smaller**: an Ubuntu Docker image is roughly **80MB**, versus a full Ubuntu ISO at roughly **5.9GB.**
+
+---
+
+## Q3: Where Do Container Images Come From?
+
+> **Docker Hub (hub.docker.com)** hosts official images for virtually every common OS and application (Ubuntu, nginx, and thousands more) — search for what's needed and pull it directly.
+
+---
+
+## Q4: How Long Does It Take to Create a Container From an Image?
+
+> ⚠️ **About one second** — dramatically faster than a VM's typical 5–10 minute boot, since there's no full OS to install or boot, just an application-layer environment to instantiate.
+
+**Basic workflow**: \`docker pull ubuntu\` (download the image) → \`docker run -it --name c1 ubuntu /bin/bash\` (create and enter a container from it). Exiting with Ctrl+P, Ctrl+Q leaves the container running in the background rather than stopping it.
+
+---
+
+## Q5: Can Containers Be Started, Stopped, and Restarted Like VMs?
+
+> **Yes.** \`docker ps\` shows running containers; \`docker ps -a\` shows all containers including stopped ones. \`docker stop\` / \`docker start\` control state, and \`docker attach\` re-enters a running container.
+
+---
+
+## Q6: How Do You Build a Custom Image With Your Own Application?
+
+> **Manually installing an app inside a running container works, but isn't the recommended pattern** — it mirrors the same manual setup pain that made VM environments slow to recreate. ⚠️ **The correct pattern is building a custom image via a Dockerfile**, so the setup is automated and repeatable.
+
+**Worked example**: a Dockerfile with just two lines — \`FROM nginx\` (use nginx as the base image, since it ships with a web server already configured, unlike a bare Ubuntu image which would need extra setup commands) and a COPY command to bring in a custom \`index.html\` into nginx's web root. Running \`docker build -t myapp .\` produces a custom image with the application baked in.
+
+---
+
+## Q7: How Do You Access a Container From Outside?
+
+> **Publish a port when creating the container** — e.g. \`docker run -d -p 80:80 myapp\` maps requests hitting the Docker host's port 80 through to the container's port 80. With this in place, the application becomes reachable over the internet via the host's public IP (e.g. an EC2 instance's public IP), exactly like a normal web server would be.
+
+**Proof it's really the container serving traffic**: stopping the container (\`docker stop\`) makes the site immediately inaccessible; starting it again immediately restores access — demonstrating the running container, not some separate process, is what's actually serving the page.
+
+---
+
+## Q8: Is a Single Docker Host a Single Point of Failure?
+
+> ⚠️ **Yes — if the Docker host itself goes down (hardware failure, OS crash), every container running on it goes down together**, exactly the same single-point-of-failure risk a single physical/virtual server has. This exact question is what motivates **Container Orchestration**, covered in the next topic.
+
+---
+
+## Exam Framing
+
+> The specific Docker CLI commands here are illustrative, not something the exam tests directly — the conceptual takeaways matter more: **images are small because they carry no kernel; container creation is near-instant because there's no OS to boot; and a Dockerfile is the correct, repeatable way to bake an application into a custom image**, rather than manually configuring a running container by hand.
+`,
+    },
+    {
+      id: "ecs-prereq-container-orchestration",
+      title: "Container Orchestration – Why Multiple Docker Hosts Need a Captain",
+      shortDesc: "Redundant Docker hosts solve the single-point-of-failure problem, but only if something coordinates them — three players on a field with no captain",
+      visuals: ["Orchestration"],
+      content: `## The Problem: One Docker Host Is a Single Point of Failure
+
+> **If a single Docker host fails, every container running on it fails together** — the same availability risk any single server carries. The obvious fix: **redundancy — run multiple Docker hosts.**
+
+---
+
+## ⚠️ Multiple Docker Hosts Alone Don't Solve This
+
+> **By default, separate Docker hosts don't know about each other.** Networking lets them ping one another, but there's **no coordination**: no shared awareness of what's running where, no automatic failover, no load distribution logic between them.
+
+**Ray's team analogy**: three players standing on a field, ready to play, but **no captain, no strategy, no communication** — each one acts independently, with no teamwork. ⚠️ **This is exactly the state of multiple unmanaged Docker hosts** — technically networked together, but not actually functioning as one coordinated system.
+
+---
+
+## What a Container Orchestrator Does
+
+> **A container orchestrator is the "captain"** — a dedicated system that connects multiple Docker hosts into a coordinated cluster and makes the placement and health decisions a team captain would make for players.
+
+**Specifically, it**:
+- **Connects Docker hosts together** into a managed cluster.
+- **Distributes containers intelligently** across hosts — deciding which host a given container should run on.
+- **Restarts failed containers** automatically.
+- **Scales containers** up or down as demand changes (auto-scaling).
+- **Acts as the "brain"** coordinating the entire container fleet — including, critically, **moving containers off a failed host onto a surviving one**, which is exactly what solves the original single-point-of-failure problem.
+
+---
+
+## Three Real Orchestrators
+
+> **Docker Swarm, Amazon ECS (Elastic Container Service), and Kubernetes** are the three real-world container orchestrators — each is "a captain," and choosing between them is the subject of the next topic.
+
+---
+
+## Exam Framing
+
+> "Multiple Docker hosts exist, but a host failure still takes down every container on it — how is this solved?" → **container orchestration** — the missing coordination layer that makes multiple hosts behave as one resilient, self-healing cluster rather than a set of independent, uncoordinated machines.
+`,
+    },
+    {
+      id: "ecs-prereq-orchestrator-comparison",
+      title: "Docker Swarm vs Amazon ECS vs Kubernetes – Choosing the Right Captain",
+      shortDesc: "School-level captain, corporate captain, international captain — and why Leo picks ECS specifically because he's already all-in on AWS",
+      visuals: ["OrchestratorCompare"],
+      content: `## Three Captains, Three Trade-Offs
+
+> **Docker Swarm, Amazon ECS, and Kubernetes are the three mainstream container orchestrators** — each solving the same coordination problem, with different trade-offs in simplicity, AWS integration, and power.
+
+---
+
+## Docker Swarm — "The School-Level Captain"
+
+> **Native to Docker itself, and very easy to set up.** ⚠️ **Lacks advanced features — no auto-scaling, no rollback support** — making it a fit for small teams and learning environments, but weaker for large-scale production use.
+
+---
+
+## Amazon ECS — "The AWS Captain"
+
+> **Fully managed by AWS, with deep native integration into the AWS ecosystem** — Load Balancers, IAM, and the rest of an existing AWS deployment connect naturally. ⚠️ **No control-plane management required** — being a managed service, there's no orchestrator infrastructure of its own to operate.
+
+**The trade-off**: ⚠️ **ECS is AWS-only** — not usable on-premises or on other cloud providers, unlike Kubernetes.
+
+---
+
+## Kubernetes — "The International-Level Captain"
+
+> **The most powerful option — open-source, widely adopted, and runs anywhere**: cloud, on-premises, or hybrid environments. Supports the full set of advanced features (auto-scaling, rollback, complex deployment strategies) needed for genuinely large, complex applications.
+
+**The trade-off**: ⚠️ **complex to set up and manage** — meaningfully more operational overhead than Docker Swarm or ECS. (For AWS users who specifically want Kubernetes without managing its control plane themselves, **Amazon EKS — Elastic Kubernetes Service — is AWS's managed Kubernetes offering**, covered separately after ECS.)
+
+---
+
+## Why Leo Chooses ECS
+
+> **Leo picks ECS for two concrete reasons**: (1) his infrastructure is **already fully on AWS** (EC2, IAM, etc.) — ECS's native integration is a direct fit; (2) his startup is small (three apps) and **doesn't need Kubernetes' advanced feature set or its operational complexity** — ECS gives him managed orchestration without the Kubernetes learning curve.
+
+---
+
+## Exam Framing
+
+> "Simple, Docker-native orchestration for a small team or learning environment" → **Docker Swarm.** "Fully AWS-integrated, managed orchestration, no interest in multi-cloud portability" → **ECS.** "Need the most powerful, portable, feature-complete orchestrator, and complexity is an acceptable trade-off" → **Kubernetes** (or its AWS-managed form, **EKS**, if staying within AWS while still wanting Kubernetes specifically). The AWS-only constraint on ECS, versus Kubernetes/EKS's portability, is the single most commonly tested distinguishing fact here.
+`,
     },
     {
       id: "ecs",
