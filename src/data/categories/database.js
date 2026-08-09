@@ -1223,10 +1223,122 @@ Both appear under **Additional configuration** when creating a database, each wi
 `,
     },
     {
+      id: "rds-automated-backups",
+      title: "RDS Automated Backups – Incremental, Transparent, and Cross-Region Replicable",
+      shortDesc: "Daily incremental snapshots stored transparently in S3, with a configurable window, retention, and optional cross-region replication",
+      visuals: ["RDSBackups"],
+      content: `## Two Kinds of Backup
+
+> RDS offers exactly two backup mechanisms: **automated backups** (a toggle enabled at instance creation, fully managed by AWS) and **manual snapshots** (user-initiated, covered in the next topic). This topic covers automated backups in full.
+
+---
+
+## Incremental, Not Full, After Day One
+
+> **Automated backup takes a daily snapshot of the database — the first is a full backup, every subsequent one is incremental**, storing only the changes made since the previous backup.
+
+Concretely: starting a backup schedule on a Sunday takes a **full** backup that day; Monday's backup captures **only the last 24 hours of changes**, not the whole database again. ⚠️ **This is specifically why incremental backups are faster and cheaper than repeating a full backup daily** — less data to write each time, less storage consumed overall.
+
+---
+
+## Storage: Transparent, Same-Region S3
+
+> **Automated backups are stored in Amazon S3, in the same AWS region as the RDS instance** — but ⚠️ **this storage is entirely transparent to the account holder.** No corresponding bucket ever appears when browsing S3 directly; the backup exists, but only RDS itself (via console, CLI, or API) can see or act on it.
+
+This is a deliberate design choice — backups are managed **through RDS**, not accessed as ordinary S3 objects.
+
+---
+
+## Retention Period
+
+> **Retention is configurable from 1 to 35 days, defaulting to 7.** Setting it to **0 disables automated backups entirely.**
+
+Backups older than the configured retention window are **automatically deleted** — only the most recent data within that window stays available for restoration. A 7-day default is genuinely sufficient for most continuously-running databases, since backups happen daily and each new one extends the coverage window forward.
+
+---
+
+## Backup Window
+
+> **The backup window is when the daily automated backup actually runs** — either a specific time range chosen explicitly, or "No preference," letting AWS pick one automatically. Times are specified in **UTC**, requiring a manual conversion for any other timezone.
+
+⚠️ **Best practice: schedule the window during genuinely low-traffic hours** (e.g. late night for a mostly-daytime user base) — taking a backup does carry some performance overhead, and running it when usage is naturally lowest minimizes any real-world impact on users.
+
+---
+
+## Cross-Region Backup Replication
+
+> By default, backups stay in the **same region** as the RDS instance. **Enabling backup replication to another region** copies snapshots and transaction logs there as well — immediately after they're available in the source region — specifically to support **disaster recovery** and compliance requirements that mandate geographic separation.
+
+⚠️ **Not supported on Multi-AZ DB Clusters** — the option simply doesn't appear when that deployment type is selected, joining the growing list of Multi-AZ DB Cluster feature exclusions from earlier topics. Available on both Single DB Instance and Multi-AZ DB Instance.
+
+**Cost**: same-region backup storage carries no data transfer fee, but ⚠️ **cross-region snapshot copies do incur additional charges** — replication for DR isn't free, even though the base backup mechanism is.
+
+---
+
+## Cost: Free Up to Instance Storage Size
+
+> **RDS provides backup storage free, up to the size of the DB instance's own allocated storage.** A 400GB instance gets 400GB of backup storage at no extra cost — covering **both** automated and manual snapshots combined against that same free allowance. Only storage beyond that free tier incurs standard S3 charges.
+
+---
+
+## Two Restoration Paths (Preview)
+
+> **Restore to the latest backup** — fast, and the right choice when the most recent available copy is all that's needed (e.g. recovering quickly from an instance failure).
+
+> **Point-in-time recovery (PITR)** — restore to **any specific moment within the retention window**, not just the most recent backup. The canonical use case: an accidental deletion or bad update happens at a known time — PITR restores the database to the moment **just before** that event occurred, undoing exactly the damage and nothing more.
+
+> ⚠️ Both restoration paths **always create a brand-new DB instance** rather than overwriting the existing one — the original instance is never directly modified by a restore operation. Full hands-on restoration is covered in a dedicated later lab.
+
+---
+
+## Exam Framing
+
+> "Undo a specific accidental change at a known point in time" → **Point-in-Time Recovery**, which requires automated backups to be enabled (manual snapshots alone don't support PITR). "Replicate backups to another region for DR/compliance" → **cross-region backup replication**, unavailable on Multi-AZ DB Cluster and chargeable for the cross-region copy itself.
+`,
+    },
+    {
+      id: "rds-manual-snapshots",
+      title: "RDS Manual Snapshots – User-Initiated, No Retention Limit",
+      shortDesc: "Take a backup exactly when you need one, and keep it forever until you explicitly delete it — the counterpart to automated backups' 35-day cap",
+      visuals: [],
+      content: `## Why Manual Snapshots Exist Alongside Automated Backups
+
+> **Automated backups have a hard retention ceiling of 35 days** — beyond that window, older backups are automatically purged, no matter how important a specific one might turn out to be. **Manual snapshots exist specifically to remove that ceiling.**
+
+---
+
+## What Makes Them Different
+
+> **A manual snapshot is user-initiated — taken at any moment the operator chooses, not on a fixed daily schedule** — and it **persists indefinitely, until explicitly deleted.** There is no 35-day cap, no automatic expiration, nothing purging it in the background.
+
+**The concrete trigger scenario**: an automated backup runs nightly at, say, 9 PM. But today, **before making a significant change** to the database, an immediate backup is wanted right now — not tonight. A manual snapshot taken in that moment captures the database's exact state before the risky change, independent of the regular automated schedule entirely.
+
+---
+
+## Where Manual Snapshots Fit
+
+- **Long-term/archival backups** — a snapshot meant to be kept for months or years, well beyond what the 35-day automated retention ceiling allows
+- **Pre-change safety nets** — taken deliberately right before a schema migration, a major data change, or any operation risky enough to want an explicit rollback point
+- **Compliance-driven retention** — when a regulation or internal policy requires keeping a specific backup indefinitely, a manual snapshot (never subject to automatic deletion) is the only mechanism that satisfies that requirement
+
+---
+
+## Cost Note
+
+> Manual snapshots share the **same free storage allowance** as automated backups — free up to the DB instance's own allocated storage size, combined across both backup types. Since manual snapshots never expire on their own, an accumulation of old, unneeded ones can quietly grow storage costs over time if nobody ever deletes them — a real operational housekeeping consideration, not just a theoretical one.
+
+---
+
+## Exam Framing
+
+> "Keep a specific backup indefinitely, beyond the 35-day automated retention limit" → **manual snapshot**. "Take a backup immediately, right before a risky change, not on the regular nightly schedule" → also a **manual snapshot** — the defining trait in both cases is that it's initiated by a person at a specific moment, not by RDS on autopilot.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
-      visuals: ["RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
+      visuals: ["RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
       content: `## RDS Part 2 — Operations, Security & Scaling
 
 Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
@@ -1236,21 +1348,6 @@ Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, back
 
 
 
-## Backups
-
-| | Automated Backups | Manual Snapshots |
-|--|-------------------|------------------|
-| Trigger | Daily, in a backup window | Any time, by you |
-| Type | Incremental (first is full) | Full |
-| Retention | **1–35 days** (default 7; 0 = off) | **Unlimited** (until you delete) |
-| Storage | AWS-managed S3 (same region) | S3 |
-| Enables | **Point-In-Time Recovery** | Long-term / pre-change archival |
-
-- **PITR** — restore to any moment within the retention window (always creates a **new** instance)
-- **Cross-region backup replication** for DR (not for Multi-AZ DB Cluster; cross-region copies cost extra)
-- Free up to your DB storage size
-
----
 
 ## Encryption
 
