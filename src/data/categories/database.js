@@ -854,38 +854,137 @@ The natural cost-conscious response — provisioning conservatively (e.g. 100GB)
 `,
     },
     {
+      id: "rds-connectivity",
+      title: "RDS Connectivity – Compute Resource, Subnet Groups, and Security Groups",
+      shortDesc: "Placing a database in a private subnet, wiring a security group to accept only web-tier traffic, and the optional TLS certificate",
+      visuals: ["RDSConnectivity"],
+      content: `## Compute Resource: Manual vs Wizard-Assisted
+
+> **The Connectivity section decides which resources are even allowed to reach the database, and how.**
+
+The first choice is **"Don't connect to an EC2 compute resource"** vs **"Connect to an EC2 compute resource."**
+
+- **Connect to an EC2 compute resource** — select a specific EC2 instance, and AWS **automatically creates the necessary security group rules** to let that instance reach the database, with no manual configuration required
+- **Don't connect to an EC2 compute resource** — every security group rule has to be set up **manually** instead
+
+> ⚠️ **Neither option restricts you to only that path** — choosing "don't connect" doesn't prevent EC2 access, it just means you're responsible for wiring the security groups yourself rather than letting the wizard do it. This manual route is exactly what's needed when access should instead come from the public internet or from a Lambda function, rather than a specific pre-selected EC2 instance.
+
+---
+
+## VPC and DB Subnet Group
+
+The database is placed into a specific **VPC**, and within it, a **DB subnet group** determines which actual subnets it can land in.
+
+> ⚠️ **Using the default subnet group gives AWS discretion over placement — including the possibility of landing the instance in a public subnet.** To guarantee a database stays private, a **custom DB subnet group** must be created, explicitly selecting only private subnets.
+
+**Creating a custom subnet group**: choose the VPC, choose Availability Zones, then choose specific subnets within each AZ.
+
+> ⚠️ **AZ count is a hard requirement tied to the deployment option**: a **Multi-AZ DB Instance needs subnets across at least 2 AZs**; a **Multi-AZ DB Cluster needs subnets across at least 3 AZs** (matching its writer + 2-reader topology). Selecting a subnet group with too few AZs will actually **block** selecting Multi-AZ DB Cluster later in the wizard until it's fixed.
+
+---
+
+## Public Access
+
+> **Public access: Yes gives the database a public IP, reachable from anywhere on the internet** (still gated by username/password, but the network path itself is open). **Public access: No keeps the database reachable only from within its VPC**, with a private IP only.
+
+For any production-grade setup, **No** is the correct choice — this is the same "public RDS instance is not best practice" lesson demonstrated hands-on in the earlier RDS lab topics.
+
+---
+
+## The Security Group: Scoped by Security Group, Not IP
+
+> **The VPC security group attached to the RDS instance is what actually enforces "only the web tier can reach this database."**
+
+The correct pattern, built step by step:
+
+1. A **web server security group** already protects the application tier's EC2 instances
+2. The **database's security group** adds an inbound rule for the database's port (**3306** for MySQL) with the **source set to the web server security group itself** — not a raw IP address or CIDR range
+3. This means: **only instances that are members of the web server security group can reach the database on that port** — anything else, regardless of its IP, is blocked
+
+> This is the exact same "security group referencing another security group as its source" pattern used in the earlier EC2-to-RDS connection lab — here it's formalized as the deliberate best-practice connectivity model for any RDS deployment.
+
+---
+
+## Certificate Authority (Optional TLS)
+
+> **By default, communication between the application and the database is plain, unencrypted text.** The Certificate Authority option provides a **ready-to-use security certificate already installed on the RDS side** — installing the matching certificate on the application server encrypts app-to-database traffic in transit.
+
+⚠️ **This step is entirely optional** — skipping it means the connection stays functional but unencrypted; installing the certificate on the application side is what actually turns on encryption for that traffic.
+
+---
+
+## Exam Framing
+
+> "Database reachable only from application servers, never directly from the internet" → **Public access = No + a security group scoped to the app tier's security group as source**, not an IP range. "Guarantee an RDS instance never lands in a public subnet" → a **custom DB subnet group** listing only private subnets. Remember the AZ-count requirement: **2 AZs for Multi-AZ Instance, 3 AZs for Multi-AZ Cluster** — get this wrong in the subnet group and the wizard blocks the cluster option later.
+`,
+    },
+    {
+      id: "rds-database-authentication",
+      title: "RDS Database Authentication – Password, IAM, and Kerberos",
+      shortDesc: "Three ways to authenticate into an RDS database: native DB users, temporary IAM tokens, or existing corporate Active Directory accounts",
+      visuals: ["DatabaseAuth"],
+      content: `## Three Authentication Methods
+
+> **Password authentication is always available as the baseline; Password + IAM and Password + Kerberos are additional methods layered on top of it, not replacements.**
+
+---
+
+## 1. Password Authentication (The Default)
+
+> **Users are created directly inside the database engine itself** (e.g. MySQL users), each with their own username and password, exactly as demonstrated in the earlier EC2-RDS connection lab.
+
+The **master user** created at instance setup can create additional database users and grant them access.
+
+**Where this fits**: small development environments, internal testing, low-risk scenarios — e.g. a small team building an inventory management system still in development, where a database administrator can simply create a developer account directly in MySQL. Simple, fast, and entirely sufficient when the user count is small and the environment isn't internet-exposed production traffic.
+
+---
+
+## 2. Password + IAM Authentication
+
+> **IAM users and roles can authenticate to the database using their own IAM identity, instead of needing a separately-created database user** — access is granted via a **temporary, automatically-expiring token** rather than a stored password.
+
+**The problem this solves**: imagine 10-15 people who already have IAM accounts, and all of them need database access. Without this option, an administrator would need to **manually recreate every one of those 10-15 people as separate MySQL users** — duplicated identity management, out of sync the moment someone joins or leaves. With IAM authentication enabled, **the same IAM account they already use for everything else grants database access directly.**
+
+**Benefits**: centralized access management (one identity system instead of two), reduced administrative overhead, and **tokens that automatically expire** — meaningfully reducing the risk of a long-lived, forgotten credential sitting around.
+
+**Typical fit**: a mid-sized company with distinct dev/test/production environments, where developers already hold IAM accounts and shouldn't need a second, separately-managed database credential.
+
+---
+
+## 3. Password + Kerberos Authentication (Active Directory)
+
+> **Active Directory is a centralized authentication system used broadly in corporate environments** — a single username/password lets a user log into their workstation, access networked devices, use Office 365, and more, all through the same identity (a single-sign-on-style model).
+
+**Kerberos authentication lets RDS validate credentials against that same Active Directory** — users authenticate to the database with the **exact same corporate identity** they already use for everything else, with **no separate database-specific account ever created**.
+
+**Where this matters**: large organizations that already run centralized Active Directory authentication and specifically don't want to duplicate 100+ user accounts into a database engine separately. ⚠️ **Genuinely complex to set up**, but a real, common requirement in large corporate environments specifically because it eliminates duplicate identity management at scale.
+
+---
+
+## ⚠️ The Multi-AZ DB Cluster Restriction
+
+> **Password + Kerberos (Active Directory) authentication is NOT supported on Multi-AZ DB Cluster deployments.** It's fully available on Single DB Instance and Multi-AZ DB Instance, but Multi-AZ DB Cluster specifically excludes it.
+
+This is one more item on the growing list of things Multi-AZ DB Cluster doesn't support (alongside cross-region DR and Storage Auto Scaling from earlier topics) — a recurring exam-relevant pattern: **Multi-AZ DB Cluster's extra performance comes with real feature tradeoffs, not just a higher price tag.**
+
+---
+
+## Exam Framing
+
+> "Grant database access to existing IAM users/roles without creating separate database accounts, with automatically-expiring credentials" → **Password + IAM authentication**. "A large enterprise wants to authenticate database users through its existing corporate directory" → **Password + Kerberos (Active Directory)**, but ⚠️ **remember it's unavailable on Multi-AZ DB Cluster** — a scenario combining both is testing exactly this exclusion.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
-      visuals: ["RDSConnectivity", "DatabaseAuth", "RDSMonitoring", "ParameterOptionGroups", "RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
+      visuals: ["RDSMonitoring", "ParameterOptionGroups", "RDSBackups", "RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
       content: `## RDS Part 2 — Operations, Security & Scaling
 
 Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
 
 ---
 
-## Connectivity (Best Practice)
-
-Place the DB in **private subnets** using a **DB subnet group**, keep **public access = No** (no public IP), and let only the web tier reach it:
-
-- **db-SG inbound:** MySQL \`3306\` ← **source = web-SG** (a security group, not an IP or \`0.0.0.0/0\`)
-- The web server **initiates** the connection; security groups are **stateful**, so replies are auto-allowed
-- DB subnet group needs **2 AZs** for Multi-AZ Instance, **3 AZs** for Multi-AZ Cluster
-- The **certificate authority** option enables **TLS in transit** (install the RDS cert on the app)
-
-> The "connect to an EC2 compute resource" wizard option just auto-creates these security-group rules for you.
-
----
-
-## Database Authentication
-
-| Method | What |
-|--------|------|
-| **Password** | Native DB users + passwords (always available). Simple, fine for small/dev. |
-| **Password + IAM** | IAM users/roles authenticate with **temporary, expiring tokens** — no need to recreate everyone as DB users. |
-| **Password + Kerberos** | Corporate **Active Directory** SSO — use existing AD users. ❌ Not on Multi-AZ DB Cluster. |
-
----
 
 ## Monitoring — 3 Tools
 
