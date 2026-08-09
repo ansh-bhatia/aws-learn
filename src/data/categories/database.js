@@ -2199,10 +2199,58 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 `,
     },
     {
+      id: "dynamodb-read-consistency",
+      title: "DynamoDB Read Consistency – Eventually Consistent, Strongly Consistent, and Transactional Reads",
+      shortDesc: "Speed-vs-accuracy tradeoff across 3 read models, built directly on the leader-node/replica-node mechanics from the storage architecture topic",
+      visuals: ["ReadConsistency"],
+      content: `## Eventually Consistent Reads
+
+> **DynamoDB can fetch data from ANY node** — the leader node or either replica node — when using eventually consistent reads. Fetching multiple items (say, A, B, and C) sends **one query per item**, and each query can independently land on any node.
+
+⚠️ **The core risk**: if an item was just written or updated, replication to the replica nodes takes a small but nonzero amount of time. A query landing on a replica **during that replication window** can return **stale data**, or in some cases, may momentarily fail to find a brand-new item at all (because it hasn't replicated there yet).
+
+**Why this is still often the right choice**: eventually consistent reads **use all three nodes** (leader + both replicas) to serve read traffic, spreading load and making this the **fastest and cheapest** option — no single node bears the full read burden. Replica nodes end up doing double duty: serving reads AND providing high availability. **Best for**: applications where a brief delay in seeing the latest data is acceptable — social media feeds being the classic example.
+
+---
+
+## Strongly Consistent Reads
+
+> **Every read is sent exclusively to the leader node** — never to a replica. Since the leader node is where every write lands first, this **guarantees the absolute latest data, every time**, with zero chance of staleness.
+
+**The tradeoff**: the leader node now carries the **entire read load on top of its existing write load** — replica nodes contribute nothing to read performance here, existing only for high availability. This means the leader node needs **higher compute capacity**, and overall performance is **slower** than the eventually consistent model, since one node is doing everything multiple nodes could otherwise share.
+
+**Best for**: applications where accuracy is non-negotiable — the textbook example is banking: depositing money and immediately checking the updated balance must never show stale data.
+
+---
+
+## Transactional Reads
+
+> **The key difference from strongly consistent**: strongly consistent reads still send **one query per item** (fetching A, B, C means 3 separate queries — and it's possible for B to be updated in between fetching A and C, producing an inconsistent group read). **Transactional reads send a single query that retrieves multiple items together, atomically** — up to **25 items in one operation** — guaranteeing the whole group is consistent as a single point-in-time snapshot.
+
+This still queries the leader node exclusively (same as strongly consistent), but because it's fetching a **batch** of items atomically in one operation rather than item-by-item, it demands the **highest compute capacity of the three models** — and is correspondingly the most expensive.
+
+---
+
+## Full Comparison
+
+| Model | Data Accuracy | Read Scope | Speed | Compute Need |
+|---|---|---|---|---|
+| **Eventually Consistent** | may return slightly outdated data | single item per operation | fastest (uses all nodes) | lowest |
+| **Strongly Consistent** | always the latest data | single item per operation | slower (leader node only) | high |
+| **Transactional** | always latest, guaranteed consistent **as a group** | up to 25 items in one operation | slightly slower still | highest |
+
+---
+
+## Exam Framing
+
+> "Fastest, cheapest read option, tolerant of very brief staleness — social-media-style use case" → **Eventually Consistent.** "Guaranteed latest data for a single item, banking/financial-accuracy use case" → **Strongly Consistent.** "Guaranteed latest AND internally consistent data across a group of up to 25 related items in one atomic read" → **Transactional.** The compute-capacity cost climbs in that same order — this is exactly why read consistency is a required input to the RCU (Read Capacity Unit) calculation covered in the next topic.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2213,15 +2261,6 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 
 
 
-## Read Consistency (3 models)
-
-| Model | Data | Scope | Speed | Compute |
-|---|---|---|---|---|
-| **Eventually Consistent** | may be stale | 1 item/query | Fastest (uses replicas) | Lowest cost |
-| **Strongly Consistent** | always latest | 1 item/query | Slower (leader only) | High |
-| **Transactional** | latest, all-or-nothing | up to **25 items** in one query | Slightly slower | Highest |
-
----
 
 ## Write Consistency (2 models)
 
