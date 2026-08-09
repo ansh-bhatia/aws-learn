@@ -3257,24 +3257,155 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-fargate-fargate-spot-lab",
+      title: "ECS Cluster Setup Lab – Why Fargate and Fargate Spot Are Always There, Whether You Select Them or Not",
+      shortDesc: "Deselecting Fargate during cluster creation from the console doesn't actually remove it — every console-created cluster is hybrid-ready by default",
+      visuals: ["ClusterInfraSetup"],
+      content: `## ⚠️ A Genuinely Surprising Console Behavior
+
+> **Even if Fargate is explicitly deselected while creating a cluster from the AWS console, Fargate and Fargate Spot are added automatically anyway.** Demonstrated directly: creating a cluster named "cluster-without-fargate" with no infrastructure selected still results in Fargate and Fargate Spot appearing in that cluster's infrastructure list afterward. ⚠️ **The AWS console does not offer a way to create a cluster without Fargate available** — the only way to avoid this is via the **AWS CLI** instead of the console.
+
+**Why this isn't actually a problem**: ⚠️ **there is no charge for Fargate/Fargate Spot simply being available in a cluster** — billing only happens when a task or service is actually launched onto that infrastructure. Their presence costs nothing until used.
+
+---
+
+## Fargate vs Fargate Spot
+
+> **Fargate** — the standard serverless option: fully managed, AWS handles provisioning/scaling/patching/availability. Ideal for **production workloads** needing stability and guaranteed availability.
+
+> **Fargate Spot** — ⚠️ **roughly 70% cheaper than standard Fargate**, using AWS's spare compute capacity — the same underlying economic model as EC2 Spot Instances. ⚠️ **Can be interrupted at any time**, making it best for batch jobs, dev/test environments, and fault-tolerant workloads that can tolerate a mid-run interruption.
+
+---
+
+## Every Console-Created Cluster Is Hybrid-Ready by Default
+
+> **Whether or not EC2 is added at cluster creation, Fargate and Fargate Spot remain available regardless** — meaning every console-created ECS cluster is inherently ready for hybrid deployment (Fargate, Fargate Spot, and optionally EC2, all simultaneously available).
+
+⚠️ **The launch type is chosen per task/service, not per cluster** — a single task cannot span multiple infrastructure types simultaneously, but different tasks/services within the same cluster can each independently choose Fargate, Fargate Spot, or EC2 at the moment they're created.
+
+---
+
+## Exam Framing
+
+> "A cluster was created via the AWS console without selecting Fargate, but Fargate still appears as available infrastructure — why?" → **this is expected console behavior; Fargate and Fargate Spot are always included when creating a cluster from the console**, with no cost implication until something is actually run on them. To create a cluster genuinely without Fargate, the **AWS CLI** must be used instead of the console.
+`,
+    },
+    {
+      id: "ecs-add-ec2-during-cluster-creation-lab",
+      title: "Adding EC2 Infrastructure During Cluster Creation – The Recommended Path When EC2 Is Already Planned",
+      shortDesc: "AWS auto-builds the launch template, Auto Scaling Group, and IAM role for you — ECS-optimized AMIs come with the container runtime and ECS agent pre-installed",
+      visuals: ["ClusterInfraSetup"],
+      content: `## Why Add EC2 (vs Sticking With Fargate)
+
+> **Choosing EC2 as cluster infrastructure gives full control over the compute layer** — the AMI, storage, and networking are all directly configurable, unlike Fargate's serverless model where none of that is exposed.
+
+---
+
+## What Happens When EC2 Is Selected During Cluster Creation
+
+> ⚠️ **AWS automatically builds a launch template AND an Auto Scaling Group for you** — this is exactly why adding EC2 during cluster creation is the recommended path when EC2 usage is already planned: most of the setup is handled automatically rather than requiring manual assembly afterward.
+
+**Configuration walked through during setup**:
+- **AMI**: ⚠️ **use an ECS-optimized AMI** — these come with the container runtime and ECS agent already pre-installed, meaning zero manual setup is needed for the instance to function as a cluster member.
+- **Instance type, key pair, security group** — the normal EC2 configuration choices.
+- **Min/max/desired instance count** — since this becomes an Auto Scaling Group under the hood.
+- **EC2 instance role** — ⚠️ **AWS creates this automatically too** (commonly named "ECS instance role") — it's what grants the EC2 instance permission to register itself with the ECS cluster in the first place.
+- **VPC/subnet, public IP assignment** — standard EC2 networking choices.
+
+---
+
+## Verifying and Adjusting Afterward
+
+> Once the cluster is created, the resulting **Auto Scaling Group and EC2 instance(s)** are both independently visible and manageable — in the EC2 console (verifying the actual running instance) and in the Auto Scaling Group console (adjusting desired/min/max capacity directly). ⚠️ **Increasing desired capacity on the Auto Scaling Group automatically creates a new EC2 instance, which then registers itself with the ECS cluster** and appears as a new container instance — fully automated, no manual per-instance setup required.
+
+---
+
+## Exam Framing
+
+> "Recommended way to add EC2 infrastructure when it's already known upfront that a cluster will need it" → **select EC2 during cluster creation**, since AWS automates the launch template, Auto Scaling Group, and IAM role creation in one flow. This contrasts with adding EC2 **after** cluster creation (covered next), which requires assembling these pieces manually.
+`,
+    },
+    {
+      id: "ecs-add-ec2-manually-lab",
+      title: "Adding EC2 Manually After Cluster Creation – Editing /etc/ecs/ecs.config by Hand",
+      shortDesc: "One line — ECS_CLUSTER=your-cluster-name — is the entire difference between a plain EC2 instance and one that registers itself as a container instance",
+      visuals: [],
+      content: `## When This Path Is Needed
+
+> **If EC2 wasn't selected during cluster creation, it can still be added afterward** — two ways: **launching an individual EC2 instance manually** (covered here), or **creating a full Auto Scaling Group manually** (covered in the next topic, for genuine high availability).
+
+⚠️ **Adding a single individual instance this way still leaves a single point of failure** — if that one instance goes down, every container/task running on it goes down too. This method is useful for understanding the mechanics, but a registered Auto Scaling Group is the production-appropriate approach.
+
+---
+
+## Step-by-Step: Manually Registering an EC2 Instance
+
+**1. Launch an EC2 instance using an ECS-optimized AMI.** ⚠️ **This is the single most important choice** — an ECS-optimized AMI comes with the container runtime and ECS agent pre-installed, meaning near-zero manual setup. A plain, non-optimized AMI would require manually installing both the container runtime and the ECS agent from scratch.
+
+**2. Attach the "ECS instance role" to the EC2 instance.** ⚠️ **Without this IAM role, the instance has no permission to register itself with ECS at all.** If a cluster was previously created with EC2 selected, this role likely already exists automatically (commonly named "ECS instance role") and can simply be attached; otherwise it must be created manually via IAM (trusted entity: EC2, with the appropriate ECS-related policy attached).
+
+**3. SSH into the instance and edit** \`/etc/ecs/ecs.config\`. ⚠️ **Add exactly one line:** \`ECS_CLUSTER=your-cluster-name\` — this single configuration line is what tells the pre-installed ECS agent which specific cluster to register with.
+
+**4. Restart the ECS service** (\`sudo systemctl restart ecs\` or equivalent) so the agent picks up the new configuration and registers with the specified cluster.
+
+**5. Verify** — the instance should now appear as a container instance under the cluster's infrastructure tab in the ECS console, confirming successful registration.
+
+---
+
+## Exam Framing
+
+> "An EC2 instance needs to be manually added to an already-existing ECS cluster" → **launch it with an ECS-optimized AMI (pre-installed agent + runtime), attach the ECS instance role, then set** \`ECS_CLUSTER=<name>\` **in** \`/etc/ecs/ecs.config\` **and restart the ECS service.** ⚠️ **That single config line is the exact mechanism connecting an otherwise-generic EC2 instance to a specific ECS cluster** — remember it as the concrete, testable detail behind "how does an instance know which cluster to join."
+`,
+    },
+    {
+      id: "ecs-custom-asg-capacity-provider-lab",
+      title: "Registering Your Own Auto Scaling Group as an ECS Capacity Provider",
+      shortDesc: "Instances show up automatically either way — but without registering the ASG as a capacity provider, ECS never actually manages its scaling, draining, or task placement",
+      visuals: [],
+      content: `## Building the Auto Scaling Group From Scratch
+
+1. **Create (or reuse) the "ECS instance role"** — the same IAM role needed for any EC2 instance to register with ECS.
+2. **Create a Launch Template**: ECS-optimized AMI, an appropriately-sized instance type, key pair, and ⚠️ **the IAM instance profile set to the ECS instance role under Advanced Details** (easy to forget, and instances silently fail to connect without it).
+3. ⚠️ **Set User Data on the launch template** to automate what was previously done manually via SSH: a script that writes \`ECS_CLUSTER=your-cluster-name\` into \`/etc/ecs/ecs.config\` automatically on first boot — eliminating the need to SSH into every new instance individually.
+4. **Create the Auto Scaling Group** using that launch template — select VPC/subnets, and set desired/min/max capacity.
+
+**At this point, instances launched by the ASG already register themselves as ECS container instances automatically** — the ECS_CLUSTER user-data line and the attached IAM role are doing the same job they did in the manual single-instance process, just automated across every instance the ASG creates.
+
+---
+
+## ⚠️ The Critical Extra Step: Registering as a Capacity Provider
+
+> **Even though instances already appear in the cluster automatically, the Auto Scaling Group itself is NOT yet registered with ECS as a capacity provider** — and this distinction matters a lot.
+
+**What happens if the ASG is left unregistered** (instances still show up, but):
+- ⚠️ **No managed scaling** — the number of EC2 instances must be adjusted manually; ECS won't automatically scale the ASG up or down based on task/container demand.
+- ⚠️ **No automated draining** — when scaling down, ECS won't gracefully move running tasks off an instance before it terminates.
+- ⚠️ **No advanced placement strategy support** — a feature covered in depth once task/service placement is introduced.
+
+**Registering the ASG as a capacity provider** (two-step process):
+1. **ECS Cluster → Infrastructure → Capacity Provider → Create**, and select the Auto Scaling Group created above.
+2. ⚠️ **Update the cluster to actually use that new capacity provider** — creating the capacity provider alone isn't sufficient; the cluster itself must be updated to add it before ECS treats the ASG as truly managed.
+
+---
+
+## Why This Two-Step Registration Exists
+
+> **The distinction is between "instances that happen to be visible in a cluster" and "an Auto Scaling Group that ECS actively manages."** Only the latter gets ECS-driven auto-scaling, graceful task draining during scale-in, and access to advanced placement strategies — capabilities specifically relevant for production-grade setups, covered in more depth once task and service creation are introduced.
+
+---
+
+## Exam Framing
+
+> "An Auto Scaling Group's EC2 instances appear correctly in an ECS cluster, but scaling still has to be managed by hand, and instances don't drain gracefully" → **the Auto Scaling Group was never registered as a capacity provider** — simply having the launch template/user-data/IAM-role setup correct is not the same as ECS actively managing that ASG's lifecycle. Registration is a separate, required step: create the capacity provider from the ASG, then update the cluster to use it.
+`,
+    },
+    {
       id: "ecs",
       title: "ECS – Elastic Container Service",
       shortDesc: "Run Docker containers at scale on AWS",
-      visuals: ["ClusterInfraSetup", "TaskVsService"],
+      visuals: ["TaskVsService"],
       content: `## ECS – Elastic Container Service
 
-
-## Cluster Setup (Fargate, Spot & EC2)
-
-- From the **console**, every cluster auto-includes **Fargate + Fargate Spot** (even if deselected — no charge until you run tasks). **Fargate Spot** = ~70% cheaper spare capacity, can be interrupted → batch/dev/fault-tolerant work.
-- **Add EC2 three ways:**
-1. **During creation** (recommended if planned) — AWS auto-builds an ASG + launch template with **ECS-optimized AMIs**.
-2. **Manually after** — launch an ECS-optimized AMI, attach **ecsInstanceRole**, set \`ECS_CLUSTER=name\` in \`/etc/ecs/ecs.config\`, restart the agent. *(Single point of failure.)*
-3. **Own ASG + Capacity Provider** — launch template (ECS-optimized AMI + role + user-data) → create ASG → **register it as a Capacity Provider** so **ECS manages scaling/draining/placement**.
-
-> **ECS-optimized AMI** = ECS agent + container runtime pre-installed. **ecsInstanceRole** lets an instance register with ECS.
-
----
 
 
 ## Task vs Service
