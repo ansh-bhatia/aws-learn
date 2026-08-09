@@ -2399,31 +2399,56 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
-      id: "dynamodb",
-      title: "DynamoDB – Fundamentals (Part 1)",
-      shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
+      id: "dynamodb-on-demand-capacity-mode",
+      title: "DynamoDB On-Demand Capacity Mode – Auto-Scaling Without Manual Planning",
+      shortDesc: "No RCU/WCU to configure — DynamoDB scales automatically and bills per request, but an unset throughput cap can turn a traffic spike (or an attack) into a runaway bill",
       visuals: ["CapacityMode"],
-      content: `## DynamoDB – Fundamentals (Part 1)
+      content: `## What Capacity Mode Controls
 
-**Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
+> **Capacity mode defines how DynamoDB handles read and write operations to manage performance and cost.** Earlier topics covered how to *calculate* RCU and WCU manually — capacity mode determines **how those units actually get allocated** to a table. DynamoDB offers exactly **two capacity modes: On-Demand and Provisioned.**
 
 ---
 
+## On-Demand: No Manual Capacity Planning At All
 
+> **On-Demand capacity mode lets DynamoDB automatically handle any level of traffic, with no RCU or WCU configuration required.** DynamoDB scales allocated capacity up or down automatically based on the actual workload — more read traffic automatically increases allocated RCU, less traffic automatically decreases it, with **no manual intervention.**
 
+⚠️ **Billing is purely per-request** — a table using 10 RCU worth of traffic is billed for 10; if traffic grows and it needs 20, billing simply rises to match 20. There's no pre-purchased capacity sitting idle.
 
+---
 
+## Key Features
 
+- **Automatic scaling** — capacity rises and falls with actual traffic, continuously.
+- **Pay only for what's used** — no pre-provisioning, no idle capacity being paid for.
+- **Simplicity** — no RCU/WCU numbers to calculate or configure up front.
 
+---
 
+## When to Use On-Demand
 
-## On-Demand Capacity Mode
+**1. Unpredictable or seasonal traffic.** A **Provisioned** table has a pre-set capacity ceiling — if real traffic exceeds it, the table can't keep up. On-Demand removes that risk entirely by scaling to match whatever traffic actually arrives.
 
-Two capacity modes allocate RCU/WCU: **On-Demand** and **Provisioned**.
+**2. Brand-new applications with unclear usage patterns.** When there's no historical data yet to size a Provisioned table correctly, On-Demand avoids the guesswork.
 
-**On-Demand** auto-scales with traffic — no capacity planning, pay only per request. Best for **unpredictable/seasonal** traffic or new apps (e.g. Swiggy spiking at lunch & dinner).
+**3. Sharp, predictable-in-shape-but-not-in-size spikes.** ⚠️ **The Swiggy/food-delivery example**: a food delivery app sees sharp traffic spikes during lunch and dinner hours, and much lower traffic late at night. A fixed Provisioned capacity would either be wastefully oversized for the quiet hours or undersized for the meal-time rush. On-Demand automatically ramps up for lunch/dinner and back down afterward, billing only for what each period actually uses.
 
-> 🛡️ **Always set a maximum throughput cap** (up to 40,000 RRU/WRU). With no cap, a cyber attack or runaway traffic can scale infinitely → **huge bill**. Set a cap, monitor, raise if legitimate traffic needs it.`,
+---
+
+## ⚠️ Always Set a Maximum Throughput Cap
+
+> **On-Demand tables can optionally set a maximum for read request units and write request units** (as an integer between 1 and 40,000 request units). ⚠️ **By default, there is NO limit — DynamoDB will scale to handle literally any volume of incoming traffic**, including illegitimate traffic like a DDoS or bot attack.
+
+**Why this matters**: without a cap, a traffic surge — legitimate or malicious — causes RCU/WCU allocation (and the resulting bill) to climb without limit, potentially producing a **shockingly large bill** and even affecting the performance of other parts of the application competing for the same account-level resources.
+
+**The recommended practice**: set an initial cap, **actively monitor** actual traffic against it, and **raise the cap only once legitimate traffic genuinely requires it.** Leaving the cap unset "to be safe" is actually the riskier choice — it's the cap itself that provides the safety net.
+
+---
+
+## Exam Framing
+
+> "No capacity planning, auto-scales with traffic, billed per request, best for unpredictable/seasonal/new-app workloads" → **On-Demand.** ⚠️ **The maximum-throughput-cap detail is a frequently tested exam point** — remember it defaults to unlimited, and that setting a cap is a deliberate cost-control best practice, not a limitation to avoid. On-Demand's counterpart — **Provisioned mode**, where capacity IS configured manually — is covered next.
+`,
     },
     {
       id: "dynamodb-2",
