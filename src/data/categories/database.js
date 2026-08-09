@@ -2747,10 +2747,61 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
+      id: "dynamodb-backups-pitr-vs-on-demand",
+      title: "DynamoDB Backups – Point-in-Time Recovery vs On-Demand Backup",
+      shortDesc: "Continuous automatic protection vs manual snapshot-on-command — five points of contrast, and neither one touches table performance",
+      visuals: ["Backups"],
+      content: `## Why DynamoDB Backups Matter
+
+> **DynamoDB backups protect table data, ensuring recovery is possible after errors, corruption, or a disaster.** A backup preserves a table's data, indexes, and settings. ⚠️ **Critically, taking a DynamoDB backup does NOT affect table performance or availability** — unlike many traditional database systems, where backup operations can visibly slow down or interrupt live traffic, DynamoDB backups run without any such impact.
+
+DynamoDB offers exactly **two backup options**, each solving a different problem: **Point-in-Time Recovery (PITR)** and **On-Demand Backup.**
+
+---
+
+## Point-in-Time Recovery (PITR)
+
+> **PITR is a continuous, automated backup process** — once enabled (it's OFF by default on a new table), it runs continuously in the background with no manual intervention required.
+
+- **Trigger**: automatic and continuous — turn it on once, and it keeps running.
+- **Granularity**: PITR allows restoring the table to **any specific second** within its retention window — not just a handful of daily snapshots, but effectively continuous coverage.
+- **Restore window**: ⚠️ **capped at a maximum of 35 days** — the most recent 35 days of history is always restorable to any second, but data older than 35 days is simply not recoverable via PITR, no matter how the retention setting is configured.
+- **Use case**: disaster recovery and undoing accidental changes — since PITR can restore to virtually any recent moment, it's ideal for "something just went wrong, roll back to right before it happened" scenarios.
+
+---
+
+## On-Demand Backup
+
+> **On-Demand Backup is a manual (or manually-scheduled) full snapshot of the table**, taken exactly when a user initiates it — not a continuously running process.
+
+- **Trigger**: manual — a user explicitly creates the backup, either immediately or via a scheduled trigger the user sets up themselves.
+- **Granularity**: a **full snapshot at one specific point in time** — the complete table state as of the moment the backup was taken.
+- **Restore window**: ⚠️ **retained indefinitely, until the user explicitly deletes it** — no 35-day ceiling like PITR.
+- **Use case**: archival, compliance requirements (e.g. "back up the full database every Sunday" as a recurring company policy), and data migration — scenarios needing a durable, long-lived snapshot rather than continuous recent-history coverage.
+
+---
+
+## Side-by-Side Comparison
+
+| Aspect | **PITR** | **On-Demand Backup** |
+|---|---|---|
+| Trigger | Continuous / automatic | Manual (or user-scheduled) |
+| Granularity | Restore to any second | Snapshot at one point in time |
+| Restore window | **Max 35 days** | **Indefinite** (until deleted) |
+| Best for | Disaster recovery, accidental changes | Archival, compliance, migration |
+
+---
+
+## Exam Framing
+
+> "Need to restore a table to any specific recent moment, e.g. right before an accidental delete" → **PITR**, but only if that moment is within the last 35 days. "Need a long-term, compliance-driven snapshot retained indefinitely" → **On-Demand Backup.** ⚠️ **The 35-day PITR ceiling is the single most commonly tested fact here** — a scenario asking to restore data from 40+ days ago rules PITR out immediately, regardless of how well PITR otherwise fits the use case.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -2762,18 +2813,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 
 
-## Backups
-
-Protect data **without impacting performance**. Two options:
-
-| Aspect | **PITR** (Point-in-Time Recovery) | **On-Demand Backup** |
-|---|---|---|
-| Trigger | Continuous / automatic | Manual (or scheduled) |
-| Granularity | Any second in last 35 days | Snapshot at a point in time |
-| Restore window | **Last 35 days only** | **Indefinite** (until deleted) |
-| Use case | Disaster recovery, accidental change | Archival, compliance, migration |
-
----
 
 ## Export to S3
 
