@@ -2343,10 +2343,66 @@ Worked examples (same scenarios as above): 4KB item, 100 reads/sec → (4÷4) ×
 `,
     },
     {
+      id: "dynamodb-wcu-write-capacity-unit",
+      title: "DynamoDB WCU – Calculating Write Capacity Units for Standard and Transactional Writes",
+      shortDesc: "1KB blocks instead of RCU's 4KB — same rounding-up and per-second/per-minute traps, just a different block size and a simpler ×2 for transactional",
+      visuals: ["WCUCalculator"],
+      content: `## What WCU Measures
+
+> **WCU (Write Capacity Unit) determines how much data an application can write to a DynamoDB table per second.** Calculating it requires the same three-input pattern as RCU: **item size, write frequency (writes per second), and which write-consistency model** (Standard or Transactional) is in use.
+
+---
+
+## ⚠️ The 1KB Block Rule (Different From RCU's 4KB)
+
+> **Write operations are measured in blocks of 1KB, always rounded UP to the nearest 1KB** — a 1.5KB item rounds up to 2KB; a 2.2KB item rounds up to 3KB. This is the single biggest thing to keep straight against RCU: **reads round to 4KB blocks, writes round to 1KB blocks** — mixing these two up is an easy, common mistake.
+
+---
+
+## Standard Writes
+
+> **Formula: WCU = ⌈item size in KB⌉ × writes per second.** 1 WCU writes 1KB of data per second — the calculation is directly proportional, with no division step (unlike RCU's ÷4).
+
+Worked examples:
+- 1KB item, 100 writes/sec → 1 × 100 = **100 WCU**
+- 1.5KB item (rounds to 2KB), 100 writes/sec → 2 × 100 = **200 WCU**
+- 2KB item, 50 writes/sec → 2 × 50 = **100 WCU**
+- 2KB item, 3,000 writes/**minute** → convert first: 3,000÷60 = 50 writes/sec → 2 × 50 = **100 WCU** (same answer as the previous line — just a different unit given in the question)
+
+⚠️ **The same per-second/per-minute trap from RCU applies here** — always check which unit is given and convert to writes/sec (÷60) before applying the formula.
+
+---
+
+## Transactional Writes
+
+> **Transactional writes consume double the WCU of Standard writes**, due to the additional consistency mechanism (the all-or-nothing multi-item guarantee covered in the write-consistency topic). The formula is identical to Standard — just **multiply the Standard result by 2.**
+
+Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transactional = 200 WCU.** 2KB item, 25 writes/sec → Standard = 2 × 25 = 50 WCU → **Transactional = 100 WCU.**
+
+---
+
+## RCU vs WCU Side by Side
+
+| | RCU (Read) | WCU (Write) |
+|---|---|---|
+| Block size | 4 KB | 1 KB |
+| Base formula | ⌈item KB ÷ 4⌉ × ops/sec | ⌈item KB⌉ × ops/sec |
+| Cheapest consistency option | Eventually Consistent (÷2) | — (no cheaper-than-baseline write option) |
+| Most expensive consistency option | Transactional (×2) | Transactional (×2) |
+| Per-minute unit trap | Yes — convert ÷60 first | Yes — convert ÷60 first |
+
+---
+
+## Exam Framing
+
+> Memorize WCU's formula as **⌈item KB⌉ × writes/sec** (no division, unlike RCU's ÷4), apply **×2 for Transactional writes**, and always verify whether the given write rate is per-second or per-minute before calculating. Together, RCU and WCU are exactly the two inputs a DynamoDB table's provisioned capacity mode is built on — covered next.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["WCUCalculator", "CapacityMode"],
+      visuals: ["CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2360,15 +2416,6 @@ Worked examples (same scenarios as above): 4KB item, 100 reads/sec → (4÷4) ×
 
 
 
-## WCU — Write Capacity Unit
-
-Writes use **1 KB blocks** (rounded up). Formula: **⌈item KB⌉ × writes/sec**, then:
-- **Standard:** as-is.
-- **Transactional:** **double**.
-
-> ⏱️ Same trap: convert **writes/minute ÷ 60** first.
-
----
 
 ## On-Demand Capacity Mode
 
