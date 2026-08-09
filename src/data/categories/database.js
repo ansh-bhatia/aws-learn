@@ -2451,25 +2451,58 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
+      id: "dynamodb-provisioned-capacity-mode",
+      title: "DynamoDB Provisioned Capacity Mode – Fixed RCU/WCU, and Auto-Scaling to Fix Under/Over-Provisioning",
+      shortDesc: "Set a fixed RCU/WCU and pay for it whether used or not — under-provision and get throttled, over-provision and waste money; auto-scaling with min/max/target% is the fix",
+      visuals: ["ProvisionedMode"],
+      content: `## Provisioned: You Set the Numbers Yourself
+
+> **Provisioned capacity mode requires allocating a fixed number of RCU and WCU for a table up front** — the direct counterpart to On-Demand, where AWS decides capacity automatically. With Provisioned, a table might be configured with, say, **100 RCU and 20 WCU**, and DynamoDB creates the table with exactly that capacity.
+
+⚠️ **You pay for the allocated capacity whether you actually use it or not.** If a table is provisioned for 100 RCU but only 10 RCU worth of traffic actually arrives, the bill is still for 100 — the moment capacity is allocated, it's being paid for, independent of real usage.
+
+**Best suited for**: predictable, steady workloads where traffic can be reasonably estimated in advance — companies with clear historical numbers who know roughly what capacity they need.
+
+---
+
+## ⚠️ The Two Ways Provisioned Can Go Wrong
+
+**1. Under-provisioning.** If allocated capacity is **too low** for actual traffic — say, 100 RCU provisioned but 200 RCU worth of real demand arrives — **requests get throttled.** This means slower performance or outright failed requests, directly hurting the user experience.
+
+**2. Over-provisioning.** If allocated capacity is **higher** than actual traffic needs — say, 200 RCU provisioned but only 100 RCU worth of real usage — there's no throttling risk, but the **unused capacity is still billed every month**, unnecessarily inflating operational cost.
+
+**Getting Provisioned mode right requires having accurate traffic numbers in advance** — without them, a table risks landing in one of these two failure modes.
+
+---
+
+## Auto-Scaling: The Fix for Both Problems
+
+> **Auto-scaling (available within Provisioned mode) lets capacity adjust automatically between a set minimum and maximum**, based on real-time workload — solving both under- and over-provisioning at once. Configuring it means setting three numbers: **minimum capacity, maximum capacity, and a target utilization threshold** (commonly 70%).
+
+**How it behaves**:
+- **Scale up**: if usage exceeds the target threshold (e.g. hits 70 RCU against a 70% threshold on a 100 RCU minimum), auto-scaling increases allocated capacity — up to the configured **maximum** — to absorb the extra load without throttling.
+- **Scale down**: if usage drops back below the threshold for a sustained period, auto-scaling reduces allocated capacity back down — but never below the configured **minimum.**
+
+⚠️ **You always pay for at least the minimum, no matter how low traffic drops** — auto-scaling removes the over-provisioning waste at the *high* end and the under-provisioning throttling risk at the *high* end of demand, but the minimum floor is still a fixed, guaranteed cost. This same min/max/target-threshold model applies identically to both RCU and WCU.
+
+---
+
+## Exam Framing
+
+> "Fixed, predictable capacity billed regardless of actual usage — risk of throttling if under-sized, risk of waste if over-sized" → **Provisioned mode, no auto-scaling.** "Same Provisioned mode, but capacity automatically flexes between a min and max based on a target utilization percentage" → **Provisioned mode with auto-scaling** — still fundamentally Provisioned (there's always a paid minimum floor), just with the manual guesswork removed at the margins. Contrast this against **On-Demand**, which has no min/max/threshold configuration at all and simply scales to match whatever traffic actually shows up.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["ProvisionedMode", "WarmThroughput", "SecondaryIndexes", "ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["WarmThroughput", "SecondaryIndexes", "ResourcePolicy", "GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 ---
 
-## Provisioned Capacity Mode
-
-You allocate a **fixed** RCU/WCU — you pay for it whether used or not. Best for **steady, predictable** workloads where you can estimate traffic and optimize cost.
-
-- **Under-provisioning** → requests get **throttled** (bad UX).
-- **Over-provisioning** → you pay for unused capacity.
-- **Auto-scaling** solves both: set a **min**, **max**, and **target utilization %** (e.g. 70%). DynamoDB scales allocated capacity up toward max when usage exceeds the target, and back down to min when traffic drops. You always pay for at least the min.
-
----
 
 ## Warm Throughput
 
