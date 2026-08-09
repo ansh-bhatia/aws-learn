@@ -2146,10 +2146,63 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 `,
     },
     {
+      id: "dynamodb-distributed-storage-architecture",
+      title: "DynamoDB Distributed Storage Architecture – Partitions, Leader Nodes, and Replica Nodes",
+      shortDesc: "Why the leader node is always strongly consistent and replica nodes are always eventually consistent — the mechanical reason behind DynamoDB's read-consistency options",
+      visuals: ["StorageArchitecture"],
+      content: `## Why This Matters Before Read/Write Consistency Makes Sense
+
+> ⚠️ **DynamoDB's read-consistency and write-consistency options are impossible to understand without first understanding how DynamoDB physically stores data** — the storage architecture is the mechanical reason those options exist at all, not an arbitrary API choice.
+
+**The foundational difference from RDS**: unlike a traditional database that stores data on a **single server**, DynamoDB **splits and distributes data across multiple servers called partitions.** This is exactly what makes DynamoDB's horizontal scaling possible — adding capacity means adding more partitions/nodes, not upgrading one machine.
+
+---
+
+## Partitions: The Storage Unit
+
+> **DynamoDB organizes data into partitions based on the partition key.** A partition can be thought of as an individual storage unit (conceptually similar to an SSD) — each item's partition-key value is hashed, and that hash determines **which specific partition** the item is stored on. (The hashing algorithm itself isn't publicly documented — the exam-relevant point is simply that partition key → hash → partition placement.)
+
+**Partitions are distributed across multiple servers** for scalability and performance — this is the physical realization of "horizontal scaling."
+
+---
+
+## Leader Nodes and Replica Nodes
+
+> **Each partition lives on a leader node**, which:
+> - Handles **all write requests**
+> - Provides **strongly consistent reads** (always returns the latest data)
+> - Replicates its data to **replica nodes** for durability
+
+> **Replica nodes** hold copies of a leader node's data, placed in **different Availability Zones**. They:
+> - Handle **eventually consistent reads** — faster and more cost-efficient, but may return slightly stale data
+> - Cannot handle write requests — writes only ever go to a leader node
+
+⚠️ **A leader node's replicas are spread across other AZs specifically for fault tolerance** — if the AZ containing a leader node fails entirely, the data isn't lost, since replica copies already exist elsewhere. A table typically has multiple leader nodes (one per partition), and **each leader node has its own set of replica nodes** in AZs other than its own.
+
+---
+
+## Walking Through a Write, Step by Step
+
+1. An item is written — DynamoDB hashes its partition key and selects the appropriate partition, which lives on a specific **leader node**.
+2. The write **completes on the leader node first.**
+3. The leader node then **replicates that write to its replica nodes** — this replication takes a small amount of time (microseconds to milliseconds), it is **not instantaneous.**
+
+**The consequence this creates**: reading immediately from the **leader node** after a write always returns the just-written value — this is why leader-node reads are called **strongly consistent**. Reading immediately from a **replica node** during that brief replication window may return the **old** value, since the replica hasn't caught up yet — this is why replica-node reads are called **eventually consistent** (they will reflect the update — just not necessarily right away).
+
+**Concrete example**: an item's value is updated from A to B. Reading from the leader node immediately afterward returns **B** (the new value, guaranteed). Reading from a replica node in that same instant might still return **A** — not because anything is broken, but because replication hasn't finished propagating yet.
+
+---
+
+## Exam Framing
+
+> "Read that is guaranteed to reflect the most recent write" → **leader node / strongly consistent read.** "Read that is faster/cheaper but might occasionally return slightly stale data" → **replica node / eventually consistent read.** The underlying reason is purely mechanical: **writes only happen on leader nodes; replication to replica nodes always takes a small but nonzero amount of time.** This exact mechanism is what the next topic's Read Consistency and Write Consistency models are built directly on top of.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2159,16 +2212,6 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 
 
 
-## Distributed Storage Architecture
-
-DynamoDB splits data across **partitions** on multiple servers (chosen by hashing the partition key).
-
-- **Leader Node** — handles all **writes** and **strongly-consistent reads**. Always has the latest data.
-- **Replica Nodes** — copies in **other AZs**. Handle **eventually-consistent reads** and provide high availability.
-
-A write commits on the Leader, then replicates to Replicas in micro/milliseconds. Read a Replica during that lag → you might get slightly **stale** data.
-
----
 
 ## Read Consistency (3 models)
 
