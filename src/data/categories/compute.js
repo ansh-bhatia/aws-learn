@@ -2185,6 +2185,50 @@ def lambda_handler(event, context):
 `,
     },
     {
+      id: "amazon-q-overview",
+      title: "Amazon Q – AWS's AI Agent for Cloud Troubleshooting and Lambda Coding",
+      shortDesc: "Not a chatbot — an AI agent that inspects real AWS resources and takes action, demonstrated through an SSH-troubleshooting comparison against ChatGPT",
+      visuals: [],
+      content: `## What Amazon Q Is
+
+> **Amazon Q is an AI agent developed by AWS** — deeply integrated into the AWS Management Console, IDEs, and business apps like Amazon QuickSight — for tasks like code generation and troubleshooting (developers), cloud infrastructure management (cloud engineers), and data analysis (business users). ⚠️ **Note: this is productivity-tooling content, not core SAA-C03 exam material** — it's covered here because the course uses Amazon Q as a teaching aid throughout the rest of the Lambda series, not because it's independently exam-tested.
+
+---
+
+## ⚠️ AI Agent vs AI Chatbot — The Core Distinction
+
+> **The defining difference: a chatbot (like ChatGPT) can only respond with suggestions; an agent (like Amazon Q) can actually inspect real AWS resources and take action on them**, because it's integrated directly with AWS APIs.
+
+**Worked comparison — "why can't I SSH into my EC2 instance?"**:
+- **ChatGPT** (no AWS integration): returns a generic list of possible causes — check if the instance is running, check the security group, check the network ACL, check the key pair. The user still has to manually go verify each one in the AWS console.
+- **Amazon Q** (AWS-integrated): asks for the instance ID, automatically inspects that instance's actual security group configuration, identifies the specific problem (e.g. "port 22 is not open in your inbound rules"), and — critically — **can add the missing inbound rule itself** if asked to.
+
+**A second example from the source lecture**: asked "why is my EC2 instance not responding," a chatbot suggests "check your logs" — Amazon Q **actually analyzes the logs itself** and returns the specific issue and a suggested fix, rather than telling the user what to go check manually.
+
+---
+
+## Where Amazon Q Fits by Role
+
+- **Cloud engineers**: explains AWS services and configuration, helps troubleshoot infrastructure, answers "how do I configure X" questions, and can even write IAM policy JSON directly.
+- **Developers**: generates and troubleshoots code snippets — directly relevant to the Lambda series, since later lectures use Amazon Q to help write Lambda function code.
+- **Business users**: natural-language queries against AWS data (e.g. via Amazon QuickSight) for reports and insights, without needing to manually query underlying services like CloudWatch.
+
+---
+
+## Amazon Q + Lambda: Inline Code Suggestions
+
+> **Within the Lambda console's code editor, Amazon Q can provide auto-suggested code as you type** — writing a comment describing the desired function (e.g. "write a Lambda function to stop an EC2 instance") and pressing Tab accepts an AI-generated implementation, without needing to leave the editor or write the logic by hand.
+
+**Demonstrated in the source lecture**: a commented instruction produces a working Python function using Boto3 to stop an EC2 instance — the same underlying pattern as the manually-written EC2-automation script from the earlier Lambda topics, just generated rather than typed. ⚠️ **The same practical gotchas still apply** — the instance ID must still be filled in, and the default 3-second timeout still needs to be increased, regardless of whether the code was hand-written or AI-generated.
+
+---
+
+## Exam Framing
+
+> This content is included for practical/productivity context rather than direct exam testing — but if a scenario question does distinguish "AI chatbot" from "AI agent with AWS integration that can take action," the agent framing (inspect real resources, execute changes, not just suggest) is the key concept to recognize.
+`,
+    },
+    {
       id: "lambda-2",
       title: "Lambda – Advanced (Part 2)",
       shortDesc: "Execution env, versions, concurrency, layers, VPC",
