@@ -2217,19 +2217,255 @@ SAA-C03 DynamoDB questions are **scenario-based** — match keywords to services
 > 🧊 Writes succeed with **4 of 6** copies; reads need **3 of 6** — so Aurora survives losing a full AZ plus one more copy without losing availability.`,
     },
     {
-      id: "elasticache",
-      title: "ElastiCache",
-      shortDesc: "In-memory caching (Redis / Memcached)",
-      content: `## ElastiCache
+      id: "elasticache-fundamentals",
+      title: "ElastiCache Fundamentals – In-Memory Caching for RDS",
+      shortDesc: "A managed NoSQL key-value store sitting in front of RDS, serving frequently-read data from RAM instead of disk",
+      visuals: [],
+      content: `## Three Ways to Improve RDS Performance
 
-**Amazon ElastiCache** is a managed **in-memory cache** (microsecond latency) that sits in front of a database to offload reads and speed up apps. Two engines:
+> RDS offers three distinct performance levers: **read replicas** (covered earlier), **RDS Proxy** (connection pooling), and **ElastiCache** — a dedicated in-memory caching layer. This topic covers ElastiCache's fundamentals.
 
-- **Redis** — rich data structures, **persistence**, replication, **Multi-AZ + automatic failover**, pub/sub, sorted sets, encryption. Use when you need HA or advanced features.
-- **Memcached** — simple, multi-threaded, easy horizontal scaling; pure cache, no persistence/replication.
+---
 
-**Caching strategies:** lazy loading, write-through, TTL. Common for **session stores, leaderboards, DB query caching**.
+## What a Cache Actually Is
 
-> Redis = features + HA; Memcached = simple & scalable. Need durability/failover/pub-sub → **Redis**.`,
+> **A cache is temporary storage for frequently-accessed data**, specifically to avoid repeatedly fetching the same data from a slower source like a database. The goal: fewer queries reaching the database, faster responses for users.
+
+> **ElastiCache is in-memory** — instead of reading from a hard disk or SSD (where a normal database stores data), it stores cached data directly in **RAM**. Memory is dramatically faster than disk, which is the entire source of the performance gain.
+
+---
+
+## What ElastiCache Is (Beyond Just RDS)
+
+> **Amazon ElastiCache is a managed, in-memory key-value NoSQL database service.** ⚠️ **A common misconception is that ElastiCache exists only to speed up RDS** — it doesn't. It's a standalone caching layer usable with many services and use cases: session management, real-time analytics, leaderboards, and more. Using it in front of RDS is simply one popular application of a more general-purpose service.
+
+---
+
+## How the Cache-Hit / Cache-Miss Flow Works
+
+1. **User A** sends a request through the **application server**
+2. The application server queries **ElastiCache first**
+3. **First time**: ElastiCache has nothing cached yet → **cache miss**
+4. The application server falls back to **RDS**, gets the data, and **populates the cache** with it for next time
+5. **User B** sends a similar subsequent request → the application server queries ElastiCache again → this time it's a **cache hit** → data returns instantly, **RDS is never touched for this request**
+
+> The net effect: as more requests hit the cache instead of the database, **RDS is freed up to focus on write operations**, since read traffic increasingly gets served from memory instead.
+
+---
+
+## Key Benefits
+
+- **Up to 80x faster reads** — caching frequently-requested query results
+- **Sub-millisecond latency** — genuinely faster than querying RDS directly, which typically responds in low milliseconds by comparison
+- **Up to 55% cost savings** — since the cache absorbs read load, the RDS instance doesn't need to be sized as large just to handle read-heavy traffic
+- **Serverless capability available** — ElastiCache can run without managing individual nodes/servers directly, covered in depth in the deployment-options topic
+
+---
+
+## Exam Framing
+
+> "Reduce read load on RDS with the fastest possible response time" → **ElastiCache**, distinct from read replicas (still hits a database, just a different one) and RDS Proxy (pools connections, doesn't cache data). Remember: **ElastiCache is a general-purpose caching/NoSQL service**, not an RDS-exclusive feature — a scenario describing session storage or real-time leaderboards outside any RDS context can still point to ElastiCache.
+`,
+    },
+    {
+      id: "elasticache-redis-vs-memcached",
+      title: "ElastiCache – Redis vs Memcached, via a Ride-Sharing App Example",
+      shortDesc: "Six real features a ride-sharing app needs — and which cache engine can actually deliver each one",
+      visuals: [],
+      content: `## The Two Cache Engines
+
+> ElastiCache supports exactly two engines: **Redis** and **Memcached**. Choosing between them is a recurring exam scenario, best understood through a concrete example: a ride-sharing app needing to match riders with nearby drivers in real time, at scale.
+
+---
+
+## Six Features, Compared Engine by Engine
+
+**1. Real-time driver matching (geospatial queries).** RDS alone must calculate distance-to-driver via a mathematical formula for every driver, every time — slow and resource-intensive at scale. ⚠️ **Redis has a built-in geospatial index**, finding nearby drivers in milliseconds without repeating the calculation. **Memcached cannot handle geospatial data at all** — it lacks this capability entirely.
+
+**2. Caching frequently-searched results.** Many riders searching the same popular route (e.g. downtown at rush hour) means RDS repeatedly processes identical queries. **Redis caches the result of a search** — a repeated query returns instantly from memory. **Memcached can also cache simple query results**, but doesn't handle complex/structured data updates as well as Redis.
+
+**3. Real-time notifications.** Notifying nearby drivers the instant a ride is requested needs real-time push messaging. ⚠️ **Redis has built-in pub/sub (publish/subscribe)**, notifying subscribed drivers instantly. **Memcached has no pub/sub support at all** — real-time notification simply isn't implementable with it.
+
+**4. Tracking active drivers.** Driver status (logged in/out) changes constantly, and updating this in RDS directly is expensive at scale. **Redis uses hashes and sets** to track active drivers in memory with instant updates. **Memcached can store basic status values, but lacks the structured data types** Redis offers here.
+
+**5. Driver leaderboards.** Ranking drivers by rating/completed rides in real time requires re-sorting large datasets — expensive if done via RDS queries on demand. ⚠️ **Redis has sorted sets**, maintaining rankings automatically as scores update — a genuinely real-time leaderboard with no extra computation. **Memcached has no sorted-set or ranking feature — leaderboards cannot be implemented with it.**
+
+**6. Data persistence.** RDS always persists data to disk, ensuring durability but at some performance cost. **Redis operates in memory but supports optional persistence** — critical cached data can be saved to disk, combining Redis's speed with a degree of RDS-like durability. **Memcached is memory-only, with zero persistence — any data is lost on a restart.**
+
+---
+
+## The Conclusion, Distilled
+
+> **RDS alone**: great for structured data, but struggles with real-time performance and scale under high traffic.
+
+> **RDS + Redis**: the right choice for **complex real-time use cases** — geospatial indexing, real-time messaging, sorted-set leaderboards — anywhere advanced data structures and durability options matter.
+
+> **RDS + Memcached**: the right choice when caching needs are **simple and lightweight** — no geospatial queries, no real-time messaging, no persistence requirement. Ideal for temporary, disposable caching where losing the cached data on a restart is genuinely acceptable.
+
+---
+
+## Exam Framing
+
+> The keyword pattern to watch for: **"geospatial," "pub/sub," "sorted sets/leaderboard," or "persistence"** in a scenario → **Redis**, every time — Memcached supports none of these. **"Simple," "lightweight," "high-speed caching without complex operations"** → **Memcached** is the intentionally simpler, cheaper-to-reason-about choice.
+`,
+    },
+    {
+      id: "elasticache-deployment-options",
+      title: "ElastiCache Deployment Options – Serverless Cache vs Design Your Own Cache",
+      shortDesc: "Hand the whole infrastructure to AWS, or take full manual control over nodes, shards, and replicas",
+      visuals: [],
+      content: `## Two Deployment Modes
+
+> After selecting a cluster type (Redis or Memcached), ElastiCache asks how the cache infrastructure itself should be set up and managed: **Serverless Cache** or **Design Your Own Cache**.
+
+---
+
+## Serverless Cache
+
+> **A fully-managed option where AWS handles the entire infrastructure automatically** — no hardware, no node configuration, no manual scaling decisions. Supported by **both Redis and Memcached**.
+
+**Key features:**
+
+- **Automatic scaling** — resources scale up and down based on actual application demand, with zero manual intervention
+- **Low overhead** — no node type, shard, or replica configuration required at all
+- **Pay-as-you-go** — billed for the resources actually consumed, whatever AWS decides to allocate
+
+**Best for**: applications with **unpredictable or fluctuating traffic**, where designing capacity in advance is genuinely difficult — quick, hassle-free deployment with scalability handled entirely by AWS.
+
+---
+
+## Design Your Own Cache
+
+> **Full manual control over the cache setup** — number of nodes, shards, replicas, and other advanced settings are all explicitly configurable.
+
+**Key features:**
+
+- **Advanced control and customization** — tailor node type, replica count, and overall architecture to a specific workload
+- **Cost optimization** — deliberately minimize replicas for small workloads, or scale up node types for large ones, tuning cost against performance directly
+- **Controlled scalability** — explicitly define node/replica counts rather than relying on automatic scaling decisions
+
+**Best for**: applications with **predictable workloads**, especially organizations migrating an existing, well-understood on-premises caching setup to the cloud and wanting to replicate that same level of control.
+
+---
+
+## ⚠️ Cluster Mode Is Only Available Here (and Only for Redis)
+
+> Choosing **Design Your Own Cache** with **Redis** exposes a further choice: **Cluster Mode Enabled** or **Cluster Mode Disabled**. ⚠️ **Cluster Mode only appears at all when Redis is selected — Memcached never shows this option**, since Memcached doesn't support sharding. Full depth on this distinction is covered in the next topic.
+
+---
+
+## Exam Framing
+
+> "Unpredictable, spiky traffic, minimal operational overhead" → **Serverless Cache**. "Predictable workload, need precise control over cost and node configuration" → **Design Your Own Cache**. Remember: **Cluster Mode is a Redis-only concept**, and only reachable through the Design Your Own Cache path.
+`,
+    },
+    {
+      id: "elasticache-cluster-mode",
+      title: "ElastiCache Cluster Mode – Shards, Primary Nodes, and Replicas (Redis Only)",
+      shortDesc: "Cluster Mode Enabled partitions data across many shards for horizontal scale; Disabled keeps everything on one shard",
+      visuals: [],
+      content: `## Core Terminology First
+
+> **A shard is a logical partition of the dataset**, consisting of exactly **one primary node** plus **0 to 5 replica nodes** for redundancy. Each shard manages a portion of the overall data — a cluster with 3 shards has its data divided into 3 parts.
+
+- **Primary node** — the main compute node inside a shard; handles **all write operations** and is the source for replication. Exactly one per shard.
+- **Replica node** — an exact copy of the primary within the same shard, serving two purposes: **offloading read traffic** (performance) and **automatic promotion to primary** if the primary fails (availability).
+
+---
+
+## ⚠️ Cluster Mode Is Redis-Only
+
+> **Cluster Mode is supported exclusively by Redis — Memcached does not support sharding at all**, and the option simply doesn't appear when Memcached is the selected engine.
+
+---
+
+## Cluster Mode Enabled
+
+> **Data is partitioned across multiple shards** — up to **500 shards** — each handling an independent portion of the dataset via a hashing mechanism.
+
+- **Horizontal scalability** — add more shards to handle growing data volume/traffic
+- **High performance** — distributing reads and writes across many shards means the cluster can handle a much higher combined request volume than a single node could
+- **High availability per shard** — each shard can have **up to 5 replicas**, and if a shard's primary fails, one of its own replicas is **automatically promoted** to primary within that shard
+
+> Example: choosing 3 shards with 2 replicas each creates **3 primary nodes and 6 total replica nodes** (3 × 2) — replica count is configured **per shard**, then multiplied out across however many shards exist.
+
+---
+
+## Cluster Mode Disabled
+
+> **Only a single shard exists**, handling the entire dataset — no partitioning at all. ⚠️ **Supported by both Redis and Memcached**, though the two engines behave differently within it (see below).
+
+- **Single node group** — the entire dataset lives on **one primary node**
+- **Optional replicas** can still be added for read scaling and availability, but there's no sharding — the config screen doesn't even ask about shard count, since it's fixed at exactly one
+- **Scalability is limited to the capacity of that single primary node** — vertical scaling only, no horizontal partitioning
+
+---
+
+## ⚠️ Redis Replicas vs Memcached "Replicas" — Genuinely Different Things
+
+**Redis (Cluster Mode Disabled)**: replicas are **exact copies** of the primary — they support both read scaling and automatic failover promotion, up to **5 replicas per primary**. This is a "true" replica in every sense.
+
+**Memcached**: added nodes are ⚠️ **NOT true replicas at all — they're independent nodes holding a partitioned subset of the data**, distributed via client-side hashing (e.g. 3 nodes might each hold roughly a third of the total data, not a full copy). This means Memcached "replicas" **improve read performance by spreading load**, but provide **zero high availability** — if one Memcached node fails, the data it held is simply **gone**, with no failover and no redundancy.
+
+> This distinction is genuinely easy to get wrong on the exam, precisely because the same UI label ("replica") means something structurally different for each engine.
+
+---
+
+## Exam Framing
+
+> "Horizontally scale a Redis cache across many nodes with automatic per-shard failover" → **Cluster Mode Enabled**. "Simple, single-node cache, works for either engine" → **Cluster Mode Disabled**. ⚠️ **The single most commonly tested trap in this topic**: a Memcached "replica" node is NOT a true copy and provides no failover — only Redis replicas behave the way most people intuitively expect a "replica" to behave.
+`,
+    },
+    {
+      id: "elasticache-exam-cheat-sheet",
+      title: "ElastiCache Exam Cheat Sheet – Terminology, Multi-AZ, Caching Strategies, Security",
+      shortDesc: "Cluster vs replication group, which engine supports Multi-AZ, the 6 caching strategies, and the auth/encryption comparison the exam loves",
+      visuals: [],
+      content: `## Terminology: "Cluster" vs "Replication Group"
+
+> ⚠️ **The same underlying Redis configuration (primary + replica nodes) is called a "cluster" in the AWS Console, but a "replication group" when referenced via the API or CLI.** This is purely a naming difference depending on which interface is used — the exam may use either term, and neither implies a different underlying concept.
+
+---
+
+## Multi-AZ Support
+
+> ⚠️ **Redis fully supports Multi-AZ (with automatic failover); Memcached does not support Multi-AZ at all.** Creating a Memcached cluster shows Multi-AZ as unavailable/disabled by default — there's no configuration path around this, it's a hard engine limitation.
+
+---
+
+## Six Core Caching Strategies
+
+**Read strategies:**
+
+- **Read-through caching** — the cache itself automatically fetches data from the database on a cache miss; the application never has to manage this logic directly
+- **Lazy loading (cache-aside)** — the application explicitly checks the cache first, and updates the cache itself only when there's a miss (the flow demonstrated in the fundamentals topic's cache-hit/miss walkthrough)
+- **TTL (Time To Live) expiration** — cached data automatically expires and is removed after a configured time period
+
+**Write strategies:**
+
+- **Write-through caching** — the cache is updated **simultaneously** with every database write
+- **Write-around caching** — data is written to the database **first**; the cache is only updated later, when that data happens to be read
+- **Write-behind caching** — data is written to the **cache first**, then persisted to the database afterward, in the background
+
+---
+
+## Authentication and Encryption — The Comparison Table
+
+| | **Redis** | **Memcached** |
+|---|---|---|
+| **Authentication token** | ✅ Supported | ❌ Not supported |
+| **ACL (Access Control List)** | ✅ Supported (Redis ACL) | ❌ Not supported |
+| **Encryption in transit** | ✅ Supported | ✅ Supported |
+| **Encryption at rest** | ✅ Supported | ❌ **Not supported** |
+
+> ⚠️ **The single most exam-relevant row: encryption at rest is Redis-only.** Memcached supports encryption in transit but never at rest — a scenario requiring both in-transit and at-rest encryption for cached data can only be satisfied by Redis.
+
+---
+
+## Exam Framing
+
+> This entire topic exists specifically to pre-empt common exam-wording confusion: **"cluster" and "replication group" are the same thing under different interfaces**; **Multi-AZ, authentication tokens, ACLs, and at-rest encryption are all Redis-exclusive features** with no Memcached equivalent. Memcached's value proposition is narrow and consistent across every comparison in this section: **simpler, cheaper, less capable** — the tradeoff is deliberate, not a missing feature to be surprised by.
+`,
     },
     {
       id: "redshift",
