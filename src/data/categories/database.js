@@ -2292,10 +2292,61 @@ Same transfer: Nitin's balance updates 3000 → 2000 **and** Rahul's balance upd
 `,
     },
     {
+      id: "dynamodb-rcu-read-capacity-unit",
+      title: "DynamoDB RCU – Calculating Read Capacity Units for All Three Consistency Models",
+      shortDesc: "One formula, three multipliers — the 4KB block-rounding rule plus a per-second/per-minute unit trap that catches real students",
+      visuals: ["RCUCalculator"],
+      content: `## What RCU Measures
+
+> **RCU (Read Capacity Unit) determines how much data an application can read from a DynamoDB table per second.** Calculating the right RCU requires three inputs: **item size, read frequency (reads per second), and which read-consistency model** is in use — a table for an app with 500 visitors/minute needs a very different RCU setting than one for an app with 5,000 visitors/minute.
+
+---
+
+## The 4KB Block Rule
+
+> ⚠️ **DynamoDB measures read operations in blocks of 4KB, always rounded UP to the nearest 4KB multiple** — a 6KB item is billed as if it were 8KB; a 10KB item is billed as if it were 12KB. This rounding applies regardless of how close the actual item size is to the next boundary — 7KB still rounds up to 8KB, only crossing to 12KB once the size passes 8KB.
+
+---
+
+## The Base Formula (Strongly Consistent)
+
+> **RCU = ⌈item size in KB ÷ 4⌉ × reads per second.**
+
+**Strongly consistent reads** are the baseline: **1 RCU reads one 4KB item per second.** Worked examples:
+- 4KB item, 100 reads/sec → (4÷4) × 100 = **100 RCU**
+- 6KB item (rounds to 8KB), 50 reads/sec → (8÷4) × 50 = **100 RCU**
+- 6KB item (rounds to 8KB), 3,000 reads/**minute** → convert first: 3,000÷60 = 50 reads/sec → (8÷4) × 50 = **100 RCU** (same answer as the previous line, just expressed per-minute)
+
+⚠️ **The unit trap**: source data is sometimes given as reads-per-**minute** rather than reads-per-**second**. Always convert to reads/sec first (divide by 60) — plugging a per-minute number directly into the formula produces a wildly inflated (and wrong) RCU.
+
+---
+
+## Eventually Consistent Reads — Half the RCU
+
+> **Eventually consistent reads cost 50% of strongly consistent reads** — 1 RCU can read **two** 4KB items per second (instead of one), because eventually consistent reads can be served from replica nodes rather than exclusively from the leader node.
+
+Worked examples (same scenarios as above): 4KB item, 100 reads/sec → (4÷4) × 100 ÷ 2 = **50 RCU**. 8KB item, 1 read/sec → (8÷4) × 1 ÷ 2 = **1 RCU** (vs 2 RCU for strongly consistent on the same item).
+
+---
+
+## Transactional Reads — Double the RCU
+
+> **Transactional reads consume double the RCU of strongly consistent reads**, due to the extra consistency mechanism (atomic multi-item reads) they provide.
+
+**The full price ladder relative to strongly consistent**: Eventually Consistent = **50%** of strongly consistent's RCU cost; Strongly Consistent = the **baseline (100%)**; Transactional = **200%** of strongly consistent's RCU cost.
+
+---
+
+## Exam Framing
+
+> Memorize the formula as **⌈item KB ÷ 4⌉ × reads/sec**, then apply the multiplier for the consistency model in use: **÷2 for Eventually Consistent, ×1 (unchanged) for Strongly Consistent, ×2 for Transactional.** Always check whether the given read rate is per-second or per-minute before calculating — this is a deliberately-planted trap in scenario questions, not an edge case to ignore.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2308,16 +2359,6 @@ Same transfer: Nitin's balance updates 3000 → 2000 **and** Rahul's balance upd
 
 
 
-## RCU — Read Capacity Unit
-
-Reads are measured in **4 KB blocks** (rounded up). Formula: **⌈item KB ÷ 4⌉ × reads/sec**, then:
-- **Strongly consistent:** 1 RCU = one 4 KB item/sec (use formula as-is).
-- **Eventually consistent:** **half** the RCU (1 RCU = two 4 KB items/sec).
-- **Transactional:** **double** the RCU.
-
-> ⏱️ Watch units — convert **reads/minute ÷ 60** first (3,000/min = 50/sec).
-
----
 
 ## WCU — Write Capacity Unit
 
