@@ -2654,10 +2654,54 @@ Worked examples: 1KB item, 100 writes/sec → Standard = 100 WCU → **Transacti
 `,
     },
     {
+      id: "dynamodb-global-tables",
+      title: "DynamoDB Global Tables – Multi-Region Active-Active Replication",
+      shortDesc: "A worked ShopX e-commerce example — three problems a single-region table creates for global users, and how Global Tables solves all three at once",
+      visuals: ["GlobalTables"],
+      content: `## The Scenario: ShopX Expands Beyond India
+
+**Worked example**: an e-commerce platform (ShopX) starts hosted only in the AWS Mumbai (India) region, correctly following the "host near your users" principle for its India-based customers. As the business grows and expands to serve **US and Europe customers too**, the single India-hosted table starts creating real problems.
+
+---
+
+## ⚠️ Three Problems a Single-Region Table Creates
+
+**1. High latency for distant users.** Every request from a US or Europe customer has to physically travel to India and back — over slower **international bandwidth** rather than domestic — producing noticeably slow response times for anyone far from the hosting region.
+
+**2. No regional failover.** DynamoDB's built-in Availability Zone resilience protects against an AZ failure, but ⚠️ **if the entire India region goes down, the table goes down with it** — affecting every user worldwide, Indian and international alike, since there's only one region hosting the data.
+
+**3. Single-table bottleneck.** As the user base grows to include US, Europe, AND India traffic simultaneously, one table now absorbs **worldwide** request volume instead of just domestic — becoming a genuine performance bottleneck as global scale increases.
+
+---
+
+## The Solution: Global Tables
+
+> **Global Tables replicate a DynamoDB table's data across multiple AWS regions chosen by the customer** (e.g. US East, Europe, alongside the original India region) — creating an exact, continuously-synced replica of the table in each selected region.
+
+**Demonstrated live in the source lecture**: an item added to the India table (order ID 101) appears in the US replica within seconds — and the reverse also works: an item added directly in the US table (order ID 102) appears back in the India replica just as quickly. ⚠️ **This is two-way (active-active) replication** — every regional replica can accept writes directly, not just reads.
+
+---
+
+## How This Solves All Three Problems
+
+**1. Low latency** — customers connect to the **replica closest to them** geographically, rather than crossing an ocean to reach a single home region. A US customer's request now stays within the US replica entirely.
+
+**2. High availability / disaster recovery** — since data is replicated in real time across multiple regions, **losing one entire region no longer takes the application down.** Traffic can shift to a surviving region's replica automatically.
+
+**3. Automatic data sync** — DynamoDB Global Tables **automatically replicate and synchronize data across every configured region**, regardless of which region a given write originated from — an order placed via the US replica, the Europe replica, or the India replica all converge to the same up-to-date state everywhere.
+
+---
+
+## Exam Framing
+
+> "Global user base experiencing high latency against a single-region table, plus a need for regional-failure resilience" → **DynamoDB Global Tables.** Remember the defining characteristic: **active-active, multi-writer replication** — every regional replica accepts writes, not just one primary region with read-only replicas elsewhere. This distinguishes Global Tables from typical single-writer, region-scoped replication patterns seen elsewhere in AWS.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["GlobalTables", "Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["Backups", "ExportToS3", "StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -2668,15 +2712,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 
 
-## Global Tables
-
-Multi-region, **active-active** replication. Solves high latency for global users, lack of regional failover, and single-table bottleneck.
-
-- Every replica is **writable**; changes replicate in ~seconds.
-- Benefits: **low-latency** local reads, **high availability / DR** (auto-failover), **automatic sync**.
-- Requires **DynamoDB Streams** (enabled automatically). **Eventually consistent**; conflicts resolved by **last-writer-wins** (timestamp).
-
----
 
 ## Backups
 
