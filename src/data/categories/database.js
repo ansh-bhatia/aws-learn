@@ -2247,10 +2247,55 @@ This still queries the leader node exclusively (same as strongly consistent), bu
 `,
     },
     {
+      id: "dynamodb-write-consistency",
+      title: "DynamoDB Write Consistency – Standard vs Transactional, Worked Through a Money-Transfer Example",
+      shortDesc: "Standard writes one item at a time and can lose money mid-transfer if step 2 fails; transactional writes both-or-neither, at double the cost",
+      visuals: ["WriteConsistency"],
+      content: `## Both Options Write Through the Leader Node
+
+> **Whether using Standard or Transactional write consistency, every write goes through the leader node** — replica nodes play no role in either write path; they exist purely for high availability and (for eventually consistent reads) read load-balancing. The distinction between the two options isn't *where* the write happens, but **how many items are written, and whether partial failure is tolerated.**
+
+⚠️ **Transactional writes cost roughly double what Standard writes cost** — understanding exactly why is the point of this comparison.
+
+---
+
+## The Worked Example: Nitin Transfers ₹1,000 to Rahul
+
+Nitin starts with ₹3,000, Rahul starts with ₹5,000. Nitin transfers ₹1,000 to Rahul — this single transfer is actually **two separate updates**: debit Nitin's account, credit Rahul's account.
+
+### Standard Write
+
+> **Standard write updates one item at a time, sequentially, as independent steps.**
+
+- **Step 1**: Nitin's balance updates 3000 → 2000. If this succeeds, the system proceeds to step 2.
+- **Step 2**: Rahul's balance updates 5000 → 6000.
+
+⚠️ **The failure scenario that makes this dangerous**: if step 1 succeeds but step 2 **fails** (network issue, timeout, anything) — Nitin is left at 2000 (money debited) while Rahul stays at 5000 (money never arrived). **₹1,000 has effectively vanished** — deducted from one account but never credited to the other. This is exactly the scenario a real bank cannot tolerate.
+
+### Transactional Write
+
+> **Transactional write updates multiple items together, atomically — either both updates succeed, or neither happens at all.**
+
+Same transfer: Nitin's balance updates 3000 → 2000 **and** Rahul's balance updates 5000 → 6000 **as a single all-or-nothing operation.** ⚠️ **There is no possible outcome where money leaves one account without arriving in the other** — if anything fails, the entire operation rolls back and both balances remain untouched, exactly as if the transfer had never been attempted.
+
+---
+
+## Why Banks Always Choose Transactional (Despite 2× the Cost)
+
+> A customer can tolerate a transfer simply **not going through** (retry later, no harm done) — but a customer **cannot** tolerate money disappearing from their account without ever reaching the recipient. Standard write consistency creates exactly that risk; transactional write consistency eliminates it entirely. **Financial systems always use transactional writes for this reason, even though the cost is double.**
+
+---
+
+## Exam Framing
+
+> "Multi-item update where partial completion is acceptable, cost-sensitive" → **Standard write.** "Multi-item update where partial completion would corrupt data integrity (money transfers, inventory reservations, anything requiring all-or-nothing correctness)" → **Transactional write**, accepting the 2× cost as the price of that guarantee. This same Standard-vs-Transactional distinction on the write side directly parallels Strongly-Consistent-vs-Transactional on the read side (from the prior topic) — both trade extra cost for atomicity across multiple items, feeding directly into the WCU (Write Capacity Unit) calculation covered next.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["RCUCalculator", "WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2262,12 +2307,6 @@ This still queries the leader node exclusively (same as strongly consistent), bu
 
 
 
-## Write Consistency (2 models)
-
-- **Standard write** — items written **one at a time**, independently. Risk: if step 2 fails after step 1 committed, money can be **lost**.
-- **Transactional write** — **all-or-nothing**; either both updates succeed or neither happens. Costs **2×** standard. Banks always use this.
-
----
 
 ## RCU — Read Capacity Unit
 
