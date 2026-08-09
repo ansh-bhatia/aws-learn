@@ -1335,10 +1335,123 @@ Backups older than the configured retention window are **automatically deleted**
 `,
     },
     {
+      id: "rds-encryption-at-rest",
+      title: "RDS Encryption at Rest – KMS, What Gets Covered, and the Enable-Only-At-Creation Rule",
+      shortDesc: "One checkbox encrypts storage, backups, snapshots, read replicas, and logs together — but only if flipped before the instance exists",
+      visuals: ["RDSEncryption"],
+      content: `## Why Encryption Matters for a Managed Database
+
+> Storing data in RDS means storing it on **AWS-managed storage, not infrastructure under direct control** — unlike on-premises, where the storage system itself is fully owned and controlled. Encryption is the answer to "what if that storage is ever compromised": encrypted data is unreadable without the corresponding key, regardless of who gains access to the underlying storage.
+
+---
+
+## ⚠️ The Rule That Matters Most: Enable at Creation, or Not At All
+
+> **Encryption must be enabled while creating the RDS instance. There is no direct toggle to enable it afterward on an existing, unencrypted instance.**
+
+**The workaround, if it's forgotten**: a **three-step process** —
+
+1. **Create a manual snapshot** of the existing unencrypted database
+2. **Copy that snapshot**, selecting **encryption enabled** during the copy
+3. **Restore a new database instance** from the now-encrypted snapshot
+
+> This produces a genuinely new instance, encrypted from that point forward — there is no way to encrypt the original instance in place.
+
+---
+
+## One Setting, Broad Coverage
+
+> **A single encryption checkbox covers the database storage itself, automated backups, manual snapshots, read replicas, and database logs — all at once**, not separate settings per component.
+
+---
+
+## Four Reasons to Enable It
+
+1. **Protects sensitive data** — inaccessible without proper authorization (the key)
+2. **Compliance requirement** — industries like healthcare and finance often have a **government or regulatory mandate** requiring data to be stored encrypted
+3. **Secures backups and snapshots** — everything derived from an encrypted instance inherits that protection automatically
+4. **Protects data at rest specifically** — the storage layer itself, as distinct from data actively moving between application and database (covered separately as encryption in transit)
+
+---
+
+## The Key: AWS KMS
+
+> **Enabling encryption requires a key, generated through AWS Key Management Service (KMS).** Two options:
+
+| | **Default AWS-managed key** | **Customer-managed key** |
+|---|---|---|
+| **Who manages it** | AWS, automatically | The account holder, via KMS |
+| **Convenience** | Encryption with zero key-management overhead | Requires actively creating and maintaining the key |
+| **Control** | Limited — no custom policy, no per-IAM-user key assignment | Full — custom access policies, specific IAM user/role permissions, configurable rotation |
+| **Best for** | "I just want encryption, no extra setup" | Compliance/security requirements demanding fine-grained control over who can use the key |
+
+---
+
+## What Actually Gets Encrypted
+
+- **Database storage** — the data itself, at rest
+- **Automated backups and manual snapshots**
+- **Read replicas** (even ones created later, after the base instance was already encrypted)
+- **Database logs**
+
+---
+
+## The One Real Limitation: Performance
+
+> ⚠️ **Encryption is fully transparent but not free** — every write is encrypted before being stored, and every read is decrypted before being returned. This adds a **minimal but real performance overhead**, worth factoring into capacity planning for encryption-sensitive, high-throughput workloads.
+
+---
+
+## Exam Framing
+
+> "Enable encryption on an already-running, unencrypted RDS instance" → **not directly possible** — the only path is **snapshot → copy with encryption → restore as a new instance**. "Full control over key policy and rotation" → a **customer-managed KMS key**, not the AWS-managed default.
+`,
+    },
+    {
+      id: "rds-encryption-in-transit",
+      title: "RDS Encryption in Transit – SSL/TLS Certificates (No Keys Involved)",
+      shortDesc: "A completely separate mechanism from at-rest encryption — a certificate installed on the application, not a KMS key",
+      visuals: [],
+      content: `## A Genuinely Different Mechanism
+
+> **Data in transit encryption protects data while it's actively moving between the application server and the database** — distinct from data at rest, which protects data sitting in storage. ⚠️ **This uses an SSL/TLS certificate, not a KMS key** — the two encryption types (at rest vs in transit) are configured through completely separate mechanisms within RDS.
+
+---
+
+## Where It Comes From
+
+> **RDS provides a ready-to-use SSL/TLS certificate**, available for download — the same **Certificate Authority** option surfaced during instance creation, and referenced earlier in the connectivity topic.
+
+---
+
+## How to Enable It
+
+1. **Download the certificate** RDS provides
+2. **Install it on the application/front-end server** — the side initiating connections to the database
+3. **Configure the application to use TLS** when connecting to RDS
+
+> Once installed and configured, every connection between that application server and the RDS instance is encrypted in transit — the certificate is what actually turns encryption on; simply having it available from RDS does nothing until it's installed and the application is configured to use it.
+
+---
+
+## ⚠️ Fully Optional, Independent of At-Rest Encryption
+
+> **Encryption in transit is entirely optional and independent of whether at-rest encryption is enabled.** An instance can have at-rest encryption on with in-transit communication still unencrypted (no certificate installed), or vice versa — the two settings don't imply or require each other.
+
+Skipping the certificate installation means application-to-database traffic stays in plain text, even if the underlying storage itself is fully encrypted.
+
+---
+
+## Exam Framing
+
+> "Encrypt data as it moves between the application and RDS" → **SSL/TLS certificate**, installed on the application server — not a KMS key, and not the same checkbox as at-rest encryption. A scenario combining both requirements needs **both** mechanisms configured separately: the at-rest checkbox at creation time, and the certificate installed on the app side for in-transit protection.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
-      visuals: ["RDSEncryption", "ReadReplicaVsStandby", "RDSAdvanced"],
+      visuals: ["ReadReplicaVsStandby", "RDSAdvanced"],
       content: `## RDS Part 2 — Operations, Security & Scaling
 
 Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, backups, encryption, replicas, and advanced features.
@@ -1349,15 +1462,6 @@ Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, back
 
 
 
-## Encryption
-
-Two layers:
-- **At rest (KMS)** — encrypts storage, **backups, snapshots, read replicas, and logs**. Must be enabled **at creation**; to encrypt an existing DB: snapshot → copy with encryption → restore.
-- **In transit (SSL/TLS)** — install the RDS cert on the app to encrypt app↔DB traffic.
-
-> Required for compliance (HIPAA, PCI…). Default AWS-managed key vs your own customer-managed KMS key (more control/rotation).
-
----
 
 ## Read Replica vs Readable Standby
 
