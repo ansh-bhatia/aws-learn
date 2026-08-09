@@ -2901,10 +2901,62 @@ The process: select the table → initiate export (via console, CLI, or SDK) →
 `,
     },
     {
+      id: "dynamodb-streams-and-triggers",
+      title: "DynamoDB Streams and Triggers – Reacting to Table Changes in Real Time",
+      shortDesc: "Streams capture what changed, triggers invoke Lambda when it does — worked through an Amazon order-notification example, step by step",
+      visuals: ["StreamsTriggers"],
+      content: `## Two Features That Work Together
+
+> **DynamoDB Streams and Triggers are two distinct but tightly-coupled features** — Streams tracks *what* changed, Triggers decides *what to do* about it. They're covered together because neither is genuinely useful without the other.
+
+---
+
+## DynamoDB Streams
+
+> **DynamoDB Streams tracks every change made to a table's data** — whenever an item is added, updated, or deleted, Streams records that change as an **event.** These events are stored for **24 hours**, available for other services to consume and act on.
+
+---
+
+## Triggers
+
+> **A Trigger automatically performs an action whenever a change occurs in the table** — it's the mechanism that connects DynamoDB Streams to an **AWS Lambda function.** When Streams logs a new event, the Trigger automatically invokes the Lambda function to process it.
+
+⚠️ **Triggers are entirely dependent on Streams** — without Streams enabled, a Trigger has no way to detect that anything changed in the table at all. Streams captures the event; Triggers is what reacts to it.
+
+---
+
+## Worked Example: Real-Time Order Notifications
+
+**The everyday experience**: placing an online order triggers an instant WhatsApp/email confirmation — and another instant message once it's delivered. Here's the mechanism behind that, step by step:
+
+1. **Place an order** — a user's order (item, quantity, price) is written into the DynamoDB table.
+2. **DynamoDB Streams captures the change** — the new item addition is recorded as an event and held for 24 hours.
+3. **Trigger invokes Lambda** — the Trigger, watching the stream, automatically invokes a Lambda function the moment the new event appears. (Enabling a Trigger in the console literally prompts: turn on DynamoDB Streams, then process the data in Lambda.)
+4. **Lambda integrates with a notification service** — the Lambda function pulls the changed data and hands it to something like **Amazon SNS**, or a third-party API (WhatsApp, email).
+5. **The notification is sent** — the confirmation message reaches the customer, effectively in real time.
+
+---
+
+## ⚠️ Three Exam-Critical Facts
+
+**1. Triggers cannot function without Streams enabled** — this dependency is absolute, not optional.
+
+**2. DynamoDB Streams is mandatory for Global Tables.** As covered in the Global Tables topic, creating a replica automatically enables Streams — **Global Tables literally cannot be created without it**, since Streams is exactly what propagates changes between regional replicas.
+
+**3. Streams also serves an auditing role** — beyond powering Triggers and Global Tables, Streams captures **detailed logs of every change, including who made it and when.** This makes it useful for security/compliance tracking independent of any Lambda integration.
+
+---
+
+## Exam Framing
+
+> "Automatically invoke a function in response to a DynamoDB item change" → **Trigger, which requires Streams to be enabled.** "How does a Global Table replicate changes between regions?" → **DynamoDB Streams**, automatically turned on the moment a replica is added. "Need an audit trail of who changed what and when in a DynamoDB table" → **DynamoDB Streams**, independent of whether Triggers/Lambda are even configured.
+`,
+    },
+    {
       id: "dynamodb-2",
       title: "DynamoDB – Advanced (Part 2)",
       shortDesc: "Provisioned, indexes, global tables, streams, backups, DAX",
-      visuals: ["StreamsTriggers", "DAXFlow", "ExamCheatSheet"],
+      visuals: ["DAXFlow", "ExamCheatSheet"],
       content: `## DynamoDB – Advanced (Part 2)
 
 This part covers the advanced features and exam-critical scenarios of DynamoDB.
@@ -2918,15 +2970,6 @@ This part covers the advanced features and exam-critical scenarios of DynamoDB.
 
 
 
-## Streams & Triggers
-
-**DynamoDB Streams** capture every item change (insert/update/delete) as events, stored **24 hours**. A **Trigger** connects the stream to a **Lambda** for real-time actions (e.g. Amazon's instant order notifications).
-
-> 📌 Triggers **require** Streams. Streams are also required for **Global Tables**, and log **who changed what & when** (auditing).
-
-**DynamoDB Stream vs Kinesis Data Stream:** Streams are built-in (just toggle on), 24h retention, included in pricing — for triggers/lightweight work. Kinesis is a separate service (shards, needs setup), up to **365 days** retention, separate cost — for advanced analytics & large-scale pipelines.
-
----
 
 ## DAX – DynamoDB Accelerator
 
