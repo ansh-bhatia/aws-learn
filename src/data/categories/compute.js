@@ -2229,35 +2229,152 @@ def lambda_handler(event, context):
 `,
     },
     {
+      id: "lambda-execution-environment",
+      title: "Lambda Execution Environment – Cold Starts, Warm Starts, and Netflix-Scale Auto-Scaling",
+      shortDesc: "Worked through Rohan opening Netflix — containers spun up on demand, reused when warm, and scaled to a thousand at once with zero manual provisioning",
+      visuals: ["ExecutionEnvironment3D"],
+      content: `## The Netflix Problem: Personalized Recommendations at Massive Scale
+
+> **Netflix delivers personalized recommendations to millions of users every second** — the challenge is processing millions of real-time requests, scaling dynamically during peak hours, keeping infrastructure cost down, and maintaining ultra-low latency, all simultaneously. Lambda is the mechanism that makes this economically and technically feasible.
+
+---
+
+## Worked Example: Rohan Opens Netflix
+
+1. **Rohan opens the Netflix app** — this triggers a recommendation request.
+2. **Netflix's backend sends the request to API Gateway**, which triggers a Lambda function.
+3. **AWS Lambda creates an execution environment (a container)** to process the request — ⚠️ **no resources are pre-provisioned; the container is created on demand**, the moment it's actually needed.
+
+---
+
+## What's Inside a Container (Briefly)
+
+> **A container is a lightweight virtual machine** — much faster to spin up than a full VM, since it doesn't carry the same overhead. Creating a container for a Lambda invocation involves: **allocating compute resources** (CPU, memory, networking), **initializing the runtime** (Python, Java, Node.js — whatever the function's language is), and **injecting the code and its dependencies.** All of this happens automatically — Netflix never manually allocates or manages any of it.
+
+---
+
+## ⚠️ Cold Start vs Warm Start
+
+> **Cold start**: the FIRST request for a given execution path has no existing container to reuse — Lambda must spin up a brand-new one from scratch (allocate resources → initialize runtime → inject code). This adds **roughly 100–300ms of extra latency** compared to a request hitting an already-warm container.
+
+> **Warm start**: a SUBSEQUENT request reuses an execution environment that's still alive from a recent invocation — no setup delay, response in milliseconds. **Worked example**: Rohan's first Netflix open of the day is a cold start (new container created); if Rohan browses to another recommendation shortly after, that request reuses the same still-live container — a warm start, with no added delay.
+
+---
+
+## How Lambda Scales for Netflix-Level Traffic
+
+> **AWS Lambda scales by launching additional containers, automatically, whenever existing ones are busy.** A worked capacity comparison from the source lecture: roughly **50 containers active during a low-traffic afternoon** vs **500 containers active during India's 8 PM peak viewing hour** — Netflix never manually provisions or manages any of this scaling. ⚠️ **1,000 simultaneous recommendation requests means Lambda creates roughly 1,000 execution environments**, with no delay and no bottleneck, since nothing needs to be pre-provisioned. Idle containers are automatically removed during low-traffic periods, directly reducing cost when demand drops.
+
+---
+
+## ⚠️ Three Ways to Reduce Cold Starts
+
+**1. Provisioned Concurrency** — a set number of "pre-warmed" containers are kept running at all times, ready to serve the very first request instantly (covered in depth in its own topic).
+
+**2. More memory/CPU allocation** — a container with more allocated resources spins up somewhat faster, reducing (but not eliminating) the cold-start delay.
+
+**3. Lambda Layers** — preloading large dependencies (e.g. an ML model) via a layer means the container doesn't have to load them fresh on every cold start (covered in depth in its own topic).
+
+---
+
+## Exam Framing
+
+> "First request to an idle Lambda function experiences noticeably higher latency than subsequent requests" → **cold start**, the direct result of container creation overhead (resource allocation + runtime init + code injection). "Massive, instant scale-out with zero manual server provisioning" → the core value proposition of Lambda's container-based execution model, exactly what makes it viable for Netflix-scale, bursty, unpredictable traffic.
+`,
+    },
+    {
+      id: "lambda-versions",
+      title: "Lambda Versions – Immutable Snapshots for Safe Rollback",
+      shortDesc: "Publishing a version freezes the code as read-only — $LATEST keeps changing, but v1/v2/v3 never do",
+      visuals: [],
+      content: `## Why Versioning Exists
+
+> **Publishing a Lambda version creates an immutable, read-only snapshot of the function's code at that exact moment** — enabling safe rollback if a later change breaks something. Without versioning, every deploy simply overwrites the function's current code, with no way to cleanly return to an earlier working state.
+
+---
+
+## $LATEST vs Published Versions
+
+> ⚠️ **$LATEST is the function's always-editable working copy** — every time code is edited and deployed, $LATEST changes. **A published version is a frozen snapshot of $LATEST at the moment of publishing** — version numbers increment automatically (v1, v2, v3...), and once published, that version's code **cannot be edited again.**
+
+**Demonstrated directly**: attempting to edit the code while viewing an already-published version (e.g. v1) is blocked — the editor reports it's read-only. To make further changes, editing has to happen back on **$LATEST** (the main, unversioned function), and a **new** version must be published to snapshot that change.
+
+---
+
+## The Publish-and-Roll-Forward Workflow
+
+1. Write and test code on $LATEST.
+2. Once satisfied, **Versions → Publish new version** (optionally adding a description) — this freezes the current $LATEST state as, say, v1.
+3. Continue editing $LATEST for the next change; test it.
+4. Publish again → v2 is created, capturing that next state. v1 remains untouched and fully intact.
+5. Repeat for v3, v4, and so on — each publish creates a new, permanent, read-only snapshot.
+
+⚠️ **Switching back to test any earlier version (v1, v2, etc.) is always possible** — nothing about publishing v3 affects v1 or v2's code. This is exactly what makes rollback safe: a broken v3 doesn't corrupt or overwrite the last known-good version.
+
+---
+
+## Exam Framing
+
+> "Need to safely test a code change while retaining the ability to instantly roll back to the previous working version" → **publish a version before making the change.** Remember: **$LATEST is the only ever-editable state; every published version (v1, v2, v3...) is permanently frozen the moment it's published.** This distinction is the direct prerequisite for understanding Aliases (covered next) and Provisioned Concurrency, both of which require targeting a specific published version rather than the constantly-changing $LATEST.
+`,
+    },
+    {
+      id: "lambda-aliases",
+      title: "Lambda Aliases – A Named Pointer That Lets You Switch Versions Without Changing the Trigger URL",
+      shortDesc: "The whole point: an API Gateway URL embedded in external code can't be changed on every deploy — an alias makes the version behind it swappable instead",
+      visuals: ["VersionsAliases"],
+      content: `## The Problem an Alias Solves
+
+> ⚠️ **A function's trigger — say, an API Gateway URL — always points at whatever version it was created against, by default $LATEST.** Directly triggering a function's URL always invokes the **latest** version, with no way to redirect it to an older one without literally recreating the trigger.
+
+**Why this is a real problem**: an API Gateway URL is typically **embedded in other code or systems** (a website's JavaScript, a mobile app, another service). ⚠️ **Changing that URL every time a rollback or version switch is needed is completely impractical** — every consumer of that URL would need to be updated too.
+
+---
+
+## What an Alias Actually Is
+
+> **An alias is a named pointer (e.g. "prod") that targets a specific version** — a trigger (like an API Gateway URL) can be built **against the alias itself, rather than against a specific version directly.** Since the alias's target version can be changed independently, the URL consumers actually hit **never has to change** — only what the alias points to changes.
+
+---
+
+## Setting Up an Alias-Based Trigger
+
+1. **Function → Aliases → Create alias.** Name it (e.g. "prod"), and select which version it should point to (e.g. the latest published version).
+2. Go to the **alias itself** (not the base function) and add a trigger there — e.g. a **new** API Gateway URL created specifically for that alias (⚠️ **distinct from any URL created directly on the base function** — they are two separate trigger setups, even if they currently return identical results).
+3. Consumers use the **alias's URL.**
+
+---
+
+## Switching Versions Without Changing the URL
+
+> **To roll back or advance, edit the alias's target version** — Aliases → select alias → Edit → change the pointed-to version → Save. ⚠️ **The API Gateway URL itself never changes** — only the version the alias resolves to changes, meaning every existing consumer automatically starts hitting the new target version on their very next request, with zero code changes on their end.
+
+---
+
+## Weighted Aliases: Canary and Blue/Green Deployments
+
+> **An alias can split traffic between TWO versions by percentage weight** — e.g. 50% of requests to version 2, 50% to version 3. This is exactly the mechanism behind **canary deployments** (gradually shifting traffic to a new version while monitoring for problems) and **blue/green deployments** (running two versions side by side during a controlled cutover).
+
+**Demonstrated directly**: setting a 50/50 weight between two versions on the same alias, then refreshing the trigger URL repeatedly, shows responses alternating between both versions' outputs — proving traffic really is being split at the alias level, invisibly to anyone hitting the single stable URL.
+
+---
+
+## Exam Framing
+
+> "Need to switch which Lambda version a live trigger points to, without changing the trigger's URL/ARN" → **Alias.** "Need to gradually shift a percentage of production traffic from one Lambda version to another" → **weighted alias**, the mechanism underlying canary and blue/green deployment patterns for Lambda specifically. Aliases and Versions work as a pair: **Versions provide immutable rollback targets; Aliases provide a stable pointer that can be redirected between those targets.**
+`,
+    },
+    {
       id: "lambda-2",
       title: "Lambda – Advanced (Part 2)",
       shortDesc: "Execution env, versions, concurrency, layers, VPC",
-      visuals: ["ExecutionEnvironment3D", "VersionsAliases", "Concurrency", "ReservedConcurrency", "ProvisionedConcurrency", "LambdaLayers", "LambdaVPC"],
+      visuals: ["Concurrency", "ReservedConcurrency", "ProvisionedConcurrency", "LambdaLayers", "LambdaVPC"],
       content: `## Lambda – Advanced (Part 2)
 
 How Lambda actually runs in the background, plus versioning, concurrency, layers and networking.
 
 ---
 
-## Execution Environment (Cold vs Warm Start)
-
-Lambda runs code inside **containers** (lightweight VMs). Netflix serves millions of recommendations this way.
-
-- **Cold start** — first request (or a scale-up): Lambda builds a new container → allocates CPU/memory/network → initializes the runtime → loads code + dependencies. Adds **~100–300 ms** of latency.
-- **Warm start** — reusing a still-live environment → no setup delay, responds in milliseconds.
-- **Scaling** — if all environments are busy, Lambda launches more (1,000 users → 1,000 environments), automatically; idle ones are removed.
-
-**Reduce cold starts** with: **provisioned concurrency**, more **memory/CPU**, or **Lambda layers** (preloaded deps).
-
----
-
-## Versions & Aliases
-
-- **Publish a version** → an immutable, read-only snapshot (v1, v2, …) for rollback. **$LATEST** stays editable.
-- **Alias** → a named pointer (e.g. \`prod\`) to a version. Point your API Gateway URL at the **alias**, so you switch versions **without changing the URL**.
-- **Weighted aliases** → split traffic between two versions (e.g. 50/50) for **canary / blue-green** deployments.
-
----
 
 ## Concurrency
 
