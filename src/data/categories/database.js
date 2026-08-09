@@ -2236,31 +2236,90 @@ This is the same underlying pattern seen elsewhere in AWS: one service (RDS) nee
 `,
     },
     {
-      id: "aurora",
-      title: "Aurora",
-      shortDesc: "Cloud-native MySQL/PostgreSQL-compatible high-performance DB",
-      visuals: ["AuroraFeatures", "ClusterStorage3D"],
-      content: `## Amazon Aurora
+      id: "aurora-origin-and-compatibility",
+      title: "Amazon Aurora – Origin Story, MySQL/PostgreSQL Compatibility, and Performance",
+      shortDesc: "Built in-house after Amazon outgrew Oracle — cloud-native from the ground up, running Amazon.com itself",
+      visuals: ["AuroraFeatures"],
+      content: `## Why Aurora Exists
 
-**Amazon Aurora** is AWS's **cloud-native** relational database — the only RDS engine built *for* the cloud rather than ported from on-prem. It combines **enterprise-grade** performance & availability with **open-source** (MySQL/PostgreSQL) cost. Amazon built it in-house after hitting performance, scaling, and licensing walls with Oracle — announced **2014**, migrated ~**75,000** databases. It's part of the RDS family.
+> **Amazon Aurora is a relational database service built by AWS specifically for the cloud** — unlike every other RDS engine (MySQL, PostgreSQL, MariaDB, Oracle, SQL Server), all of which were originally designed for on-premises infrastructure and later adapted to run in the cloud, **Aurora was designed cloud-native from day one.**
+
+**The origin story**: Amazon was once Oracle's largest customer, running its own e-commerce platform on Oracle databases. As Amazon's scale grew, it repeatedly hit **performance, scalability, and licensing** walls with Oracle — problems raised with Oracle directly but never resolved. Amazon's response: **build its own enterprise-grade database management system in-house**, capable of scaling to run the world's largest e-commerce platform.
+
+> **Aurora was announced in 2014**, and Amazon subsequently migrated roughly **75,000 databases** from Oracle to Aurora. Today, Amazon.com — serving over 315 million users worldwide — runs on Aurora. Aurora is now offered as **part of the RDS family**, available to any AWS customer.
 
 ---
 
-## 8 Unique Features
+## MySQL and PostgreSQL Compatible
 
-1. **MySQL & PostgreSQL compatible** — drop-in migration, no app code changes.
-2. **High performance** — up to **5×** MySQL and **3×** PostgreSQL throughput on the same instance size.
-3. **Cluster storage** — distributed storage layer (not plain EBS like other RDS engines):
- - **6-way replication across 3 AZs** (automatic, no config)
- - **Auto storage scaling** 10 GB → **128 TB** (RDS caps at 64 TB with manual auto-scaling)
- - **Self-healing** — detects & repairs corruption at the storage layer
-4. **Serverless** — Aurora Serverless auto-scales capacity for variable workloads.
-5. **Multi-AZ by default** — automatic failover to Aurora Replicas that **also serve reads** (2-in-1: HA + performance). Plain RDS Multi-AZ single-standby gives no read offload.
-6. **Global Database** — cross-region replication for low-latency global reads + disaster recovery.
-7. **Aurora Machine Learning** — run ML models directly inside SQL queries.
-8. **Parallel Query** — push complex analytics down to the storage layer.
+> **Aurora is compatible with both MySQL and PostgreSQL** — an application already built against either engine can migrate to Aurora **without any application code changes**, since Aurora speaks the same wire protocol and SQL dialect.
 
-> 🧊 Writes succeed with **4 of 6** copies; reads need **3 of 6** — so Aurora survives losing a full AZ plus one more copy without losing availability.`,
+This combines **enterprise-grade performance and availability** with the **cost structure and simplicity of an open-source database** — the value proposition in one sentence: Oracle-class capability, MySQL/PostgreSQL-class pricing and familiarity.
+
+---
+
+## Performance: The Numbers That Matter
+
+> **On the same instance size, Aurora delivers up to 5× the throughput of MySQL Community Edition, and up to 3× the throughput of PostgreSQL.**
+
+This isn't a marginal tuning improvement — it's a fundamentally different storage and replication architecture (covered in the next topic) delivering a genuinely large performance multiplier for workloads that would otherwise need meaningfully larger, more expensive instances to hit the same throughput on stock MySQL or PostgreSQL.
+
+---
+
+## Exam Framing
+
+> "MySQL or PostgreSQL-compatible database needing significantly higher throughput than the open-source engine provides, on the same instance size" → **Aurora**. Remember Aurora is explicitly **cloud-native by design**, not a cloud-hosted version of an on-premises engine — this distinction is exactly what the origin story is meant to make memorable.
+`,
+    },
+    {
+      id: "aurora-architecture-and-advanced-features",
+      title: "Amazon Aurora – Cluster Storage, Serverless, Multi-AZ, and Advanced Features",
+      shortDesc: "6-way replication across 3 AZs, auto-scaling to 128TB, reader nodes that actually serve reads by default, and 4 features RDS doesn't have at all",
+      visuals: ["ClusterStorage3D"],
+      content: `## Cluster Storage: Aurora's Core Architectural Advantage
+
+> ⚠️ **Aurora uses a distributed cluster storage layer instead of a plain EBS volume** — this is the single biggest structural difference from every other RDS engine, and the source of most of Aurora's other advantages. Creating an Aurora database surfaces a **"cluster storage configuration"** option that simply doesn't exist when creating a standard MySQL/PostgreSQL RDS instance.
+
+**Three concrete advantages this unlocks:**
+
+1. **6-way replication across 3 AZs, fully automatic** — every write is replicated six times, spread across three Availability Zones, with **zero manual configuration**. Standard RDS relies on plain EBS volumes with no equivalent built-in multi-copy replication at the storage layer.
+2. **Automatic storage auto-scaling from 10GB up to 128TB** — ⚠️ **no size needs to be specified at creation**, and it grows **without downtime or manual intervention** as data grows. Compare this to standard RDS, which caps at **64TB** and requires manually enabling and configuring Storage Auto Scaling (covered in an earlier topic) rather than having it on by default.
+3. **Self-healing storage** — the storage layer **automatically detects and repairs data corruption** on its own. Standard RDS has no equivalent capability.
+
+> 🧊 **The quorum detail worth remembering**: writes succeed once **4 of the 6** storage copies acknowledge; reads only need **3 of the 6**. This means Aurora can survive losing an **entire AZ, plus one additional copy**, without losing either read or write availability — a stronger guarantee than a simple "2 copies in 2 AZs" model would provide.
+
+---
+
+## Aurora Serverless
+
+> **Aurora Serverless automatically scales database capacity up and down based on actual demand**, with no manual provisioning of instance size — ideal for workloads with unpredictable or highly variable traffic. Aurora also still supports manually choosing a fixed instance size for predictable workloads, exactly like standard RDS — serverless is an additional option, not a replacement for the provisioned model.
+
+---
+
+## Multi-AZ by Default — With a Real Performance Benefit
+
+> ⚠️ **Aurora supports Multi-AZ deployment by default, with automatic failover to Aurora Replicas that also actively serve read traffic** — a genuine 2-in-1 combination of high availability **and** read performance, out of the box.
+
+Contrast this directly with standard RDS: a **plain Multi-AZ DB Instance** gives automatic failover but the standby handles **zero** read traffic — pure availability, no performance benefit (covered in depth in the RDS availability-options topics earlier in this section). RDS only closes this gap with its newer **Multi-AZ DB Cluster** option, which offers reader nodes similar in spirit to what Aurora has provided as its default model from the start.
+
+---
+
+## Four Advanced Features RDS Doesn't Have At All
+
+**1. Global Database** — replicates an Aurora database across **multiple AWS regions**, enabling **low-latency global reads** and serving as a disaster-recovery mechanism. ⚠️ **This is meaningfully different from a standard RDS cross-region read replica** — Global Database is a purpose-built, more capable replication feature specific to Aurora, not simply "the same cross-region replica concept RDS also has."
+
+**2. Aurora Machine Learning** — integrates ML models **directly into database queries**, so predictions can be generated as part of a SQL query without exporting data to a separate ML service first.
+
+**3. Parallel Query** — offloads complex query processing **down to the storage layer itself**, accelerating analytics and reporting workloads that would otherwise burden the compute layer.
+
+**4.** (Covered above) **Cluster storage's self-healing and 128TB auto-scaling** — also has no standard-RDS equivalent.
+
+---
+
+## Exam Framing
+
+> "Multi-AZ database where the standby/replica ALSO serves read traffic, by default, with no extra configuration" → **Aurora**, not standard RDS Multi-AZ Instance. "Cross-region database replication with low-latency global reads AND disaster recovery in one feature" → **Aurora Global Database**, distinct from a standard RDS cross-region read replica. "128TB storage ceiling with automatic, no-downtime scaling from 10GB" → **Aurora cluster storage**, versus RDS's 64TB cap requiring manually-configured Storage Auto Scaling.
+`,
     },
     {
       id: "elasticache-fundamentals",
