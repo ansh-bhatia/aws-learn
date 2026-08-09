@@ -1900,69 +1900,289 @@ Watch each state change appear in the console. Type **exit** to leave.
 `,
     },
     {
-      id: "lambda",
-      title: "Lambda – Fundamentals (Part 1)",
-      shortDesc: "Serverless compute — run code without managing servers",
-      visuals: ["FunctionAnatomy", "AuthoringOptions", "ExecutionRole", "EC2Automation", "LambdaTriggers"],
-      content: `
-## Your First Function
+      id: "lambda-first-function-lab",
+      title: "Creating Your First Lambda Function – Hello World, Step by Step",
+      shortDesc: "def lambda_handler(event, context) is not optional — the event-trigger model is exactly why a plain script won't work here",
+      visuals: ["FunctionAnatomy"],
+      content: `## Why a Lambda Function Isn't Just a Script
+
+> ⚠️ **Lambda's event-driven nature means code cannot simply run top-to-bottom like a normal script** — an event happens, that event triggers the function, and the function sends back a response. This trigger→response structure is exactly why Lambda requires code to be wrapped inside a specific function definition, rather than accepting arbitrary standalone code.
+
+---
+
+## Creating the Function
+
+1. In the Lambda console, choose **Create function → Author from scratch.**
+2. Provide a **function name** (e.g. "Hello World").
+3. Choose a **runtime** — e.g. Python.
+4. Choose a **processor architecture** — **x86_64** is the standard default choice.
+5. Choose an **execution role** — for a first function, "create a new role with basic Lambda permissions" is the simplest path (execution roles are covered in depth in their own topic).
+6. Click **Create function.**
+
+---
+
+## Anatomy of a Lambda Function
 
 \`\`\`python
 def lambda_handler(event, context):
-  return "Hello World"
+    return "Hello World"
 \`\`\`
 
-- **lambda_handler(event, context)** — the entry point Lambda calls on each trigger. \`event\` = trigger input; \`context\` = runtime info.
-- **return** — sends a value back as the **response**.
-- **print** — writes to **CloudWatch Logs** (not returned to caller).
-
-Workflow: write → **Deploy** → create a **Test event** (JSON passed in as \`event\`) → **Test**.
+- **def lambda_handler(event, context):** — ⚠️ **the function definition is mandatory, not optional** — since an external event is what triggers execution, the code must be wrapped in a function that event can invoke. **lambda_handler is the default, fixed function name** provided by AWS (it can be changed, but the default is the standard starting point).
+- **event** and **context** — parameters automatically managed by Lambda; they aren't something to configure manually when starting out.
+- **return** — ⚠️ **use return, not print, when the goal is to send a value back as the response** to whatever triggered the function. A plain print() call does NOT get returned to the caller — it only writes to **CloudWatch Logs**, which is useful for debugging but is not the function's actual output.
 
 ---
 
-## Ways to Create a Function
+## Testing the Function
 
-- **Author from scratch** — write your own code (pick runtime + architecture).
-- **Blueprint** — ready-made sample functions for common cases (e.g. DynamoDB read/write); tweak instead of writing from scratch.
-- **Container image** — package as a Docker image (own base OS + runtime), push to **ECR**, run as Lambda.
+Since Lambda is event-driven, it needs *something* to trigger it — Lambda provides a built-in way to simulate this without a real external service:
 
-**Unsupported language?** Two container options:
-- **Container Image** — any base OS, runtime bundled in; for ML (TensorFlow), big custom apps.
-- **OS-only Runtime** — fixed Amazon Linux base, you install the runtime; e.g. run an unlisted Node.js version.
+1. Click **Test** → **Create new test event**, give it a name (e.g. "my-test-event"), and save.
+2. Click **Test** again to actually invoke the function with that event.
+3. The console reports **"execution result: succeeded"** along with the function's response — for the Hello World example, the response is literally "Hello World", exactly matching the return statement.
 
 ---
 
-## Execution Role
+## Exam Framing
 
-AWS services are **isolated** — Lambda needs an **IAM execution role** (an identity it assumes) to touch other services.
-- Even "Hello World" needs the **basic execution role** (\`AWSLambdaBasicExecutionRole\`) to write to **CloudWatch Logs**.
-- To read S3, add S3 permissions; to start EC2, add EC2 permissions; etc.
+> "Lambda function structure requires a defined entry-point function (lambda_handler by default), because execution is always triggered by an external event rather than run directly" — this event-triggered nature is the conceptual foundation for everything that follows: authoring options, execution roles, and the trigger types covered in later topics.
+`,
+    },
+    {
+      id: "lambda-blueprints-test-events",
+      title: "Lambda Blueprints and Passing Test Event Data",
+      shortDesc: "Ready-made functions for common AWS patterns, plus how key-value JSON passed into a test event actually reaches the function's code",
+      visuals: [],
+      content: `## What a Blueprint Is
+
+> **AWS provides pre-built, ready-to-use Lambda functions called Blueprints** for common, frequently-seen use cases — reading/writing DynamoDB data being one concrete example the source lecture calls out. ⚠️ **Using a blueprint means not writing the function from scratch** — the code is already provided; only minor customization (e.g. plugging in a specific table name) is typically needed.
+
+**Why blueprints exist**: AWS has visibility into the most common Lambda usage patterns across its customer base, so it packages those patterns as ready-made starting points rather than leaving every customer to reinvent the same logic independently.
 
 ---
 
-## EC2 Automation with Boto3
+## Choosing a Blueprint
 
-**Boto3** is AWS's Python SDK to manage resources from Lambda.
+1. **Create function → Use a blueprint** (instead of Author from scratch).
+2. Select a blueprint (the source lecture uses a simple "Hello World" blueprint for illustration) — the **runtime is automatically selected** to match the language the blueprint is written in.
+3. As with any function, choose an execution role (a new role is created automatically if needed).
+
+---
+
+## Passing Data Into a Test Event
+
+> **A test event isn't limited to a fixed structure — custom key-value pairs can be added as JSON**, and that data becomes accessible to the function's code through its event parameter.
+
+**Worked example**: adding a test event with **key1 = "Cloud Fox Hub"** and **key2 = a name value** — the function (per the blueprint's own code) returns the value associated with **key1** as its actual response, while **all the entered key-value pairs appear in the CloudWatch log output**, regardless of which one is returned.
+
+⚠️ **This distinction matters**: the *returned* value is what's sent back as the response to whatever triggered the function; *everything else passed in* is still visible, but only in the logs — not in the response itself. This is the same return-vs-print distinction from the first-function topic, just demonstrated with real input data this time.
+
+---
+
+## Exam Framing
+
+> "How would test data be supplied to a Lambda function before wiring up a real trigger like S3 or API Gateway?" → **a test event, expressed as a JSON key-value payload**, which the function accesses via its event parameter. Blueprints are best understood as accelerators for common patterns, not a fundamentally different execution model from an authored-from-scratch function.
+`,
+    },
+    {
+      id: "lambda-container-images",
+      title: "Lambda Container Images vs OS-Only Runtime – Running Unsupported Languages",
+      shortDesc: "Go, Rust, and C++ have no built-in Lambda runtime — two container-based escape hatches, compared point by point",
+      visuals: ["AuthoringOptions"],
+      content: `## The Problem: Unsupported Languages
+
+> **AWS Lambda provides preconfigured runtimes only for a specific set of popular languages** — Python, Node.js, Java, .NET, Ruby among them. ⚠️ **Languages without an official Lambda runtime — the source lecture names Go, Rust, and C++ specifically — have no predefined runtime option to select at all.**
+
+For exactly this situation, Lambda offers **two container-based paths.**
+
+---
+
+## Option 1: Container Image
+
+> **A full container image is built (including the base OS AND the runtime), then run as the Lambda function.** The image is created using **Docker** (via a Dockerfile), and can use **any base operating system** — Alpine Linux, Ubuntu, Amazon Linux, or others — entirely at the developer's discretion. ⚠️ **The runtime must be included inside the container image itself** — nothing is installed after the fact; the image is fully self-contained on arrival.
+
+**Best for**: deploying something like a **machine learning model with TensorFlow** in a fully custom container, or any large, complex application needing a specific, controlled environment from the base OS up.
+
+---
+
+## Option 2: OS-Only Runtime
+
+> **AWS provides a container with ONLY a base operating system** — ⚠️ **fixed to Amazon Linux** (2023 or Amazon Linux 2, not a free choice like Option 1's base OS) — and the runtime must be **installed separately, after the fact**, inside that fixed base.
+
+**Best for**: a lighter-weight scenario — e.g. running a **specific Node.js version not listed** among Lambda's standard supported versions, by installing that exact version onto the Amazon Linux base rather than building a full custom image from scratch.
+
+---
+
+## Five-Point Comparison
+
+| Aspect | Container Image | OS-Only Runtime |
+|---|---|---|
+| Base OS | Any (Alpine, Ubuntu, Amazon Linux, etc.) | ⚠️ Fixed — Amazon Linux only |
+| Runtime | Bundled into the image at build time | Installed separately, after choosing the base |
+| Control | Full control over OS, runtime, and dependencies | Runtime/dependencies controllable; **OS is fixed** |
+| Best for | Full custom environments, large/complex apps | Lightweight setups, one unsupported runtime version |
+| Example use case | ML model (TensorFlow) in a custom container | An unlisted Node.js version on Amazon Linux |
+
+**Deployment mechanics**: a Container Image must be built and then **uploaded to Amazon ECR (Elastic Container Registry)** before Lambda can reference and run it — an extra step not required for a standard runtime-based function.
+
+---
+
+## Exam Framing
+
+> "Language/framework has no official Lambda runtime available" → **either Container Image (full custom OS+runtime control) or OS-Only Runtime (fixed Amazon Linux base, install the runtime yourself)**, chosen based on how much OS-level flexibility the workload actually needs. Remember: Container Image goes through **ECR** as a required intermediate step.
+`,
+    },
+    {
+      id: "lambda-execution-role",
+      title: "Lambda Execution Role – Why Even 'Hello World' Needs One",
+      shortDesc: "AWS services are fully isolated from each other by default — the PDF-watermarking example shows exactly why an IAM role is the only way through",
+      visuals: ["ExecutionRole"],
+      content: `## Why Execution Roles Exist at All
+
+> ⚠️ **All AWS services are completely isolated from one another by default.** For one service to act on another — Lambda reading from S3, Lambda starting an EC2 instance, anything — explicit permission must be granted via an **IAM role**, which the accessing service assumes as its own identity.
+
+---
+
+## Worked Example: Automatic PDF Watermarking
+
+**The scenario**: an application lets users upload PDF files to an S3 bucket, and every uploaded PDF should automatically get a company watermark added. A Lambda function is the natural mechanism — triggered by the S3 upload event, it accesses the newly-uploaded PDF and adds the watermark.
+
+⚠️ **But Lambda cannot access that PDF in S3 by default** — S3 and Lambda are isolated services. **An IAM role granting Lambda permission to access the S3 bucket must exist and be attached to the function** before this works. The same logic applies to any other cross-service action — starting an EC2 instance, writing to DynamoDB, anything.
+
+---
+
+## Creating and Attaching a Role
+
+1. In **IAM → Roles → Create Role**, choose **Lambda** as the trusted AWS service.
+2. Attach the needed permissions (e.g. **Amazon S3 Full Access** for the watermarking scenario — though a narrower, custom-scoped policy is the better real-world practice over a broad managed policy).
+3. Name and create the role.
+4. Back in the Lambda function's configuration, select **Use existing role** and choose the newly-created role.
+
+AWS also provides **predefined policy templates** as a middle ground between "create everything by hand" and "just use a broad managed policy."
+
+---
+
+## ⚠️ Why Even a "Hello World" Function Needs an Execution Role
+
+**The question that trips people up**: a plain Hello World function doesn't touch S3, EC2, or any other AWS service — so why does creating it still require choosing an execution role?
+
+> **The answer: writing to CloudWatch Logs is ITSELF a cross-service action.** Lambda and CloudWatch are separate, isolated services just like Lambda and S3. When a function uses print() (rather than return), that output has to be written somewhere — and it's written to **CloudWatch Logs.** ⚠️ **The default "basic Lambda execution role" exists specifically to grant this CloudWatch-logging permission** — it's not an arbitrary default, it's the minimum permission every function needs to produce any visible log output at all.
+
+**Verifying this**: after running a function that uses print() instead of return, the test response comes back **null** (since nothing was returned) — but clicking **Monitor → View CloudWatch Logs** reveals the printed output was captured there, proving the default execution role's CloudWatch-writing permission is what made that visibility possible.
+
+---
+
+## Exam Framing
+
+> "Why does a Lambda function need an execution role even when it doesn't call any other AWS service in its own code?" → **because writing logs to CloudWatch is itself a cross-service call**, and the basic execution role is what grants that specific permission. Any *additional* service access (S3, EC2, DynamoDB, etc.) requires *additional* permissions layered on top of that baseline — the execution role is cumulative, not a single fixed grant.
+`,
+    },
+    {
+      id: "lambda-ec2-automation-boto3-lab",
+      title: "Lambda + Boto3 Lab – Automating EC2 Start/Stop from Python",
+      shortDesc: "Two prerequisites (an EC2 instance and an IAM role), one Boto3 call, and a timeout tweak most people miss on the first run",
+      visuals: ["EC2Automation"],
+      content: `## What Boto3 Is
+
+> **Boto3 is AWS's official Python SDK** — a library that lets Python code manage AWS resources programmatically. It's specifically what makes it possible to write Lambda functions in Python that start EC2 instances, read/write S3 objects, query DynamoDB, and interact with essentially any other AWS service.
+
+**Real-world Lambda automation examples the source lecture calls out**: sending an SMS/OTP alert, resizing an uploaded image, processing an e-commerce order, generating an invoice, sending appointment reminders. This lab builds the simplest possible version of that pattern — a function that starts a stopped EC2 instance.
+
+---
+
+## Prerequisite 1: An EC2 Instance
+
+> **An EC2 instance must already exist (and be in a Stopped state)** before building a function to start it — there's nothing to automate the starting of otherwise.
+
+---
+
+## Prerequisite 2: An IAM Role for Lambda → EC2 Access
+
+> ⚠️ **By default, Lambda has zero permission to manage EC2 instances** — the same cross-service isolation principle covered in the Execution Role topic applies here directly. A role must be created granting Lambda the ability to start/stop EC2 instances.
+
+**Creating the role**: **IAM → Roles → Create Role**, trusted service = **Lambda**, attach **EC2 Full Access** AND the **basic Lambda execution permission** (the same CloudWatch-logging permission from the prior topic — without it, this function's logs would be invisible too). Name it something like "Lambda-EC2-Role."
+
+---
+
+## Writing the Function
 
 \`\`\`python
 import boto3
 ec2 = boto3.client('ec2', region_name='ap-south-1')
+
 def lambda_handler(event, context):
-  ec2.start_instances(InstanceIds=['i-0abc123'])
-  return "Started"
+    ec2.start_instances(InstanceIds=['i-0abc123'])
+    return "Started"
 \`\`\`
 
-Prerequisites: an EC2 instance + an IAM role (EC2 access + basic execution). Increase the default **3-second timeout** (e.g. to 10 s) so the instance has time to start.
+- **boto3.client('ec2', ...)** — creates a client object for interacting with EC2, scoped to a specific **region** (must match the region the target instance actually lives in).
+- **ec2.start_instances(InstanceIds=[...])** — the actual API call that starts the named instance(s).
 
 ---
 
-## Triggers
+## ⚠️ The Timeout Trap
 
-A function does nothing until a **trigger** invokes it (added manually):
-- **API Gateway** — exposes an HTTP URL; hitting it (e.g. a webpage button) runs the function.
-- **EventBridge** — schedule (cron) or event patterns; e.g. start EC2 at 9 AM, stop at 6 PM.
-- **S3** — object events (upload/delete).
-- Plus **Alexa, ALB, CodeCommit, DynamoDB Streams, SNS, SQS**, and more.`,
+> **Lambda's default execution timeout is 3 seconds** — starting an EC2 instance genuinely takes longer than that. ⚠️ **A function that correctly starts an EC2 instance can still fail/timeout if the 3-second default isn't increased** — bumping it to something like 10 seconds is a necessary configuration step, not optional cleanup.
+
+---
+
+## Testing and Verifying
+
+1. Create a test event (no JSON payload needed for this simple case) and run **Test.**
+2. A successful execution reports the instance as started.
+3. **Verify two ways**: check the EC2 console directly for the instance's now-Running state, or check **Monitor → View CloudWatch Logs** for the function's own printed confirmation output.
+
+---
+
+## Exam Framing
+
+> "Lambda function correctly calls an AWS API but the invocation fails or times out" → check **both** the execution role's permissions **and** the configured timeout — a correct IAM role with an unchanged 3-second default timeout is a realistic failure mode for anything that takes real time to complete (like starting an EC2 instance), not just a permissions issue.
+`,
+    },
+    {
+      id: "lambda-triggers",
+      title: "Lambda Triggers – API Gateway and EventBridge, Worked Through a Start/Stop EC2 Example",
+      shortDesc: "A function with no trigger attached is completely inert — click-driven access via API Gateway vs scheduled cron-style access via EventBridge",
+      visuals: ["LambdaTriggers"],
+      content: `## A Function Does Nothing Without a Trigger
+
+> ⚠️ **Triggers are not automatic — they must be added manually to a Lambda function**, from the function's **Add trigger** option (or the Configuration tab). Without a trigger attached, a function simply never executes, no matter how correct its code is.
+
+**Demonstrated directly**: removing a function's existing trigger (e.g. an API Gateway trigger) causes a previously-working "click this button to start my EC2 instance" webpage to stop doing anything at all — the button still exists, but nothing is listening for the click anymore.
+
+---
+
+## Trigger Type 1: API Gateway (Click-Driven)
+
+> **API Gateway exposes an HTTP endpoint (a URL) that, when hit, invokes the Lambda function.**
+
+**Setup**: **Add trigger → API Gateway → Create a new API** (HTTP API is the simpler option) → choose security level (the lecture uses "Open" — no auth — for demonstration simplicity, though a real deployment would typically restrict this). This produces a **URL** that triggers the function whenever it's accessed.
+
+**Worked example**: a simple webpage with a "Start EC2" button, where the button's action is simply hitting that generated API Gateway URL — clicking it invokes the Lambda function, which calls the EC2 start-instance API, and the instance transitions from Stopped to Running.
+
+---
+
+## Trigger Type 2: EventBridge (Schedule-Driven)
+
+> **EventBridge triggers a function on a schedule (cron-style) or in response to event patterns** — the natural fit for "run this automatically at a specific time," rather than "run this when a user clicks something."
+
+**Worked example**: automatically stopping an EC2 instance on a schedule — **Add trigger → EventBridge → Create a new rule**, choose **Schedule expression**, and supply a cron expression (AWS provides ready-made example expressions for common intervals — every N minutes, a specific daily time, etc.).
+
+**Real business use case this generalizes to**: starting all company EC2 instances automatically at 9 AM and stopping them at 6 PM, entirely without manual intervention — a cost-saving, hands-off automation pattern built from exactly this trigger type.
+
+---
+
+## Choosing Between Them
+
+> **The right trigger type depends entirely on what should cause the function to run.** A user-initiated action (clicking a button, submitting a form) → **API Gateway.** A time-based or recurring schedule → **EventBridge.** (Lambda also supports many other trigger sources — S3 object events, DynamoDB Streams, SNS, SQS, Alexa, ALB, CodeCommit, and more — each fitting a different "what should cause this to run" scenario.)
+
+---
+
+## Exam Framing
+
+> "A Lambda function's code is correct, but it never seems to execute" → check whether a **trigger** is actually attached — a function with no trigger is inert by design, since Lambda's entire model is event-driven. "User-initiated, on-demand execution via a URL/webpage" → **API Gateway.** "Recurring/scheduled execution, e.g. daily EC2 start/stop" → **EventBridge**, using cron-style schedule expressions.
+`,
     },
     {
       id: "lambda-2",
