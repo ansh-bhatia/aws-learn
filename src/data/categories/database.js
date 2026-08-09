@@ -1503,6 +1503,66 @@ Skipping the certificate installation means application-to-database traffic stay
 `,
     },
     {
+      id: "rds-maintenance",
+      title: "RDS Maintenance – Windows, Minor vs Major Upgrades, and Deletion Protection",
+      shortDesc: "AWS applies security patches and minor upgrades automatically during a scheduled window — impact depends entirely on the deployment type",
+      visuals: [],
+      content: `## What Maintenance Covers
+
+> **A maintenance window is a scheduled time slot during which AWS applies security patches, software updates, and minor version upgrades to an RDS instance** — the same underlying need as on-premises database maintenance, just AWS-managed instead of self-managed.
+
+⚠️ **Whether to allow this at all is a real choice**: leaving the option unchecked keeps the current version exactly as-is, with no automatic patches or upgrades applied. Checking it authorizes AWS to apply these changes — a reasonable trade given that RDS being a managed service means there's no hardware, OS, or engine-level access to apply patches manually anyway.
+
+---
+
+## Choosing the Maintenance Window
+
+> **The window can be set explicitly (day, start time, duration up to 8 hours) or left as "No preference," letting AWS pick automatically.**
+
+⚠️ **Best practice: choose a window during genuinely low-traffic hours** — e.g. late Saturday night for a business-hours-heavy application — since maintenance activity, especially patching, can carry a real performance impact while it's running.
+
+---
+
+## Minor vs Major Version Upgrades
+
+> **Minor version upgrades (e.g. MySQL 5.6.1 → 5.6.2) are applied automatically during the maintenance window.** They're considered safe, low-risk changes within the same version series.
+
+> ⚠️ **Major version upgrades (e.g. MySQL 5.6 → 5.7) are NEVER applied automatically** — they can include feature and configuration changes significant enough to require application-side testing or code adjustments for compatibility. These must be **initiated manually**, deliberately, at a time chosen by the operator — never silently applied during a routine maintenance window.
+
+**Maintenance tasks in scope**: security patches, software updates, minor version upgrades, and underlying hardware maintenance.
+
+> The maintenance window setting isn't locked in at creation — it **can be changed at any time** after the instance exists, and AWS sends **notifications ahead of upcoming scheduled maintenance** so there's advance warning.
+
+---
+
+## Maintenance Impact Depends Entirely on Deployment Type
+
+This is explicitly flagged as one of the most exam-relevant details in the whole topic:
+
+| Deployment | Impact During Maintenance |
+|---|---|
+| **Single DB Instance** | ⚠️ **Real downtime** — the only instance goes offline while patches apply. Best suited for non-critical workloads; choosing a genuinely low-traffic window matters most here. |
+| **Multi-AZ DB Instance** | Patches apply to the **standby first**, then a **quick failover** promotes the newly-patched standby to primary (which then gets patched itself). Downtime is limited to the brief failover switch, not the full patching duration. |
+| **Multi-AZ DB Cluster** | Updates apply **in stages across instances** without ever taking the primary offline — effectively **zero downtime or service interruption**. |
+
+> The pattern across all three: **more redundancy in the deployment model directly buys less maintenance-related downtime** — the exact same tradeoff seen throughout the availability-options topics earlier in this section.
+
+---
+
+## Deletion Protection
+
+> **A separate feature that blocks any delete attempt on the instance**, adding a deliberate extra safeguard specifically for production or otherwise critical databases.
+
+⚠️ **To delete a protected instance, deletion protection must be disabled first** — a required extra step that exists specifically to prevent an accidental delete from succeeding on the first click. Full hands-on practice with this is covered in a dedicated later lab.
+
+---
+
+## Exam Framing
+
+> "MySQL 5.6.1 → 5.6.2 happens automatically; 5.6 → 5.7 requires manual action" → the **minor vs major upgrade** distinction, always tested together. "Which deployment type has zero maintenance downtime?" → **Multi-AZ DB Cluster**, specifically because updates roll out in stages without ever taking the primary offline. "Prevent accidental deletion of a production database" → **deletion protection**, which must be explicitly disabled before a delete can succeed.
+`,
+    },
+    {
       id: "rds-2",
       title: "RDS – Operations & Scaling (Part 2)",
       shortDesc: "Connectivity, monitoring, backups, encryption, replicas, proxy",
@@ -1531,11 +1591,6 @@ Day-2 operations for RDS: connectivity, authentication, monitoring, tuning, back
 
 ---
 
-## Maintenance
-
-A **maintenance window** lets AWS apply patches, software updates, and **minor** version upgrades (e.g. 5.6.1 → 5.6.2). **Major** upgrades (5.6 → 5.7) are **manual** (may need app changes). Impact by deployment: Single-AZ = downtime; Multi-AZ = brief failover switch; Multi-AZ Cluster = ~no downtime. **Deletion protection** blocks accidental deletes (disable it first to delete).
-
----
 
 ## Advanced Features
 
