@@ -2052,10 +2052,58 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 `,
     },
     {
+      id: "dynamodb-core-components-and-keys",
+      title: "DynamoDB Core Components – Table, Item, Attributes, and Primary Key Types",
+      shortDesc: "Simple primary key (partition-only, must be globally unique) vs composite primary key (partition + sort, unique only in combination)",
+      visuals: ["CoreComponents"],
+      content: `## The Three Building Blocks
+
+> **Table** — the top-level container that holds your data, similar to a table in a relational database but designed for high performance and scalability. Data displays in a table-like grid of rows and columns, but under the hood **DynamoDB actually stores everything as key-value pairs** — the table view is a presentation layer over that.
+
+> **Item** — a single record inside a table (≈ a row in a relational database). Each item is **uniquely identified by the table's primary key**.
+
+> **Attribute** — an individual piece of data within an item (≈ a column). Attributes can hold strings, numbers, lists, maps, and more.
+
+---
+
+## ⚠️ No Fixed Schema — Attributes Are Defined Per-Item
+
+> **DynamoDB does not enforce a fixed schema for attributes.** In MySQL, the schema is defined up front and every row must conform to it. In DynamoDB, **you define attributes as you add each item** — meaning different items in the *same table* can carry different attributes entirely.
+
+**Concrete example**: an orders table might have most items with customerID, orderAmount, orderDate, and orderID — but one specific item (say, customer C004) could additionally carry an orderItem attribute and a mobile-number attribute that no other item has. Adding this extra attribute doesn't require altering a schema or touching any other item — it's simply defined at the moment that one item is created.
+
+---
+
+## Primary Key: Two Types
+
+> **Every DynamoDB table must specify a primary key at creation** — it uniquely identifies each item so no two items can share the same key. DynamoDB supports exactly **two kinds of primary key**.
+
+### 1. Simple Primary Key (Partition Key Only)
+
+> A simple primary key is composed of **exactly one attribute — the partition key.** ⚠️ **This attribute's value must be unique across the entire table** — attempting to add an item with a partition-key value that already exists fails outright ("An item with the primary key you provided already exists").
+
+**How it works internally**: DynamoDB feeds the partition key's value into an **internal hash function**. The hash output determines **which physical storage partition** the item lands on — DynamoDB runs on distributed cluster storage behind the scenes, and this hash is how it decides where any given item actually lives. ⚠️ **A high-cardinality (varied, well-spread) partition key value spreads items across more partitions, which improves performance** — the exact reasoning behind DynamoDB's "choose an attribute with many distinct values" partition-key guidance.
+
+### 2. Composite Primary Key (Partition Key + Sort Key)
+
+**The problem a simple primary key can't solve**: imagine customerID as the sole partition key on an orders table. The very first time a customer places an order, an item is created — but the moment that *same customer* places a **second** order, adding a new item with the same customerID fails, since the partition key must be unique. One customer, one order, permanently — clearly wrong for a real orders system.
+
+> **The fix is a composite primary key** — composed of **two attributes: a partition key plus a sort key.** ⚠️ **Multiple items CAN now share the same partition key value, as long as their sort key values differ** — only the *combination* of the two must be unique. A customer placing 5 orders becomes 5 items, all sharing the same customerID (partition key) but each with a distinct orderID (sort key).
+
+⚠️ **The sort key must be defined at table-creation time — it cannot be added to an already-existing table.** A table created with only a partition key can never retroactively gain a sort key; a fresh table (with both keys specified up front) is the only way to get a composite primary key.
+
+---
+
+## Exam Framing
+
+> "An attribute that must be unique across every item in the table, on its own" → **simple primary key (partition key only)**. "Two attributes together, where the first can repeat as long as the second differs" → **composite primary key (partition key + sort key)** — this is the standard pattern whenever a single entity (a customer, a device, a session) needs to own **multiple** related records over time. Remember the sort key is a table-creation-time decision, not something bolted on later.
+`,
+    },
+    {
       id: "dynamodb",
       title: "DynamoDB – Fundamentals (Part 1)",
       shortDesc: "NoSQL: SQL vs NoSQL, components, storage, consistency, RCU/WCU",
-      visuals: ["CoreComponents", "TableClass", "StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
+      visuals: ["TableClass", "StorageArchitecture", "ReadConsistency", "WriteConsistency", "RCUCalculator", "WCUCalculator", "CapacityMode"],
       content: `## DynamoDB – Fundamentals (Part 1)
 
 **Amazon DynamoDB** is a fully managed, **serverless NoSQL** database built for fast storage and retrieval even at huge traffic. 1 million+ customers (Disney, Dropbox, Snap, Zoom). It is **faster than every RDS engine** (except Aurora) for key lookups, auto-scales horizontally, and is perfect for real-time apps — gaming, IoT, e-commerce.
@@ -2063,17 +2111,6 @@ Both scale **horizontally** (adding more servers) rather than vertically — the
 ---
 
 
-## Core Components & Keys
-
-- **Table** → top-level container.
-- **Item** → a single record (≈ row), identified by the primary key.
-- **Attributes** → individual data fields (≈ columns) — **dynamic**, items can differ.
-
-**Primary key types:**
-- **Simple primary key** = **partition key** only → must be **unique**. DynamoDB hashes it to choose a storage partition. A good (high-cardinality) partition key spreads data across partitions → better performance.
-- **Composite primary key** = **partition key + sort key** → only the **combination** must be unique. Lets one customer place many orders (same partition key, different sort key). *Sort key must be defined at table creation.*
-
----
 
 ## Table Class
 
