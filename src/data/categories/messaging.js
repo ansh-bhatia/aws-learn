@@ -6,6 +6,52 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-hands-on-lab-producer-consumer-ec2",
+      title: "SQS Hands-On Lab – Producer and Consumer EC2 Apps, Proving the Pull-Based Flow End to End",
+      shortDesc: "One IAM role attached to BOTH EC2 instances, since neither can push or pull from the queue without explicit permission — then watching the message count genuinely rise and fall as it's sent, pulled, and deleted",
+      visuals: [],
+      content: `## The Architecture: Two Separate EC2 Instances, One Shared Role
+
+> **The lab requires three things: a producer, a queue, and a consumer.** ⚠️ **Two SEPARATE EC2 instances are deliberately used — one as producer, one as consumer — rather than combining both on one machine, specifically to keep the lab clean and unambiguous about which side is doing what.** Both instances run identical Ubuntu 22 AMIs; the only real difference between them is which USER DATA SCRIPT each one runs (a producer web UI script vs a consumer web UI script).
+
+---
+
+## ⚠️ Step 1: Create the Queue (Standard, Default Configuration)
+
+> Create a standard queue with default configuration — default encryption, no access policy configured (IAM handles permissions instead), redrive allow policy and DLQ deliberately skipped for this simple lab. ⚠️ **The resulting Queue URL is the single most important artifact from this step — it's what both the producer and consumer applications actually use to push/pull messages.**
+
+---
+
+## ⚠️ Step 2: One Shared IAM Role for Both Instances
+
+> **Neither EC2 instance can push or pull messages from the queue without explicit permission — an IAM role must be created and attached to BOTH the producer and consumer instances.** ⚠️ **Create ONE role (trusted entity: EC2, permission: Amazon SQS Full Access — a custom, queue-scoped policy would be the stricter production choice, but full access is used here to keep focus on the lab flow) and attach that SAME role to both instances** — this follows the established best practice of using an IAM role rather than hardcoded access keys (the same pattern reinforced across every earlier EC2-to-AWS-service lab this session).
+
+---
+
+## Steps 3-4: Launch the Producer and Consumer EC2 Instances
+
+> Identical instance configuration for both (Ubuntu 22, free-tier instance type, default VPC, public IP auto-assign enabled, HTTP inbound allowed to reach the web UI) — attach the SAME IAM role from Step 2 to both — the only real difference is which user data script is pasted in (producer script vs consumer script) during launch.
+
+---
+
+## ⚠️ Testing: Watching the Queue's Message Count Actually Change
+
+> **The validation checklist**: (1) open the producer app's public IP over HTTP (⚠️ **watch out for browsers auto-prepending HTTPS to a bare IP — must be corrected to HTTP or the app won't load**, the same gotcha covered in the earlier ECS lab), paste the queue URL and region, send a test message → the queue's "receive message" count rises from 0 to 1. (2) Open the consumer app, paste the same queue URL and region, pull the message → the message is received AND automatically deleted (receive-and-delete) → pulling again immediately returns nothing, and the queue's message count drops back to 0. ⚠️ **This end-to-end count change — 0 → 1 → 0 — is the concrete proof the pull-based mechanism genuinely works**, not just a theoretical description.
+
+---
+
+## ⚠️ Role Clarification: What a Cloud Engineer Is (and Isn't) Responsible For
+
+> **The producer/consumer web app code itself is explicitly NOT something a cloud engineer/architect needs to write** — that's an application developer's job. ⚠️ **The cloud engineer's actual responsibilities in this lab: create the queue, provide its URL, and set up the IAM role granting the necessary permissions** — the application code is a given, provided directly rather than something to build from scratch.
+
+---
+
+## Exam Framing
+
+> "Two separate EC2 instances (a producer and a consumer) both need to interact with the same SQS queue" → **one IAM role, attached to BOTH instances, granting the necessary SQS permissions** — neither instance can push or pull without it, since AWS services never have implicit permission to act on each other. This is purely a lab-mechanics topic reinforcing IAM-role-over-hardcoded-credentials, and the practical proof that SQS's pull-based delivery genuinely removes and doesn't just hide a processed message (0 → 1 → 0 message count).
+`,
+    },
+    {
       id: "sqs-encryption-sse-sqs-vs-kms",
       title: "SQS Encryption – SSE-SQS's Zero-Config Simplicity vs KMS's Full Key Control",
       shortDesc: "Both options encrypt messages at rest, but only KMS lets you actually control permissions, rotation, and auditing on the key itself — SSE-SQS is fully AWS-managed and completely invisible to you",
