@@ -5146,6 +5146,38 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-capstone-project2-introduction",
+      title: "ECS Capstone Project – Deploying a Web App on Fargate: The 9-Step Execution Plan",
+      shortDesc: "The second, cleaner build-from-scratch project — reusing the already-pushed ECR image, but this time following AWS best practices for VPC, security groups, and load balancer from step one",
+      visuals: [],
+      content: `## Purpose: Turning Terminology Into an End-to-End Build
+
+> **This is a second, ground-up capstone project — hosting a web application on ECS Fargate, reusing the same Docker image already built and pushed to ECR in the earlier project.** ⚠️ **Unlike the earlier project's incremental exploration of individual task-definition and service options, this one is executed as one clean, best-practices-first build from the very first step** — VPC design, security groups, cluster, ALB, task definition, service, and auto scaling, all built in the correct dependency order.
+
+**Reused from the earlier project**: ⚠️ **the container image already pushed to ECR, and S3 as the application's storage backend** — no need to rebuild or re-push the image.
+
+---
+
+## ⚠️ The 9-Step Execution Plan
+
+1. **Set up the VPC** — following AWS best practices (public + private subnets across multiple AZs, matching the earlier networking topic's design).
+2. **Set up security groups** — ⚠️ **TWO separate security groups are needed: one protecting the Application Load Balancer, and a separate one protecting the task itself** — not a single shared security group for both.
+3. **Create the ECS cluster** — using Fargate (serverless, no EC2 instances to manage).
+4. **Set up the Application Load Balancer** — required to expose the task (which lives in a private subnet) to the internet.
+5. **Verify the ECR image** — confirm the previously pushed image is ready to be pulled.
+6. **Create/verify the ECS task definition** — referencing the ECR image, IAM roles, networking, and all the configuration options covered in the earlier task-definition lecture series.
+7. **Create the ECS Fargate service** — launching the actual running tasks from the task definition, integrated with the ALB.
+8. **Enable service auto scaling** — applying the scaling policy concepts (target tracking or step scaling) covered earlier.
+9. **Verify the service** — confirming the application is genuinely reachable and functioning end-to-end.
+
+---
+
+## Exam Framing
+
+> This lecture is purely a scoping/roadmap overview for the hands-on build that follows — ⚠️ **the one concrete, testable detail worth remembering is the TWO-security-group split: one dedicated to the ALB, one dedicated to the task**, rather than a single shared security group covering both. This separation is what allows the ALB's inbound rule (open to the internet on the app port) to stay distinct from the task's inbound rule (restricted to ONLY the ALB's security group as its source) — the concrete mechanism covered in the next steps of this build.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
