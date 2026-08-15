@@ -6,6 +6,72 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-lambda-event-source-mapping-vs-ec2-polling",
+      title: "SQS + Lambda – Why Event Source Mapping Exists (and Who Actually Owns It)",
+      shortDesc: "Lambda's code never contains a single line of polling logic — AWS itself polls the queue on Lambda's behalf via Event Source Mapping, a facility that belongs to Lambda even when you set it up from the SQS console",
+      visuals: [],
+      content: `## EC2 Worker vs Lambda Consumer: Fundamentally Different Polling Models
+
+> **EC2 worker nodes are ALWAYS running — the application code inside them contains the polling logic itself, continuously checking the queue whenever the instance is free.** ⚠️ **Lambda is event-driven and NOT always on — it structurally CANNOT continuously poll a queue the way an EC2 worker does, since that would require running 24/7, defeating the entire point of serverless.**
+
+---
+
+## ⚠️ The Key Fact: Lambda Never Polls SQS Itself
+
+> **AWS polls SQS on Lambda's behalf** — Lambda's own function code never contains any polling logic at all. This connection is called **Event Source Mapping**: an AWS-managed configuration that continuously polls the SQS queue, reads messages in batches, and automatically invokes the Lambda function when there's work to do.
+
+### ⚠️ Ownership: Event Source Mapping Belongs to Lambda, Not SQS
+
+> **Even though it can be configured from either side — from the SQS console (choose Lambda as the trigger) or from the Lambda console (add SQS as a trigger) — the resulting Event Source Mapping is always a Lambda-owned resource.** SQS's role is limited to storing and providing messages; Lambda owns all pulling and invocation behavior.
+
+---
+
+## Scaling: No Servers, No Auto Scaling Group, No Configuration
+
+> **Lambda scaling is nothing like EC2 auto scaling** — there are no servers, no Auto Scaling Groups, and no scaling policies to configure at all, because Lambda is serverless. ⚠️ **AWS continuously polls via Event Source Mapping — as message count rises, AWS automatically increases the number of Lambda invocations; as the queue empties, invocations automatically reduce.** This scaling is instant and fully automatic, entirely handled by Event Source Mapping — there's no metric like EC2's queue-depth-driven Auto Scaling to configure.
+
+---
+
+## Exam Framing
+
+> "How does a Lambda function receive messages from an SQS queue, given that Lambda isn't always running?" → **Event Source Mapping — an AWS-managed facility that polls SQS continuously and invokes Lambda automatically, NOT any polling code inside the Lambda function itself.** ⚠️ **Remember the ownership trap: configuring the trigger from the SQS side doesn't make it an SQS feature — Event Source Mapping is, and always remains, a property of the Lambda function.**
+`,
+    },
+    {
+      id: "sqs-priority-processing-paid-vs-free-queues",
+      title: "Priority Processing With SQS – Multiple Queues, Because SQS Itself Has No Priority Concept",
+      shortDesc: "Amazon SQS does not understand paid vs free, urgent vs routine — it only stores and delivers messages in arrival order, so 'priority' has to be engineered entirely OUTSIDE the queue, using separate queues per priority tier",
+      visuals: [],
+      content: `## ⚠️ The Core Fact: SQS Has Zero Native Priority Support
+
+> **Amazon SQS does not support priority within a single queue — it has no concept of "important" vs "unimportant" messages, and processes strictly in arrival order.** ⚠️ **A single mixed queue genuinely cannot fulfill a priority requirement**: if a free user's request arrives before a paid user's, the free request gets processed first regardless of business priority — the paid customer ends up waiting behind the free one.
+
+---
+
+## The Fix: Separate Queues Per Priority Tier
+
+> **Solution: one high-priority queue (e.g. paid) and one low-priority queue (e.g. free) — the PRODUCER decides which queue each message goes to** (it already knows whether the user is paid or free). ⚠️ **Priority logic lives entirely OUTSIDE SQS — SQS itself still treats both queues as ordinary, equally-important queues; the "priority" only exists in how the consumer/worker chooses to drain them.**
+
+---
+
+## Priority With an EC2 Worker: Just Application Code
+
+> **Traditional EC2-based worker: write the polling logic to check the paid queue FIRST, and only pull from the free queue when the paid queue is empty.** Since polling logic lives inside the consumer's application code, prioritization is simply a matter of which queue that code checks first — the free queue only ever gets processed when the paid queue is genuinely drained.
+
+---
+
+## ⚠️ Priority With Lambda: No Polling Code to Write — Use Reserved Concurrency Instead
+
+> **Lambda's polling is handled entirely by Event Source Mapping — there's no application code where a "check this queue first" rule could even be written.** ⚠️ **The Lambda solution: create TWO separate Lambda functions, one per queue (one dedicated to the paid queue, one to the free queue) — NOT one Lambda function serving both.** Then set **Reserved Concurrency** disproportionately — e.g. 100 for the paid-queue Lambda, 10 for the free-queue Lambda — meaning the paid function can run far more parallel executions at once. ⚠️ **Result: with a 100-vs-10 split, paid video conversion runs roughly 10x faster than free — not because SQS prioritized anything, but because the paid Lambda function was simply given far more parallel processing capacity.**
+
+---
+
+## Exam Framing
+
+> "Paid customers' jobs must be processed before free customers' jobs, but SQS has no built-in priority setting" → **create separate queues per tier, and implement priority in the CONSUMER**: for EC2, poll the high-priority queue first in the worker's own code; for Lambda, use separate functions per queue with disproportionate Reserved Concurrency (more for the high-priority function). ⚠️ **The exam trap: SQS itself is never the place priority logic lives — it only stores and delivers messages, unaware of any business meaning behind them.**
+`,
+    },
+    {
       id: "sqs-fifo-throughput-limit-per-queue-vs-per-message-group",
       title: "FIFO Throughput Limit – Per Queue vs Per Message Group ID",
       shortDesc: "300 messages/sec applied to the WHOLE queue vs 1 message/sec per group scaling with however many groups your producer creates — neither is 'better', it's purely a question of whether your consumer can actually keep up",
