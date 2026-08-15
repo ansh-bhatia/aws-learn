@@ -6,6 +6,66 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-waf-edge-protection",
+      title: "API Gateway Layer 3 – WAF Edge Protection: Blocking Attacks Before the Request Even Reaches API Gateway",
+      shortDesc: "WAF sits ahead of everything else in the security stack, filtering out malicious traffic at Layer 7 before API Gateway itself ever processes the request",
+      visuals: [],
+      content: `## ⚠️ WAF: The Highest Level of Protection, First in Line
+
+> **Edge protection secures the API at the entry point — BEFORE any request reaches API Gateway at all.** ⚠️ **This is provided by AWS WAF (Web Application Firewall), operating at Layer 7 (the application layer of the OSI model)** — ⚠️ **explicitly called out as the "highest level of security" among API Gateway's four layers, since it filters traffic before API Gateway itself even processes anything.**
+
+**⚠️ Attacks WAF protects against**: SQL injection, cross-site scripting (XSS), malicious IP addresses, and bad bots/automated attacks.
+
+**⚠️ Exam tip called out directly**: "AWS WAF works at Layer 7 and blocks the request BEFORE API execution" — this exact phrasing is worth memorizing verbatim.
+
+---
+
+## Exam Framing
+
+> "An API needs Layer 7 application-level protection against SQL injection and cross-site scripting attacks, filtering malicious traffic before it ever reaches API Gateway" → **AWS WAF integration** — the edge-protection layer, evaluated before API Gateway processes the request at all, distinct from resource policy (which controls origin) and the usage plan/authorizer layers (which run inside API Gateway itself, after WAF has already let the request through).
+`,
+    },
+    {
+      id: "api-gateway-iam-vs-cognito-vs-lambda-authorizer",
+      title: "API Gateway Authentication – IAM vs Cognito vs Lambda Authorizer: Three Callers, Three Tools",
+      shortDesc: "SigV4 signing in the question means IAM; social login or JWT tokens mean Cognito; a genuinely custom or legacy authentication scheme means Lambda authorizer — the exam keyword gives the answer away directly",
+      visuals: [],
+      content: `## Layer 4: Authentication and Authorization — Three Distinct Tools for Three Distinct Callers
+
+> **Authentication decides WHO can access the API; authorization decides WHAT they're allowed to do once authenticated.** ⚠️ **API Gateway supports three tools for this, each suited to a different type of caller.**
+
+---
+
+## IAM: For AWS-to-AWS Access
+
+> **Who uses it**: other AWS services or IAM users/roles — NOT end users with no AWS account. **Purpose**: securing AWS-to-AWS access. **Auth type**: AWS credentials (SigV4 signing). **Authorization**: via IAM policy. ⚠️ **Does NOT support OAuth 2.0, JWT tokens, social login (Google/Facebook), external identity providers, or custom authentication rules — none of these are available through IAM.** **Typical use case**: internal AWS-only APIs.
+
+**⚠️ Exam keyword: "SigV4 signing" in a question → the answer is always IAM.**
+
+---
+
+## Cognito: For End Users (Web/Mobile)
+
+> **Who uses it**: end users accessing the API from a web or mobile app — people with NO AWS account of their own. **Purpose**: authentication and authorization for public-facing APIs. **Auth type**: username/password, OR social login (Google, Facebook). **Authorization**: via Cognito User Pool. ⚠️ **Supports OAuth 2.0 — yes. JWT tokens — yes. Social login — yes, fully. External identity providers (e.g. connecting to an existing Active Directory) — yes, supported.** ⚠️ **Custom authentication rules: only LIMITED — Cognito has predefined rules, not full custom logic.** **Typical use case**: public APIs serving real end users.
+
+**⚠️ Exam keyword: "OAuth" or "JWT token" in a question → the answer is Cognito.**
+
+---
+
+## Lambda Authorizer: For Fully Custom Logic
+
+> **Who uses it**: anyone with a requirement not covered by IAM or Cognito's built-in rules. **Purpose**: fully custom authentication and authorization, written entirely as your own Lambda code. **Auth type**: custom token, header, query parameter — whatever the custom logic defines. **Authorization**: entirely handled by the Lambda function's own code. ⚠️ **OAuth, JWT, social login, external IDPs — ALL possible, but only if explicitly coded into the Lambda function; none of it comes built-in.** ⚠️ **Custom authentication rules: FULL control** — this is the entire point of choosing Lambda authorizer over the other two. **Typical use case**: legacy applications, external/non-standard authentication systems, genuinely bespoke logic.
+
+**⚠️ Exam keyword: "custom authorizer" in a question → the answer is Lambda authorizer.**
+
+---
+
+## Exam Framing
+
+> "An internal API is called only by other AWS services using SigV4-signed requests, with authorization managed through IAM policies" → **IAM.** "A public mobile app needs users to log in via Google or Facebook, using JWT tokens issued after login" → **Cognito.** "An API needs to authenticate against a legacy, non-AWS identity system with completely custom logic" → **Lambda authorizer** — the only option offering full, unrestricted control over the authentication logic itself. The three exam keywords to memorize directly: **SigV4 → IAM; OAuth/JWT → Cognito; custom authorizer → Lambda authorizer.**
+`,
+    },
+    {
       id: "api-gateway-resource-policy",
       title: "API Gateway Resource Policy – The First Gate a Request Passes Through, and Why It's Not Authentication",
       shortDesc: "An API key alone can never restrict WHERE a request comes from — resource policy is the layer that finally can, and it's evaluated before WAF, before the usage plan, before any authorizer",
