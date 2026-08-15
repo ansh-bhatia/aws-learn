@@ -4931,6 +4931,73 @@ Two use cases:
     },
 
     {
+      id: "volume-gateway-hands-on-lab-iscsi-cached-volume",
+      title: "Volume Gateway Hands-On Lab – A Real D: Drive, Not a Shared Folder",
+      shortDesc: "The same iSCSI initiator built into Windows connects to the gateway and formats a genuine block drive you can install software on — the exact thing a File Gateway's shared folder structurally cannot offer",
+      visuals: [],
+      content: `## ⚠️ File Gateway (NAS) vs Volume Gateway (SAN) — The Fundamental Difference
+
+> **File Gateway gives you a shared FOLDER (NFS/SMB) — you can store files in it, but you cannot install software onto it, because it's a network share, not a disk.** ⚠️ **Volume Gateway instead exposes a genuine block-level drive (iSCSI) — it shows up in Windows as an ordinary lettered drive (e.g. D:) that can be formatted and used exactly like local storage, including installing full applications (e.g. a database server) directly onto it.** This is the classic NAS-vs-SAN distinction, mapped onto AWS: File Gateway = NAS-like, Volume Gateway = SAN-like.
+
+---
+
+## Two Volume Gateway Modes
+
+> **Cached mode**: recently-accessed data stays cached locally (small, fast local disk), while the FULL dataset lives durably in S3 — cannot be scheduled, data moves to the cloud automatically as it's written. **Stored mode**: the FULL dataset lives on-premises for low-latency access, with the local data periodically backed up to AWS on a SCHEDULE — used when on-prem capacity is sufficient and cloud is purely a backup target.
+
+---
+
+## Building the Lab (Cached Mode)
+
+> Requirements before creating the gateway: a disk for the **upload buffer** AND a SEPARATE disk for the **local cache** — attempting to activate with only one disk throws an explicit error requiring the second disk to be allocated. Once active, create a volume (e.g. 20GB) as an iSCSI target — ⚠️ **notably, no S3 bucket is ever explicitly chosen here (unlike File Gateway) — the volume's data flows to Amazon EBS as its backing store, not a bucket you pick.**
+
+### Connecting From Windows: the iSCSI Initiator
+
+> **Windows' built-in iSCSI Initiator tool connects to the gateway's target using its IP address.** ⚠️ **Once connected, Disk Management shows the volume as a genuinely uninitialized raw disk — it must be brought online, initialized, and formatted with a new simple volume before it becomes a usable D: drive**, exactly like adding a brand-new physical disk. ⚠️ **A SECOND server can connect to the SAME target and skip formatting entirely (already done by the first server) — this is how a Volume Gateway target can be shared as centralized SAN-style storage across multiple machines.**
+
+---
+
+## Backup: On-Demand and Scheduled EBS Snapshots
+
+> From the gateway console's volume actions: **create an on-demand backup, or configure a recurring EBS snapshot schedule** (e.g. every 30 minutes or hourly) — each scheduled run creates an incremental snapshot capturing only the changes since the last one. ⚠️ **A snapshot can later be used to create a fresh EBS volume, attachable to any EC2 instance — the standard AWS backup/restore pattern, just triggered from the gateway rather than manually.**
+
+---
+
+## Exam Framing
+
+> "On-premises applications need genuine block-level storage (installable software, formattable drive), not just a shared file folder, backed by AWS" → **Storage Gateway, Volume Gateway (iSCSI)** — cached mode for hot-data-local/full-dataset-in-cloud, stored mode for full-dataset-local/scheduled-cloud-backup. ⚠️ **Remember the structural reason File Gateway can't substitute here: a network share is fundamentally not a disk, and most software requires a real block device to install onto.**
+`,
+    },
+    {
+      id: "tape-gateway-vtl-features-and-benefits",
+      title: "Tape Gateway (VTL) – Replacing Physical Tape Without Touching Your Backup Software",
+      shortDesc: "Existing tape backup workflows (Veeam and similar) keep working completely unchanged — Tape Gateway just swaps out the physical tape media itself for durable, deep-archive S3 storage behind the scenes",
+      visuals: [],
+      content: `## ⚠️ Why Physical Tape Still Matters (and Why Companies Want Off It)
+
+> **Physical tape remains popular for two genuine reasons: a small tape cartridge can store a large amount of data, and tape has notably higher long-term durability than CDs/DVDs.** ⚠️ **But if a company already has an existing tape-based backup SOFTWARE workflow (e.g. Veeam) and wants to stop physically managing tape media, Tape Gateway (VTL — Virtual Tape Library) lets that same software keep working unchanged, while the data actually lands in S3/S3 Glacier instead of a physical cartridge.**
+
+---
+
+## Four Core Features
+
+> **iSCSI VTL interface, compliant with leading backup applications** — no need to replace existing backup software. ⚠️ **Active tapes stored in S3; ejected tapes (retained for long-term compliance, e.g. 3-4 years) automatically move to S3 Glacier or Glacier Deep Archive.** Automatic fixity/integrity checking after backup. Data compression plus encryption both in transit and at rest.
+
+---
+
+## Five Core Benefits
+
+> **A drop-in replacement for physical tape libraries and archiving services** — the existing backup workflow and software configuration stay exactly as they are; only the physical media changes. **Eliminates the operational hassle of physical tape** (loss risk, dedicated storage space for cartridges). **Durable, reliable archival storage in S3 Glacier Deep Archive for under $1/TB/month.**
+
+---
+
+## Exam Framing
+
+> ⚠️ **This entire topic is explicitly theoretical exam material — there is no hands-on lab (it requires third-party backup software like Veeam), so questions test recognition of the concept, not configuration steps.** "An existing tape-based backup workflow needs to move off physical media without changing backup software" → **Tape Gateway (VTL)** — active tapes go to S3, ejected/archived tapes automatically move to S3 Glacier/Deep Archive, and the existing backup application (Veeam etc.) keeps working against what it still sees as ordinary tape infrastructure.
+`,
+    },
+
+    {
       id: "storage-gateway",
       title: "Storage Gateway",
       shortDesc: "Hybrid cloud storage integration",
