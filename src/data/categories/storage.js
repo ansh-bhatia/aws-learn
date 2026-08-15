@@ -4800,6 +4800,85 @@ Auto-replicates objects to a destination bucket in **another region** — **one-
 > Use **lifecycle rules** to auto-move S3 objects to Glacier over time. Choose the tier by how fast you need data back. **Vault Lock** enforces WORM/compliance.`,
     },
     {
+      id: "datasync-lab-aws-to-aws-s3-to-efs",
+      title: "DataSync Hands-On Lab – Copying Between AWS Storage Services (S3 to EFS)",
+      shortDesc: "No agent needed for AWS-to-AWS transfers — pick a source (S3), pick a destination (EFS), let DataSync auto-generate the IAM role it needs, and a background sync task does the rest",
+      visuals: [],
+      content: `## The AWS-to-AWS Use Case, in Practice
+
+> **Setup for this lab: an S3 bucket with files already uploaded, plus a freshly created empty EFS file system mounted on an EC2 instance (to verify contents before/after).** ⚠️ **Before the sync runs, mounting the EFS and running a directory listing shows nothing — proving the copy genuinely didn't happen until DataSync ran.**
+
+---
+
+## Configuring the DataSync Task
+
+> DataSync offers two top-level options at creation: **"between on-premises storage and AWS"** or **"between AWS storage services."** ⚠️ **For AWS-to-AWS transfers specifically, NO on-prem hardware or agent is required at all** — select the source (S3, in this case a specific bucket) and destination (EFS, mounted at the root path). ⚠️ **DataSync needs an IAM role to actually read from S3 and write to EFS — the console's "Auto Generate" option creates this role automatically, no manual policy authoring required.**
+
+---
+
+## Running and Verifying the Sync
+
+> Once the task is created, clicking **Start** kicks off the sync manually (scheduling is also available for recurring transfers). ⚠️ **Verification happens two ways: DataSync's own task History shows the exact file count transferred (e.g. "9 files"), AND re-running the directory listing on the mounted EFS now shows those same files present** — a genuine before/after proof, not just trusting the console's success message.
+
+---
+
+## Exam Framing
+
+> "Copy data between two AWS storage services (S3, EFS, FSx) with no on-premises component involved" → **DataSync, AWS-to-AWS mode — no agent needed, source and destination are both selected directly from AWS storage options, with an auto-generated IAM role handling permissions.**
+`,
+    },
+    {
+      id: "datasync-lab-on-prem-to-aws-via-agent",
+      title: "DataSync Hands-On Lab – On-Premises to AWS via the DataSync Agent",
+      shortDesc: "The agent is just a VM sitting between your on-prem SMB/NFS share and AWS — the lab proves the exact same mechanics work whether that VM genuinely lives on-prem or is simulated with an EC2 instance for practice",
+      visuals: [],
+      content: `## ⚠️ The Agent Bridges On-Prem Storage to AWS — It's Just a VM
+
+> **The DataSync Agent is a downloadable virtual machine image (OVA) that gets deployed wherever the source storage actually lives — VMware ESXi/Workstation, Hyper-V, KVM, or (for practice/simulation purposes) an EC2 instance running the same agent AMI.** ⚠️ **Regardless of where it runs, the agent's job is identical: read from the on-prem SMB/NFS share and forward the data to AWS over TLS.**
+
+---
+
+## Setup Sequence
+
+> (1) Stand up a shared folder as the "on-prem" storage source (a Windows share with SMB, granted full-control sharing permissions). (2) Deploy the DataSync agent VM and give it a static IP so it's reachable. (3) **Activate the agent from the AWS console by supplying its IP address and clicking "Get Key"** — this requires the browser session to actually be able to reach the agent's IP, and if the private IP times out, the public IP works as a fallback. (4) Create an S3 bucket as the destination.
+
+---
+
+## Configuring the Task: SMB Source, S3 Destination
+
+> Location type = **SMB**, referencing the activated agent, the SMB server's IP, the shared folder name, and Windows credentials (username/password) for that share. ⚠️ **Destination = S3, with the IAM role again handled via Auto Generate.** Once created, starting the task manually (or on a schedule) triggers the transfer — verified through task History (exact file count, e.g. "11 files") and a direct refresh of the destination S3 bucket showing the transferred files.
+
+---
+
+## Exam Framing
+
+> "Migrate or continuously sync data from an on-premises NFS/SMB file share to AWS" → **DataSync with an Agent** — the agent is the on-prem-facing component (VM deployed via VMware/Hyper-V/KVM, or simulated on EC2 for testing), activated by IP address, then used as the source connector for a DataSync task writing to S3/EFS/FSx. ⚠️ **The underlying mechanics are identical whether the agent runs on real on-prem hardware or an EC2 instance used purely to simulate the scenario — the exam cares about the pattern (agent bridges on-prem storage to AWS), not the specific virtualization platform.**
+`,
+    },
+    {
+      id: "datasync-use-cases-and-benefits",
+      title: "DataSync Use Cases & Benefits – The Theory the Exam Actually Tests",
+      shortDesc: "The exam doesn't ask how to configure a DataSync agent — it asks WHY you'd reach for DataSync over a manual copy, and the answer is always some combination of automation, TLS security, speed, and lower operational cost",
+      visuals: [],
+      content: `## ⚠️ Four Core Use Cases
+
+> **Data migration** — moving data from existing on-premises storage to AWS. **Archiving cold data** — sending infrequently-used data to the cloud for backup/retention. **Data protection** — using AWS as a durable backup target for on-prem data. **Scheduled/timely data movement for cloud processing** — recurring, automated transfers (e.g. hourly) so cloud-side processing always has fresh data to work with.
+
+---
+
+## Four Core Benefits
+
+> **Simplify and automate data movement** — configure the agent once, schedule the task, and transfers happen automatically without manual intervention going forward. ⚠️ **Secure by default — data moves from agent to AWS over TLS**, no separate encryption setup required. **Faster and more reliable than manual transfer** — an automated, scheduled process doesn't suffer from the human error a manual copy process is prone to ("people fail, systems don't"). **Reduced operational cost** — compared to alternative migration paths (e.g. AWS Snowball, covered elsewhere), DataSync is typically the lower-cost option for ongoing or moderate-volume online transfers.
+
+---
+
+## Exam Framing
+
+> ⚠️ **The exam is explicitly theoretical here, not practical — it will never ask HOW to configure a DataSync agent step-by-step, only WHY a scenario calls for DataSync at all.** "Automate and schedule ongoing data movement from on-prem to AWS, securely and at lower cost than manual transfer" → **AWS DataSync** — recognize the use-case/benefit keywords (migration, archiving, scheduled movement, TLS, automation, cost) rather than any configuration detail.
+`,
+    },
+
+    {
       id: "datasync",
       title: "DataSync",
       shortDesc: "Online data transfer service",
