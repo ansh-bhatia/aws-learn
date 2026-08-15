@@ -4252,6 +4252,50 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-resource-allocation-limits",
+      title: "ECS Project Step 5 (Part 8.2) – Resource Allocation Limits: Task-Level Size vs Per-Container CPU/Memory/GPU",
+      shortDesc: "Task size is a shared box every container must fit inside — container-level limits stop one greedy container from starving the others sharing that same box",
+      visuals: [],
+      content: `## Two Levels of Resource Control
+
+> **CPU and memory can be limited at TWO levels: task level (total resources for the whole task, shared across all its containers) and container level (a per-container cap within that shared pool).** ⚠️ **Task size (covered in the earlier "Task Size" topic) is mandatory for Fargate and optional for EC2** — EC2 already has its own instance size acting as a natural ceiling, whereas Fargate has no underlying instance at all, so task size is the only way to set a limit.
+
+**The "shared box" mental model**: whatever CPU/memory is set at task level is a total pool — e.g. 4 vCPU and 512MB RAM for the whole task — that ALL containers inside that task must collectively fit inside.
+
+---
+
+## ⚠️ Why Container-Level Limits Matter: Preventing One Container From Starving Another
+
+> **Without container-level limits, nothing stops one container from consuming most of the task's shared resources, leaving little or nothing for the others.** Concrete example: a task with 4 vCPU total and two containers — if container 1 is left unrestricted and consumes 3 vCPU, container 2 is stuck with only 1 vCPU, even if it genuinely needs more. **Container-level allocation lets each container's CPU/memory be explicitly capped**, preventing this kind of resource imbalance between containers sharing the same task.
+
+---
+
+## The Four Container-Level Settings
+
+**1. CPU** — CPU units for the container, e.g. 0.25, 0.5, or 1 full vCPU. Values are expressed as decimals of a vCPU (quarter, half, whole), not raw units.
+
+**2. Memory hard limit** — ⚠️ **the container is KILLED outright if it tries to exceed this limit.** Values set in GB via the console (e.g. 0.25 GB rather than 256 — the console works in GB, not MB).
+
+**3. Memory soft limit** — ⚠️ **a RESERVATION, not a kill threshold: ECS tries to keep at least this much memory free and available for the container**, without forcibly terminating it for exceeding the number. This is framed as the "safer, friendlier" of the two memory settings — it guarantees a baseline of available memory rather than punishing overages.
+
+**4. GPU** — defines how many physical GPUs the container can use, relevant for AI workloads or image/video processing and rendering. ⚠️ **GPU can ONLY be set at the container level — there is no task-level GPU setting.**
+
+---
+
+## ⚠️ Why the GPU Field Is Usually Grayed Out
+
+> **GPU becomes selectable only when ALL of these conditions are met**: (1) the launch type must be EC2 ONLY — ⚠️ **GPU is not supported on Fargate at all, and a task definition that mixes Fargate and EC2 launch-type compatibility will also gray this out**, since Fargate's lack of GPU support poisons the mixed option; (2) the EC2 instance(s) registered in the cluster must actually be a GPU-capable instance type (e.g. NOT a T2 micro, which has no GPU hardware at all); (3) the EC2 instance must use a **GPU-optimized AMI** specifically, not a standard ECS-optimized AMI.
+
+**Practical implication**: if no container host currently exists in the cluster, the console may show the GPU option available speculatively (assuming a compatible host will be added) — but with an existing, non-GPU-capable host already registered, the field stays firmly grayed out.
+
+---
+
+## Exam Framing
+
+> "A container keeps getting killed under load, even though the overall task has plenty of spare CPU/memory" → **check the container-level memory HARD limit** — hard limit overages result in termination, unlike the soft limit, which only reserves memory without killing the container. "GPU can't be selected while configuring a container" → **verify all three conditions: EC2-only launch type (never Fargate, never a Fargate+EC2 mix), a genuinely GPU-capable EC2 instance type in the cluster, and a GPU-optimized AMI** — missing any one of these keeps the field grayed out.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
