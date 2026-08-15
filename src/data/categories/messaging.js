@@ -6,6 +6,42 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "synchronous-vs-asynchronous-communication",
+      title: "Synchronous vs Asynchronous Communication – The Core Split Behind Every AWS Integration Service",
+      shortDesc: "Payment MUST be synchronous because the order can't decide what to do next without knowing the result — notification MUST be asynchronous because nothing downstream depends on when the email actually arrives",
+      visuals: [],
+      content: `## ⚠️ The Fundamental Split: Does the Sender Need to Wait?
+
+> **Every AWS application integration service exists to serve one of two communication styles — synchronous or asynchronous.** ⚠️ **The single deciding question: does the sending service's NEXT STEP depend on the receiving service's response?** If yes → synchronous. If no → asynchronous.
+
+---
+
+## Synchronous Communication: Wait for the Reply Before Continuing
+
+> **One service sends a request and WAITS until the other service replies — just like a phone call: ask a question, stay on the line until you get an answer.** ⚠️ **The sender's next decision genuinely depends on the reply.**
+
+**⚠️ Worked example — payment processing**: when a user clicks "Pay," the order service sends a request to the payment service and MUST wait for the result. ⚠️ **The order service literally cannot proceed without knowing whether the payment succeeded or failed** — success means show dispatch information, failure means show a retry-payment page. There is no valid next step until the answer arrives.
+
+**When to use synchronous**: an instant response is genuinely needed, the next action depends directly on the previous answer, or the operation is critical enough that immediate confirmation is required. ⚠️ **AWS services**: API Gateway and Application Load Balancer (ALB already covered elsewhere — application integration specifically focuses on API Gateway).
+
+---
+
+## Asynchronous Communication: Send and Move On, No Waiting
+
+> **One service sends a message and immediately continues its own work — the receiving service processes it whenever it's free, with no blocking.** ⚠️ **Just like sending a WhatsApp message: send it, keep doing other things, the reply (if any) comes later, on its own schedule.**
+
+**⚠️ Worked example — payment success notification**: once payment succeeds, the payment service sends a "payment successful" message (via SQS, SNS, or EventBridge) and moves on immediately — ⚠️ **it does NOT wait for the notification service to actually send the email/SMS.** ⚠️ **Some delay before the email arrives (seconds, or even 30+ minutes) is completely acceptable, because nothing downstream is blocked waiting on it** — the payment flow itself already completed independently of when the notification actually gets delivered.
+
+**When to use asynchronous**: background tasks, notifications (email/SMS), inventory updates, event logging (payment success/failure events), retry logic — ⚠️ **anywhere the next step genuinely does NOT depend on this specific step's outcome or timing.** ⚠️ **AWS services**: SQS, SNS, EventBridge (each with its own distinct use case, covered in depth in upcoming topics).
+
+---
+
+## Exam Framing
+
+> "An order service needs to know immediately whether a payment succeeded before deciding what page to show the user next" → **synchronous communication** — the next step is directly dependent on this specific response, so the caller must wait; API Gateway is the AWS service for this. "A payment service needs to trigger a confirmation email, but the email doesn't need to arrive instantly and nothing else is blocked waiting for it" → **asynchronous communication** — SQS, SNS, or EventBridge, since the sender can move on immediately without waiting for the notification to actually be delivered. The single litmus test in both cases: **does the sender's next action depend on this specific reply?**
+`,
+    },
+    {
       id: "microservices-architecture-and-need-for-integration",
       title: "Microservices Architecture – Independent Scaling, and Why Separation Forces Application Integration",
       shortDesc: "Splitting cart, checkout, and payment into separate services means each can scale to its own actual demand — but it also means they can no longer just call each other's functions or share a database",
