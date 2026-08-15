@@ -6,6 +6,46 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-resources-and-methods",
+      title: "REST API – Resources and Methods: The Structural Layer HTTP API Doesn't Have",
+      shortDesc: "HTTP API just has flat routes triggering an integration directly — REST API forces every request through a resource-then-method hierarchy, which is exactly where all its advanced features actually live",
+      visuals: [],
+      content: `## ⚠️ The Structural Difference From HTTP API
+
+> **HTTP API's flow is flat and simple: client sends a request → the matching route triggers its integration directly.** ⚠️ **REST API adds an extra structural layer: create a RESOURCE first, then create a METHOD inside that resource — and the method is where ALL of REST API's advanced features actually get configured** (request/response inspection, validation, transformation, and everything else covered in earlier topics).
+
+---
+
+## Resources: URL Paths, Organized in a Tree Under the Root
+
+> **A resource = a URL path** (e.g. /user, /product). ⚠️ **Every REST API automatically gets ONE default resource called "/" — the route resource** — created automatically, and it can NEVER be deleted, since it's the mandatory root every other resource nests under.
+
+**⚠️ Every additional resource is created as a CHILD of the root (or of another resource) — nothing can exist parallel to root.** Example: creating /users makes it a child resource of "/". ⚠️ **Child resources can themselves have children** — e.g. /user/{id} as a child of /user — mirroring the classic use case of "/users" listing all users vs "/user/{id}" fetching one specific user.
+
+**Invoke URL structure**: the base API Gateway URL + stage, with the resource's path appended — root resource contributes nothing extra to the URL; a child resource like /users appends exactly that segment.
+
+---
+
+## ⚠️ Methods: Where the Actual REST API Features Live
+
+> **A method = an HTTP verb attached to a specific resource.** ⚠️ **Methods can ONLY exist inside a resource — there's no such thing as a method without a resource** (even the root "/" resource itself can have methods attached directly to it). ⚠️ **This is the critical structural rule: ALL of REST API's advanced features — method type, integration type, proxy integration, request settings, query parameters, headers, request body validation — are configured AT THE METHOD LEVEL**, not at the resource level.
+
+---
+
+## Supported HTTP Method Types
+
+> **GET** (read data), **POST** (add a new record), **PUT** (full update/replace), **PATCH** (partial update), **DELETE** (remove a record), **HEAD** (headers only, no body), **OPTIONS** (used for CORS), and ⚠️ **ANY — a special catch-all matching EVERY HTTP verb, routing all of them to ONE single backend integration.**
+
+**⚠️ Best practice vs the ANY shortcut**: ⚠️ **creating separate Lambda functions per method (matching the earlier lab's approach — one function per CRUD operation) is the established best practice**, since it keeps each function focused on one job. ⚠️ **ANY is explicitly flagged as more advanced/complex, letting one function handle everything — a valid option, but not the recommended default pattern.**
+
+---
+
+## Exam Framing
+
+> "In REST API, where are advanced features like request validation, transformation, and integration type actually configured?" → **at the METHOD level, not the resource level** — a resource is purely a URL path; the method (the HTTP verb attached to that path) is where every REST-API-specific capability actually gets set up. "Can a resource be created that sits parallel to the root '/' resource, rather than nested under it?" → **no — every resource, without exception, is created as a child somewhere under the root resource**, which itself cannot be deleted since it's the mandatory starting point for the entire resource tree.
+`,
+    },
+    {
       id: "api-gateway-strict-mode-domain-fronting",
       title: "API Gateway Strict Mode – Catching a Domain-Fronting Attack by Checking If the TLS Handshake Lies About the HTTP Request",
       shortDesc: "A normal request always names the same domain twice — once during the TLS handshake, once in the HTTP host header — domain fronting exploits the rare case where those two names quietly disagree",
