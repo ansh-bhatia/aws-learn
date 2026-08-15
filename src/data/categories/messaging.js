@@ -6,6 +6,64 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "kinesis-data-stream-vs-firehose-and-vpc-endpoint",
+      title: "Kinesis Data Stream vs Firehose – Write Your Own Consumer, or Let Firehose Deliver It For You",
+      shortDesc: "Firehose is a pre-built mediator that pipes data straight to S3, Redshift, Elasticsearch, or Splunk with zero consumer code — reach for a raw Data Stream only when Firehose's fixed destination list doesn't cover what you actually need",
+      visuals: [],
+      content: `## ⚠️ The Core Distinction: Who Writes the Consumer Code?
+
+> **Kinesis Data Firehose can deliver stream data directly to a fixed set of destinations — Amazon S3, Redshift, OpenSearch/Elasticsearch, and even third-party tools like Splunk — with NO custom consumer application required.** ⚠️ **To achieve the same delivery using a raw Kinesis Data Stream instead, you would have to write your own application that consumes from the stream and connects to the destination yourself.** ⚠️ **Firehose is essentially a pre-configured streaming application with a fixed set of destination options — the moment a requirement falls outside those options, custom code becomes necessary, and that's exactly when a raw Data Stream (with your own consumer) is the right tool instead of Firehose.**
+
+---
+
+## Kinesis VPC Interface Endpoint (Exam-Relevant Detail)
+
+> **An Interface VPC Endpoint keeps traffic between a VPC and Kinesis Data Streams entirely off the public internet** — relevant whenever the producer (e.g. an EC2 instance) lives inside a VPC and should not need to reach Kinesis over the internet. ⚠️ **Unlike S3 and DynamoDB, which use a VPC GATEWAY endpoint, Kinesis uses a VPC INTERFACE endpoint** — powered by AWS PrivateLink, using an Elastic Network Interface with a private IP inside the VPC. No Internet Gateway, NAT Gateway, VPN, or Direct Connect is required.
+
+---
+
+## Exam Framing
+
+> "Deliver streaming data to S3/Redshift/Elasticsearch/Splunk without writing and maintaining a custom consumer application" → **Kinesis Data Firehose.** "The delivery destination isn't one Firehose supports, or custom processing logic is required before delivery" → **raw Kinesis Data Stream with your own consumer application.** ⚠️ **"Keep Kinesis traffic off the public internet from within a VPC" → Interface VPC Endpoint (PrivateLink) — remember this is INTERFACE, not the GATEWAY type used by S3/DynamoDB, a common point of confusion.**
+`,
+    },
+    {
+      id: "amazon-swf-simple-workflow-service",
+      title: "Amazon SWF – A Code-Driven, Polling-Based Workflow Coordinator (Not a GUI Like Step Functions)",
+      shortDesc: "SWF never executes your code and never contains the workflow logic itself — deciders and activity workers poll it for tasks, run them, and report results back, with SWF purely tracking state and coordinating what happens next",
+      visuals: [],
+      content: `## ⚠️ What SWF Actually Does — and Explicitly Does NOT Do
+
+> **Amazon SWF (Simple Workflow Service) is a web service for coordinating work across distributed application components** — a central management tool providing task coordination and state tracking. ⚠️ **Critical fact: SWF does NOT execute any code, and does NOT contain the workflow logic itself — it is purely a coordinator.** Your actual code always runs elsewhere (EC2, on-premises, containers — SWF doesn't care where).
+
+### The Polling Model
+
+> **SWF is fundamentally polling-based**: your code polls the SWF API for tasks, waits in a queue, receives a task, executes it, and sends the result back to SWF. ⚠️ **SWF then issues the NEXT task based on that result, and keeps a full history of the workflow — this history is what SWF calls "state."**
+
+---
+
+## Core Building Blocks
+
+> **Domain** — the first thing you create; an isolated container for a set of workflow types, executions, and task lists (useful for separating multiple large projects within one account). **Workers** — the actual software performing work, split into two roles: ⚠️ **Decider — makes decisions based on state history and determines the next activity task (or workflow completion); corresponds to a DIAMOND box in a flowchart.** ⚠️ **Activity — performs the actual task itself (e.g. processing a payment); corresponds to an OVAL box in a flowchart.** **Workflow Starter** — any application that initiates a workflow execution (e.g. a website where a customer places an order, or a rep's internal tool placing an order on a customer's behalf); corresponds to a RECTANGLE box.
+
+### Task Types
+
+> Three kinds of task SWF can hand out to workers: an **activity task** (for an activity worker), a **decision task** (for a decider), or a **Lambda task** (a special activity task that can be executed directly via an AWS Lambda function).
+
+---
+
+## ⚠️ SWF vs Step Functions: Code-Driven vs Visual
+
+> **Step Functions provides a graphical state-machine builder — you define the workflow visually, without writing orchestration code yourself** (see the separate Step Functions topic). ⚠️ **SWF is the older, manual alternative: AWS explicitly does NOT let you draw a workflow or state machine in SWF — everything is coordinated through your own code polling the SWF API.** This manual approach is more work, but gives a coder more direct flexibility over edge cases than a purely graphical tool.
+
+---
+
+## Exam Framing
+
+> ⚠️ **This is explicitly flagged as low priority for the exam — SWF questions are rare, but a Solutions Architect should still recognize what it is.** "A polling-based, code-driven workflow coordinator that tracks state but never executes logic itself, with decider and activity worker roles" → **SWF.** "A visual, graphical state-machine service for orchestrating multiple Lambda/AWS-service steps without writing custom orchestration code" → **Step Functions** — the modern, GUI-driven alternative that has largely superseded SWF for new workflows.
+`,
+    },
+    {
       id: "kinesis-data-streams-terminology-producer-shard-consumer",
       title: "Kinesis Data Streams Terminology – Shards as Highway Lanes for Live Uber Cab Data",
       shortDesc: "One shard is one lane on the highway — a handful of cabs sending updates fits fine in one lane, but thousands of cabs streaming location, speed, and trip status need multiple shards or the traffic simply can't move",
