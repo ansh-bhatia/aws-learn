@@ -5783,6 +5783,69 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-kubectl-installation-ec2-lab",
+      title: "kubectl Installation on EC2 (Full Lab) – Why 'kubectl get nodes' Returns Nothing in Auto Mode",
+      shortDesc: "The kubeconfig file is what actually connects kubectl to a specific cluster — and an empty response from get nodes in Auto Mode is completely normal, not a broken setup",
+      visuals: [],
+      content: `## The Six-Step Goal
+
+> **Install and configure kubectl on an EC2 instance so it can securely manage an EKS cluster** — six steps: launch EC2 → connect via SSH → verify/authenticate AWS CLI → download/install kubectl → generate the kubeconfig file → verify connectivity, plus troubleshooting.
+
+---
+
+## Step 1: Launch the EC2 Instance — Same VPC as the Cluster
+
+> ⚠️ **The EC2 instance must be launched into the SAME VPC as the EKS cluster** — this is what grants access to a private endpoint without needing a VPN, per the earlier endpoint-access topic. Amazon Linux, any small free-tier instance type. ⚠️ **Security group requirement: outbound HTTPS (port 443) must be allowed** — a fresh security group already allows all outbound traffic by default, so this typically needs no extra configuration. Inbound SSH (port 22) is enough for connecting.
+
+---
+
+## Step 2-3: Connect and Authenticate
+
+> SSH into the instance as the default user, then escalate as needed. ⚠️ **Amazon Linux ships with AWS CLI pre-installed** — other distros (CentOS, Debian) require installing it separately.
+
+**⚠️ Authenticating the AWS CLI**: ⚠️ **an IAM role attached to the EC2 instance is the best-practice, most secure method — but it requires extra setup steps specific to EKS, adding complexity.** ⚠️ **For lab/testing purposes specifically, an access key + secret key set via** \`aws configure\` **is used instead — explicitly acknowledged as NOT the production-recommended approach, chosen here purely for simplicity while learning.** ⚠️ **Using ROOT USER access keys specifically is also explicitly flagged as not recommended** — done only because the goal here is testing kubectl connectivity, not a real deployment.
+
+---
+
+## Step 4: Download and Install kubectl
+
+> ⚠️ **The kubectl version downloaded should match the EKS cluster's own Kubernetes version** — check the cluster's version first, then download the matching kubectl release from AWS's official download page. After downloading the binary: give it executable permission, then move it into \`/usr/local/bin\` so it can be run from anywhere. Verify with \`kubectl version\`.
+
+---
+
+## Step 5: Generate the kubeconfig File
+
+> **kubectl reads its cluster connection details from a kubeconfig file — this file doesn't exist until generated.** ⚠️ **Generated via:** \`aws eks update-kubeconfig --name <cluster-name> --region <region>\` **— this single command downloads the cluster's certificate, adds the cluster endpoint into the config file, and maps the current IAM identity for authentication.** ⚠️ **If this command errors, the root cause is almost always the authentication information (access key/secret or role) not being valid or lacking sufficient permissions.**
+
+---
+
+## Step 6: Verify Connectivity
+
+- \`kubectl cluster-info\` — confirms the control plane is reachable, returns cluster details.
+- \`kubectl get ns\` — lists namespaces, confirming genuine API-server-level connectivity.
+- \`kubectl get pods\` — shows any pods already running.
+- ⚠️ \`kubectl get nodes\` — **returns EMPTY in Auto Mode.** ⚠️ **This is entirely normal, not a broken setup** — Auto Mode's worker nodes are created automatically behind the scenes and simply don't show up under this command the way Classic Mode's explicitly-managed nodes would. Classic Mode clusters DO show nodes here.
+
+---
+
+## ⚠️ Troubleshooting: "Unable to Connect" / Connection Timeout
+
+> **The most common cause: the EKS cluster's OWN security group is blocking the EC2 instance.** ⚠️ **Fix: go to the cluster's networking settings, find the cluster security group, and verify its inbound rule allows the traffic** (the lab specifically opens 0.0.0.0/0 as a quick fix for lab purposes) — then retry the kubectl command.
+
+---
+
+## ⚠️ Where AWS's Responsibility Ends
+
+> **Once kubectl connectivity to the cluster is confirmed working, the scope of this course's AWS-focused responsibility ends** — ⚠️ **actually deploying and managing applications inside the cluster (writing YAML manifests, creating deployments, managing Kubernetes objects) is Kubernetes administration, a separate skill set from the AWS infrastructure covered here.** The goal was establishing the connection, not performing ongoing cluster administration.
+
+---
+
+## Exam Framing
+
+> "\`kubectl get nodes\` returns an empty result on an EKS cluster running in Auto Mode, even though the cluster is otherwise healthy" → **expected behavior — Auto Mode manages worker nodes entirely behind the scenes, and they simply don't appear under this command the way Classic Mode's explicitly-created nodes would.** "kubectl commands fail with a connection timeout even though the kubeconfig was generated successfully" → **check the EKS cluster's OWN security group for a blocking inbound rule** — this is the most common cause of an otherwise-correctly-configured kubectl setup failing to connect.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
