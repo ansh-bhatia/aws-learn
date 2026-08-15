@@ -4595,6 +4595,66 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-deployment-config-replica-daemon-az",
+      title: "ECS Service Deployment Configuration – Replica vs Daemon, and Automatic AZ Rebalancing",
+      shortDesc: "Daemon runs exactly one task per EC2 instance and is permanently grayed out on Fargate, and AZ rebalancing is the setting that quietly fixes an outage's lopsided aftermath",
+      visuals: [],
+      content: `## Scheduling Strategy: Replica vs Daemon
+
+> **Replica**: ⚠️ **specifies a desired number of tasks, and ECS keeps EXACTLY that many running at all times** — if any task fails, ECS launches a replacement to restore the count. This is the standard, most commonly used strategy.
+
+> **Daemon**: ⚠️ **automatically runs exactly ONE task per EC2 instance in the cluster — directly analogous to Kubernetes DaemonSet.** Example: a cluster with 10 EC2 instances running Daemon mode gets exactly 10 tasks, one per instance, automatically. ⚠️ **Daemon is EC2-launch-type only — it's permanently grayed out on Fargate**, since Fargate has no underlying EC2 instances for a "one task per instance" model to attach to.
+
+---
+
+## ⚠️ Availability Zone Rebalancing: Fixing an Outage's Aftermath Automatically
+
+> **When a service runs across more than one AZ, ECS tries to keep an EQUAL number of tasks in each AZ.** Worked example: 4 desired tasks, 2 AZs selected (e.g. ap-south-1a and ap-south-1b) → normally 2 tasks run in each AZ.
+
+**The outage scenario**: if ap-south-1b goes down entirely, ECS must still maintain 4 running tasks — so ⚠️ **all 4 tasks temporarily get placed in the one remaining healthy AZ (ap-south-1a)**, even though running everything in a single AZ isn't best practice. ⚠️ **This is a forced, temporary compromise to preserve availability, not a permanent design choice.**
+
+**What happens when the failed AZ recovers**: ⚠️ **with AZ rebalancing turned ON, ECS automatically detects the 4-0 imbalance and starts moving tasks back, restoring a 2-2 split once ap-south-1b is healthy again.** ⚠️ **With AZ rebalancing turned OFF, ECS does nothing — all 4 tasks stay permanently stuck in the one AZ even after the other AZ recovers**, leaving the service needlessly exposed to a repeat single-AZ failure. ⚠️ **Recommendation: always enable AZ rebalancing** — leaving tasks unevenly distributed after an outage recovers is genuinely dangerous, not just cosmetically imbalanced.
+
+---
+
+## Exam Framing
+
+> "A service needs exactly one task running on every EC2 instance registered to the cluster, automatically, as instances are added or removed" → **Daemon scheduling strategy** — EC2-only, never available on Fargate. "After an AZ outage forces all tasks into a single healthy AZ, the tasks stay clustered there even once the failed AZ recovers" → **AZ rebalancing was not enabled** — with it on, ECS automatically restores an even distribution once all AZs are healthy again; without it, the imbalance persists indefinitely.
+`,
+    },
+    {
+      id: "ecs-service-health-check-grace-period",
+      title: "ECS Service – Health Check Grace Period: Giving a Freshly Launched Task Time Before Judging It",
+      shortDesc: "Without a grace period, ECS can declare a brand-new task unhealthy simply because its application hasn't finished starting up yet — not because anything is actually wrong",
+      visuals: [],
+      content: `## How ECS Health Checks Work
+
+> **ECS periodically sends probe packets to each running task and expects a reply.** ⚠️ **If a task stops replying, ECS concludes it's no longer healthy and launches a replacement task to restore the desired count** — this is the underlying mechanism a service relies on to detect and recover from a failed task.
+
+---
+
+## ⚠️ The Problem Grace Period Solves
+
+> **A newly launched replacement task doesn't start serving traffic instantly — the application inside it needs time to initialize (install dependencies, run startup scripts, etc.), and this startup time varies entirely by application.** ⚠️ **Without any grace period, ECS could send a health-check probe to the brand-new task WHILE it's still starting up, get no reply (because the app genuinely isn't ready yet), and incorrectly conclude the task is unhealthy** — potentially killing and relaunching a task that was never actually broken, just still booting.
+
+---
+
+## What Grace Period Actually Configures
+
+> **Health check grace period is the amount of time (in seconds) ECS waits BEFORE beginning health checks on a newly launched task.** ⚠️ **During this window, ECS assumes the task is healthy even if a health check would otherwise fail** — it simply doesn't check at all until the grace period elapses.
+
+**Worked example**: grace period = 60 seconds. ECS launches a new task → for the first 60 seconds, ECS performs NO health checks at all, letting the application fully start → after 60 seconds, ECS begins checking normally.
+
+**Setting the right value**: ⚠️ **entirely dependent on how long the specific application actually takes to become ready** — an application with a slow startup sequence needs a longer grace period; a fast-starting application can use a short one or none at all.
+
+---
+
+## Exam Framing
+
+> "A service keeps churning through newly launched tasks, killing and relaunching them repeatedly even though the application eventually works fine" → **the health check grace period is likely too short (or unset) relative to the application's actual startup time** — ECS is judging tasks as unhealthy before they've finished initializing. The fix: increase the grace period to match the application's real startup duration, giving it time to become ready before health checks begin evaluating it.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
