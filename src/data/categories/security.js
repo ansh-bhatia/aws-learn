@@ -1495,6 +1495,109 @@ This is why Identity Center is the standard answer for **workforce users needing
 > Exam: "**sign-in / user directory / social login** for an app" → User Pool. "give app users **temporary AWS access**" → Identity Pool.`,
     },
     {
+      id: "acm-https-alb-hands-on-lab",
+      title: "ACM Hands-On Lab – HTTPS on the Load Balancer, Plain HTTP to the Instance",
+      shortDesc: "The browser only ever sees HTTPS, terminated right at the load balancer with a free ACM certificate — behind it, the ALB talks to the EC2 web server over ordinary unencrypted HTTP the whole time",
+      visuals: [],
+      content: `## The Architecture: HTTPS Stops at the Load Balancer
+
+> ⚠️ **The EC2 instance's security group only allows HTTP (port 80), never HTTPS — deliberately, because the user only ever talks to the LOAD BALANCER over HTTPS; the load balancer then talks to the EC2 instance over plain HTTP.** This is standard TLS termination: encryption is handled once, at the edge, not re-encrypted on every internal hop.
+
+---
+
+## Requesting the Certificate: DNS Validation
+
+> Request a public certificate for a domain (e.g. a wildcard like \`*.example.com\`), choosing **DNS validation** over email validation when the requester controls the domain's DNS (e.g. via Route 53). ⚠️ **ACM hands back a CNAME record that must be added to the domain's DNS — creating it directly in Route 53 (one click, if the zone is already there) auto-completes the validation; an external DNS provider requires manually adding the same record.** Status flips from "Pending Validation" to "Issued" once AWS confirms the record exists — typically within minutes.
+
+---
+
+## Attaching the Certificate to an HTTPS Listener
+
+> Creating the Application Load Balancer with an **HTTPS listener** (rather than HTTP) presents a dropdown to **choose the certificate directly from ACM** — no file upload, no manual cert/key pairing. ⚠️ **The target group's health check still uses plain HTTP, matching what the EC2 instance actually serves** — only the public-facing listener is HTTPS.
+
+---
+
+## ⚠️ The DNS Record Is Not Optional
+
+> **Hitting the load balancer's raw AWS-generated DNS name directly triggers a browser privacy error, even with a valid certificate attached** — the certificate was issued for a specific domain name, not the load balancer's own auto-generated hostname. ⚠️ **A Route 53 alias/A record pointing the actual domain at the load balancer is required before the certificate and the URL genuinely match** — only then does the browser show "Connection is secure."
+
+---
+
+## Exam Framing
+
+> "Add HTTPS to a load-balanced application, terminating TLS at the load balancer, with a free certificate" → **ACM certificate attached to the ALB's HTTPS listener** — free specifically because it's used with an integrated AWS service (ALB/CloudFront/API Gateway/Elastic Beanstalk). ⚠️ **A certificate matches a domain NAME, not a load balancer — the DNS record pointing that domain at the load balancer is a required, separate step, not automatic.**
+`,
+    },
+    {
+      id: "kms-envelope-encryption-cli-hands-on-lab",
+      title: "KMS Envelope Encryption CLI Lab – Proving Permission Actually Gates Decryption",
+      shortDesc: "Two IAM users try to decrypt the same file — one denied key access fails outright, the other granted access succeeds — live proof that a KMS key's permission policy is what actually controls who can read encrypted data",
+      visuals: [],
+      content: `## Setup: A Customer-Managed Key, Scoped to One User
+
+> Create a symmetric customer-managed CMK, and during creation explicitly grant **key usage permission to only ONE of two test IAM users** (e.g. "agent-one" can use the key; "agent-two" is deliberately given none). ⚠️ **This key-level permission is what actually determines who can decrypt data protected by this key — completely separate from any S3/EC2/other resource permissions those users might otherwise have.**
+
+---
+
+## Encrypting a File via the CLI
+
+> Using the root user's credentials, \`aws kms encrypt\` against a plaintext file produces a ciphertext blob — a genuinely different, unreadable file. ⚠️ **On Windows, the raw ciphertext needs an extra** \`certutil\` **decode pass to reach a truly final encrypted format** — a Windows-specific packaging quirk, not a KMS requirement itself. The original plaintext file can then be safely deleted, since only the encrypted version needs to persist.
+
+---
+
+## ⚠️ The Live Proof: One User Fails, One Succeeds
+
+> **Attempting** \`aws kms decrypt\` **as agent-two (no key permission) fails outright with a signature/authorization error — the encrypted file stays genuinely unreadable to them.** ⚠️ **The exact same decrypt command, run as agent-one (who WAS granted key permission), succeeds and reproduces the original plaintext exactly.** This is envelope encryption made concrete: the CMK gates access to the data key, and the data key is what actually decrypts the data — no key permission means no path to readable data at all, regardless of any other AWS permissions that user has.
+
+---
+
+## Exam Framing
+
+> "Two users with identical S3/EC2 permissions get different results decrypting the same KMS-encrypted data" → **check the KMS KEY's own permission policy, not the users' other IAM permissions** — key-level access is a separate, additional gate that sits in front of the actual decrypt operation. ⚠️ **This is the concrete mechanic behind "envelope encryption": the CMK never directly encrypts your data — it generates and protects a data key, and possessing the data key (gated by KMS key permission) is what ultimately allows decryption.**
+`,
+    },
+    {
+      id: "waf-web-acl-hands-on-lab",
+      title: "WAF Hands-On Lab – Block-Except-One-IP vs Allow-Only-One-IP",
+      shortDesc: "Flipping a single default rule from Allow to Block turns the exact same IP Set rule from 'block this one office IP' into 'allow ONLY this one office IP' — the whole policy hinges on what happens to everyone NOT matched by a rule",
+      visuals: [],
+      content: `## Building Blocks: IP Set, Then Web ACL
+
+> **An IP Set is a reusable named list of IP addresses/CIDR ranges** (e.g. a single office IP as \`x.x.x.x/32\`) — created once, then referenced by rules. ⚠️ **A Web ACL is created next and associated with a specific resource (here, an Application Load Balancer)** — CloudFront ACLs are global (not region-scoped) since CloudFront itself isn't tied to one region, but ALB/API Gateway/AppSync ACLs are.
+
+---
+
+## ⚠️ The Default Rule Is What Actually Flips the Policy
+
+> **A rule referencing the IP Set set to BLOCK, combined with a DEFAULT rule set to ALLOW, means: block that one specific IP, allow everyone else** — proven live: the office IP got a 403, every other IP (a phone on mobile data) loaded the site fine. ⚠️ **Flipping ONLY the default rule from ALLOW to BLOCK — without touching the IP Set rule itself, now set to ALLOW instead of BLOCK — inverts the entire policy: now ONLY that one IP can reach the site, and every other IP gets blocked.** The same IP Set, the same single rule slot, opposite real-world behavior — purely from which side (the named rule vs. the default) is set to Allow vs Block.
+
+---
+
+## Count Mode: Monitoring Without Blocking Anything
+
+> Setting the rule's action to **Count** instead of Block/Allow lets ALL traffic through unaffected, while the Web ACL's request metrics dashboard tallies matches — useful for observing suspicious traffic patterns before committing to an actual block. ⚠️ **Real-world workflow mirrors this: count first to confirm genuine malicious traffic, THEN switch to block — never block blind.**
+
+---
+
+## AWS Managed Rules: Pre-Built, Paid Protection
+
+> Beyond custom IP-Set rules, AWS Managed Rule groups (e.g. Amazon IP reputation list, SQL injection protection) are ready-to-attach rule sets requiring no custom logic — each consumes Web ACL capacity units (a fixed budget, e.g. 1500 total) and some require a paid subscription beyond the base WAF capacity cost.
+
+---
+
+## ⚠️ Cleanup Order Matters
+
+> **The Web ACL must be DISASSOCIATED from its protected resource (the ALB) before it can be deleted — attempting to delete an associated ACL fails.** The IP Set can be deleted independently once no rule references it.
+
+---
+
+## Exam Framing
+
+> "Allow traffic from ONLY one trusted IP and block everything else" → **an IP Set rule set to ALLOW, combined with the Web ACL's DEFAULT action set to BLOCK.** "Block one specific IP and allow everyone else" → **the same IP Set rule set to BLOCK, default action left at ALLOW.** ⚠️ **The default action isn't a passive fallback to memorize separately — it's an equal, active half of the policy, and swapping it alone can completely invert what a rule set accomplishes.**
+`,
+    },
+
+    {
       id: "acm",
       title: "ACM – Certificate Manager",
       shortDesc: "Free TLS/SSL certificates for AWS services",
