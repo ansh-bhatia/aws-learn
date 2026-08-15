@@ -3539,6 +3539,137 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step1-create-cluster",
+      title: "ECS Project Step 1 – Creating a Hybrid Cluster (Fargate + EC2 Together)",
+      shortDesc: "Both launch types, on purpose, in the same cluster — so the deployment can be compared side by side on Fargate and EC2, plus the auto-scaling trick to pause EC2 charges overnight",
+      visuals: [],
+      content: `## Why This Cluster Is Deliberately Hybrid
+
+> ⚠️ **The goal is a single ECS cluster supporting BOTH Fargate and EC2 simultaneously** — not because the app needs both, but so the project can deploy and compare the SAME application on each launch type side by side. A Fargate-only cluster would make it impossible to unlock or exercise EC2-specific task definition features later in the project.
+
+---
+
+## Configuring the EC2 Side of the Cluster
+
+- **New Auto Scaling Group**, On-Demand instances, an **ECS-optimized AMI** (Amazon Linux 2023), free-tier-eligible **T2 micro** instance size.
+- **ECS instance role** — reused if one already exists from a prior lab, otherwise created fresh.
+- **Min 1 / max 2 instances.**
+- **Key pair** for SSH access.
+- **30GB EBS root volume** (default).
+- **Default VPC** used for simplicity — ⚠️ **the source lecture explicitly notes creating a dedicated VPC with public/private subnets is the real best practice, but the default VPC is used here to keep the project approachable.**
+- ⚠️ **Region-specific gotcha**: in the Mumbai (AP South 1) region specifically, T2 micro free-tier instances are sometimes unavailable in the AP South 1C Availability Zone — deselecting that AZ (keeping only 1A and 1B) avoids a launch failure.
+- **A dedicated security group** (not the default) — inbound rules for **SSH (port 22)** and a **custom TCP rule on port 8080** (the port the application itself will be reachable on, explained further in the next topics), both open from anywhere for lab simplicity.
+- **Auto-assign public IP** enabled, matching the subnet's default setting.
+
+---
+
+## ⚠️ Cost-Management Pro Tip: Pausing EC2 Charges Between Sessions
+
+> **The ECS cluster itself is never chargeable — only tasks/services running on it incur cost.** But the EC2 instance created as part of this hybrid setup IS a real, billable instance (even if T2 micro is within the free tier).
+
+**The problem**: manually terminating that EC2 instance doesn't actually stop it from coming back — ⚠️ **the Auto Scaling Group will simply recreate it**, since its desired capacity is still set to 1.
+
+**The actual fix**: go to the **Auto Scaling Group → Edit**, and set both **desired capacity and minimum capacity to 0.** This causes the ASG to terminate the instance itself, cleanly, with no risk of it silently reappearing. ⚠️ **To resume work later, edit the ASG again and set desired capacity back to 1** — a new instance is created automatically within a few minutes, fully re-registering with the cluster exactly as before.
+
+---
+
+## Exam Framing
+
+> "How can EC2 costs be paused between work sessions on an ECS cluster with EC2 infrastructure, without breaking the cluster's configuration?" → **adjust the Auto Scaling Group's desired/minimum capacity to 0** (not manually terminating the instance directly, which the ASG would just undo). This is a genuinely practical, exam-adjacent operational pattern for any ASG-backed ECS EC2 setup, not just this specific project.
+`,
+    },
+    {
+      id: "ecs-project-step2-build-docker-image",
+      title: "ECS Project Step 2 (Part 1) – Building the Docker Image on a Separate EC2 'Build Machine'",
+      shortDesc: "ECS can only RUN images, never build them — so a throwaway EC2 instance with Docker, PHP, and Composer installed is where the image actually gets assembled",
+      visuals: [],
+      content: `## ⚠️ Why a Separate EC2 Instance Is Needed at All
+
+> **ECS cannot build Docker images — it can only run them.** A task/service always requires an already-built image to run; ECS itself has no image-building capability whatsoever. This is exactly why a standalone EC2 instance (a "build machine") is required as a separate, temporary step before anything touches ECS.
+
+---
+
+## Setting Up the Build Machine
+
+1. Launch a plain EC2 instance (Amazon Linux, T2 micro) — open **port 22** (SSH) and **port 8080** (to test the app locally before it ever touches ECS).
+2. SSH in, then **install Docker** and enable the ec2-user to run Docker commands without sudo.
+3. **Install PHP, unzip, and git** — PHP because the application itself is PHP-based, unzip for decompressing files, git specifically to clone the application's source repository.
+
+---
+
+## ⚠️ What Composer Is, and Why It's Needed
+
+> **The application uploads files to Amazon S3 — meaning it needs to talk to AWS from PHP code.** ⚠️ **PHP has no built-in AWS capability; talking to S3 requires the official AWS SDK for PHP, a third-party library.** **Composer is PHP's standard dependency manager** — the tool used to install that third-party SDK (and any other PHP libraries the project needs) correctly.
+
+**Installing Composer**: download the official installer script, run it, then move the resulting binary into a system PATH location so it can be invoked from anywhere.
+
+⚠️ **In a real team, a developer/programmer would typically hand over exactly which libraries and dependencies are needed** — the point of walking through this manually here is to build genuine end-to-end understanding of the process, not to suggest every cloud engineer writes PHP dependency lists from scratch in practice.
+
+---
+
+## Cloning the Application and Installing Dependencies
+
+4. **Clone the application's public source repository** via git — this produces a project directory containing the application code (index.php, upload logic), a Dockerfile, and Composer's dependency manifest files (composer.json / composer.lock).
+5. **Install the PHP SimpleXML extension** — ⚠️ **not always pre-installed by default**, but required because the AWS SDK uses XML under the hood for certain service communications; skipping this can cause subtle failures later.
+6. **Run the Composer install step** — reads composer.json/composer.lock and downloads every required library (including the AWS SDK for PHP) automatically.
+
+---
+
+## Building the Image
+
+7. **docker build** the image from the Dockerfile in the current directory. ⚠️ **The trailing "." in the build command matters** — it tells Docker to look for the Dockerfile in the current directory; omitting it is a common mistake.
+8. **Verify** the image exists via the image-listing command — confirming it's ready to be tested (next topic) and eventually pushed to ECR.
+
+---
+
+## Exam Framing
+
+> "Why does building a container image for ECS require a separate EC2 instance rather than doing it directly in ECS?" → **ECS is purely a runtime for already-built images — it has no image-build capability of its own.** A build machine (or a CI/CD pipeline serving the same purpose) is always a separate step upstream of ECS, with the resulting image typically pushed to a registry like ECR for ECS to then pull and run.
+`,
+    },
+    {
+      id: "ecs-project-step2-test-image-env-iam",
+      title: "ECS Project Step 2 (Part 2) – Testing the Image, and the Environment-Variable + IAM-Role Best Practices That Carry Into Task Definitions",
+      shortDesc: "Two things NOT to hardcode into application code: config values (use environment variables) and AWS credentials (use an IAM role) — this topic is the direct foundation for task definitions",
+      visuals: [],
+      content: `## Running the Image Locally to Test It
+
+> **Running the built image locally on the build machine** — publishing container port 80 to host port 8080 (the same port opened earlier), with two values injected as **environment variables**: the target **S3 bucket name** and the **AWS region.**
+
+---
+
+## ⚠️ Environment Variables vs Hardcoded Config — Why Dynamic Wins
+
+> **Two ways exist to supply the S3 bucket name and region to the application**: hardcode them directly into the PHP source file, OR pass them as environment variables at container-run time.
+
+⚠️ **Hardcoding them means every bucket/region change requires editing the code, rebuilding the image, re-pushing to ECR, and re-pulling into ECS** — a full repeat of the entire build-and-deploy cycle for what should be a trivial config change. ⚠️ **Passing values dynamically via environment variables avoids all of that** — the same image can be reused unmodified across different buckets, regions, or even entirely different deployments, with only the passed-in values changing. ⚠️ **This environment-variable mechanism is exactly what gets configured later when building the actual ECS task definition** — this local test is deliberately foreshadowing that.
+
+---
+
+## ⚠️ AWS Credentials — Never Hardcode Access Keys Into Application Code
+
+> **The PHP application needs permission to write to S3 — and by default, it has none**, since AWS services are isolated from each other just like everywhere else in this course. Two ways to grant that permission:
+
+**The wrong way (never do this in real code)**: hardcode an AWS access key and secret access key directly into the PHP source. ⚠️ **This is explicitly called out as bad practice** — if an attacker ever gains access to that source file, the embedded credentials directly compromise the AWS account, with no separate barrier protecting them.
+
+**The right way**: ⚠️ **attach an IAM role to the task/container itself**, granting it S3 write permission without any credentials ever appearing in code at all. This is exactly the IAM-role-on-a-task capability from the earlier "ECS Task" concept topic, now being connected to a concrete real use case.
+
+**Why this local test still uses temporary access keys**: for this specific local-testing step (running the image directly on the build EC2 instance, before ECS is involved at all), a temporary access key/secret key pair is used just to confirm the application works correctly. ⚠️ **This is explicitly framed as a temporary testing shortcut, not the production pattern** — once deployed as a real ECS task/service, the IAM role approach replaces this entirely, and any test access keys used here should be deleted afterward.
+
+---
+
+## Verifying End-to-End
+
+> With the container running (verified via the running-containers list) and the app reachable on port 8080 through the EC2 instance's public IP, uploading a test image through the web form and then checking the target S3 bucket confirms the entire chain works: **PHP app → environment-variable-supplied config → S3 write via temporary credentials → object appears in the bucket's upload folder.**
+
+---
+
+## Exam Framing
+
+> ⚠️ **Two best-practice patterns established here carry directly into ECS task definitions, covered in upcoming topics**: (1) **application configuration values (bucket names, regions, etc.) should be injected as environment variables, never hardcoded** — enabling the same image to be reused across environments unmodified; (2) **AWS service permissions (like S3 access) should always come from an attached IAM role, never from hardcoded access keys in source code** — a scenario testing "how should a containerized application authenticate to another AWS service" is testing exactly this IAM-role pattern.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
