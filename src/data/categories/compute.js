@@ -5319,6 +5319,56 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-capstone2-step7-create-service-verify",
+      title: "ECS Capstone Project – Step 7: Creating the Fargate Service, and How to Actually Prove Two Tasks Are Load-Balancing",
+      shortDesc: "Refreshing the page and watching the container ID change is the real proof that traffic is actually being split between separate tasks — not just that the app loaded once",
+      visuals: [],
+      content: `## Wiring Everything Created So Far Into One Service
+
+> **This step assembles every resource built in the earlier steps into a single running service**: task definition (Step 6) + VPC/private subnets (Step 1) + task security group (Step 2) + ALB, existing listener, existing target group (Step 4). ⚠️ **Desired task count = 2, specifically to demonstrate high availability and load distribution, not just get the app running.**
+
+---
+
+## ⚠️ Networking Configuration: Private Subnet Only, No Public IP
+
+> **Only the PRIVATE subnets are selected for the service's networking — public subnets are explicitly removed from selection**, so both tasks launch exclusively into the private subnet(s). ⚠️ **Public IP assignment is turned OFF** — consistent with the earlier private-subnet networking design, since the task is reached only through the ALB, never directly.
+
+**Security group**: the ⚠️ **task-specific security group created in Step 2 is selected explicitly, and the default security group is removed** — same pattern as the ALB's own security group configuration in Step 4.
+
+---
+
+## Load Balancer Integration: All "Existing," Never "New"
+
+> **Every load balancer component is selected as "use existing": existing Application Load Balancer (Step 4), existing listener, existing target group.** ⚠️ **This is exactly the payoff of pre-creating the ALB in Step 4 instead of letting the service wizard create one inline** — every piece just needs to be selected, not (re)created, and there's zero risk of an ALB accidentally landing in the wrong subnet.
+
+---
+
+## ⚠️ Auto Scaling Remains Optional at This Stage
+
+> **Service auto scaling is deliberately skipped during this service's creation — it's entirely optional at creation time and gets configured as its own separate step afterward** — directly matching the earlier established pattern (target tracking/step scaling can be added post-creation, not just during).
+
+---
+
+## ⚠️ Proving Load Balancing Actually Works: Watch the Container ID Change
+
+> **After the service reaches RUNNING status with both tasks healthy, opening the ALB's DNS URL loads the application — but a single successful page load doesn't prove load balancing is actually happening.** ⚠️ **The real verification: refresh the page repeatedly and watch the displayed container ID change between refreshes** — since two separate tasks (two separate containers) are running, and the ALB is distributing requests across both, a changing container ID on each refresh is direct proof that traffic is genuinely being split, not just served by one task the whole time.
+
+**End-to-end functional verification**: uploading a file through the web application (served by whichever task the ALB happened to route to) successfully lands in the configured S3 bucket — confirming the task role's S3 permissions, the environment variables, and the application code are all working correctly together, regardless of which of the two tasks handled the specific request.
+
+---
+
+## Confirming Target Health Directly
+
+> **The target group (from Step 4, EC2 console → Target Groups) should show exactly 2 registered targets, both reporting HEALTHY.** ⚠️ **This registration happens automatically — creating the service with 2 desired tasks is what caused both task IPs to be added to the target group, with zero manual target configuration needed** — the same automatic-IP-registration behavior established back when the IP-address target type was first chosen.
+
+---
+
+## Exam Framing
+
+> "How can it be confirmed that an ALB is genuinely distributing traffic across multiple ECS tasks, rather than just serving all requests from one?" → **repeatedly refresh the application and observe the container/task identifier changing between requests** — a single successful load only proves ONE task responded; a changing identifier across refreshes is what actually demonstrates the ALB routing across multiple healthy targets. "Why does a service's target group already show registered, healthy targets without any manual configuration?" → **ECS automatically registers each task's IP with the target group the moment the task launches**, provided the target group was created with the IP-address target type.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
