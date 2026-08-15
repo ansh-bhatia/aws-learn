@@ -6,6 +6,38 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-lab-part2-create-api-resources",
+      title: "REST API Lab – Part 2: One Unique URL Path = One Resource, No Exceptions",
+      shortDesc: "Needing both /user and /user/{userId} means creating TWO resources, not one — REST API's structure is deliberately one resource per distinct URL path, with no shortcuts",
+      visuals: [],
+      content: `## Creating the REST API Itself
+
+> **REST API build → provide a name → choose endpoint type → choose a security policy** (this lab specifically uses one supporting BOTH TLS 1.2 and 1.3, for maximum browser compatibility during testing — matching the earlier TLS security policy topic) → **endpoint access mode: basic** (Strict Mode is available but deliberately not used here, to keep the lab simple) → **IP address type: IPv4** (IPv6 dual-stack support is available but skipped for simplicity) → create.
+
+---
+
+## ⚠️ The Rule: Every Unique URL Path Needs Its Own Resource
+
+> **REST API design is fundamentally based on URL paths — each DISTINCT path must be created as a SEPARATE resource, with no exceptions.** ⚠️ **This lab needs two different URL patterns**: /user (to fetch all users) and /user/{userId} (to fetch or delete one specific user) — ⚠️ **meaning TWO resources must be created, not one, even though they're closely related.**
+
+**Building the resource tree**:
+1. **/user** — created directly as a child of the auto-generated root ("/") resource (matching the resource-hierarchy rule from the earlier topic).
+2. **/user/{userId}** — created as a CHILD of /user specifically, not of root directly. ⚠️ **The curly braces around userId mark it as a PATH PARAMETER — a placeholder that gets substituted with an actual value at request time** (e.g. /user/101), since userID is the DynamoDB table's primary key and is what identifies exactly which record to operate on.
+
+---
+
+## What This Sets Up for the Next Step
+
+> **With both resources created, the next step (covered separately) is attaching HTTP methods to each** — /user will get a method for listing/creating users, /user/{userId} will get methods for reading or deleting one specific user, directly mirroring the CRUD design already established in the earlier HTTP API lab.
+
+---
+
+## Exam Framing
+
+> "A REST API needs to support both fetching a list of all users and fetching one specific user by ID" → **two separate resources must be created — /user and /user/{userId} — since REST API requires one resource per distinct URL path, never combining multiple paths into a single resource.** "What do curly braces around a resource path segment (e.g. {userId}) signify?" → **a path parameter — a placeholder substituted with an actual value at request time**, used specifically when a URL segment needs to identify a specific record (like a primary key) rather than being a fixed, unchanging path.
+`,
+    },
+    {
       id: "rest-api-method-request-settings",
       title: "REST API Method Request Settings – The Security Gate That Runs BEFORE the Backend Is Ever Called",
       shortDesc: "Method request settings check the request and reject it right at the gate, before it ever reaches Lambda — a request that fails validation here never triggers the backend at all",
