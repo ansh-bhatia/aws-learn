@@ -6,6 +6,40 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-lab-part2-lambda-functions",
+      title: "API Gateway Lab – Part 2: Testing Each Lambda Function Directly, Before API Gateway Even Enters the Picture",
+      shortDesc: "Every Lambda function gets triggered and verified straight from the Lambda console's own Test feature first — proving each function works standalone before wiring API Gateway on top of it",
+      visuals: [],
+      content: `## ⚠️ Same Pattern Repeated Three Times, Once Per CRUD Operation
+
+> **Each of the three Lambda functions (create user, get user, delete user) follows the identical setup process**: create a new Lambda function from scratch, attach the existing IAM role created in Part 1 (Lambda-DynamoDB-execution-role — reused for all three, no need to create a new role each time), paste in the provided function code, deploy, then test directly from the Lambda console.
+
+---
+
+## ⚠️ Critical Verification Step: Test Each Function BEFORE Wiring API Gateway
+
+> **Every function is tested directly from the Lambda console's own "Test" feature — creating a test event with a JSON payload matching what the function expects, then running it and inspecting both the function's response and the actual DynamoDB table.** ⚠️ **This is deliberate: proving each Lambda function works correctly in isolation FIRST, before adding API Gateway on top, makes any later issue much easier to isolate** — if something breaks after API Gateway is wired in, the Lambda logic itself is already confirmed working.
+
+**Create user function test**: a JSON payload representing a new user record → running the test returns success code 201 ("user created successfully") → refreshing the DynamoDB table's item view confirms the new record actually exists.
+
+**Get user function test**: a payload specifying a user ID to look up → ⚠️ **tested with BOTH a valid existing ID (returns the record successfully) AND a non-existent ID (returns a "user not found" response)** — verifying both the success and not-found code paths work correctly, not just the happy path.
+
+**Delete user function test**: a payload specifying the user ID to remove → running the test confirms deletion, and refreshing the DynamoDB table shows the record is genuinely gone.
+
+---
+
+## ⚠️ Why Only Three Functions, Not Four (No Update)
+
+> **A fourth Lambda function (update) could technically be added, but is deliberately left out of this lab** — ⚠️ **explicitly to avoid unnecessary complexity, since the lab's actual purpose is teaching API Gateway's mechanics, not building an exhaustive CRUD reference implementation.**
+
+---
+
+## Exam Framing
+
+> "Before wiring API Gateway on top of a set of Lambda functions, what's the recommended verification step?" → **test each Lambda function directly from the Lambda console's own Test feature first** — confirming the backend logic works in isolation makes it far easier to isolate whether a later integration issue is in the Lambda code or in the API Gateway configuration. This is the same "verify each layer before adding the next" discipline that appears throughout AWS troubleshooting generally.
+`,
+    },
+    {
       id: "api-gateway-lab-part1-prerequisites",
       title: "API Gateway Lab – Part 1: DynamoDB Table, Separated Lambda Functions, and the IAM Role Lambda Needs to Even Talk to DynamoDB",
       shortDesc: "Three separate Lambda functions instead of one, on purpose — cramming create/read/delete into a single function works technically, but violates separation of concerns and becomes harder to test and maintain",
