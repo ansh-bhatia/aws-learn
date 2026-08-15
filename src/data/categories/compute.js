@@ -4204,6 +4204,54 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-container-configuration",
+      title: "ECS Project Step 5 (Part 8) – Container Configuration: Name, Image, Essential Flag, Private Registry Auth, and Read-Only Filesystem",
+      shortDesc: "The essential flag decides whether one dying container takes down the whole task, and private-registry auth is only needed at all when the image ISN'T sitting in your own private ECR",
+      visuals: [],
+      content: `## Name and Image URI
+
+> **Name is simply the label assigned to the container within the task definition** (e.g. "web-application"). **Image is the URI pointing to where the Docker image actually lives** — for this project, the ECR image URI copied directly from the ECR console. ⚠️ **The image is NOT required to come from ECR specifically — any registry works** (Docker Hub, Azure Container Registry, Google Artifact Registry, etc.), public or private, as long as a valid image URI is provided.
+
+---
+
+## ⚠️ Essential Container: One Failure Can Take Down the Whole Task
+
+> **A task can bundle multiple containers, and any one (or several) of them can be flagged "essential."** ⚠️ **If an essential container fails or stops, the ENTIRE task stops** — not just that one container. ⚠️ **By default, the first container added is automatically marked essential**, but this can be reassigned to any container, or to multiple containers at once.
+
+**The multi-essential trap**: ⚠️ **if multiple containers are all marked essential, the task fails the moment ANY ONE of them goes down** — not only if all of them fail. This makes the essential flag a real architectural decision: mark only the container(s) whose failure should genuinely justify killing the whole task, not every container indiscriminately.
+
+---
+
+## Private Registry Authentication — Only Needed in Specific Cases
+
+> **Three distinct authentication scenarios**:
+
+1. **Public registry (e.g. Docker Hub public image)**: ⚠️ **no authentication needed at all.**
+2. **Private ECR repository (this project's case)**: ⚠️ **also requires NO manual authentication configuration** — ECR automatically authenticates using the task's already-configured task execution role (see the earlier task-role-vs-task-execution-role topic). Since the execution role already grants ECR pull permissions, nothing further is needed here.
+3. **Private registry OUTSIDE AWS** (private Docker Hub, private Azure/Google registries): ⚠️ **credentials ARE required, but they can never be typed directly into the task definition.** The reason: a task definition is ultimately stored as a JSON document, and hardcoding a username/password into that JSON is explicitly flagged as bad practice. ⚠️ **The correct approach: store the credentials in AWS Secrets Manager first, then reference that secret's ARN in the task definition's private registry authentication field** — the task definition never holds the raw credentials itself.
+
+**For this project specifically**: since the image sits in private ECR and the task execution role already handles authentication automatically, ⚠️ **no Secrets Manager setup is needed at all** — this section is simply skipped.
+
+---
+
+## Port Mapping (Recap, Tied to Network Mode)
+
+> Directly connects back to the five network modes covered earlier: ⚠️ **awsvpc needs only a container port; bridge and default (Windows NAT) both need a host port AND a container port; host needs only a container port (but it must be unique per task); none disables port mapping entirely** — selecting none as the network mode grays out the port mapping section, since no external access is intended at all.
+
+---
+
+## Root Filesystem: Read-Only Toggle
+
+> **Controls whether the container's root filesystem is locked to read-only.** ⚠️ **When enabled, the container can read from its filesystem but cannot write to it or modify any configuration file inside it** — a security hardening option for containers that deliberately don't need to persist or alter any local data. ⚠️ **This setting does not apply to Windows containers — it's Linux-only.**
+
+---
+
+## Exam Framing
+
+> "A task with two containers stops running entirely, even though only one container actually crashed" → **check whether that container was flagged "essential"** — an essential container's failure always takes the whole task down, by design. "A task definition needs to pull a private image but no authentication was configured, and it still works" → **the image is very likely in ECR, and the task's execution role is already providing the authentication automatically** — this is the ONLY private-registry case where zero manual auth setup is needed. Any other private registry (Docker Hub, Azure, Google) requires storing credentials in **Secrets Manager** and referencing the secret's ARN — never typed directly into the task definition JSON.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
