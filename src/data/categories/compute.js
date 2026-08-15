@@ -4296,6 +4296,50 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-environment-variables",
+      title: "ECS Project Step 5 (Part 9) – Environment Variables: Config Without a Rebuild",
+      shortDesc: "Hardcode the S3 bucket name into the PHP code and every bucket change means rebuild-repush-repull; pass it as an environment variable instead and it's a config edit, not a code change",
+      visuals: [],
+      content: `## ⚠️ The Problem Environment Variables Solve
+
+> **Two options exist for supplying a config value (e.g. an S3 bucket name and AWS region) to the application: hardcode it directly in the PHP source code, or pass it in as an environment variable at container-run time.** ⚠️ **Hardcoding means every config change requires editing the code, rebuilding the Docker image, re-pushing to ECR, and re-pulling** — a genuinely long, repetitive cycle for what should be a trivial change. **Passing it as an environment variable avoids this entirely**: the container-run command (or, for ECS, the task definition) supplies the value directly, with zero code changes and zero image rebuild needed.
+
+**Demonstrated locally first**: running the container manually on an EC2 instance via Docker, the bucket name and region are passed directly in the container-run command rather than baked into the code — proving the same application, unmodified, can point at a different bucket or region purely by changing what's passed in at runtime.
+
+---
+
+## What an Environment Variable Actually Is
+
+> **A small key-value pair passed to the container at runtime** — e.g. key "S3_BUCKET", value "my-x-bucket." ⚠️ **They function as configuration the application needs, without requiring any change to the application's own code.**
+
+---
+
+## ⚠️ Environment Variables Are Entirely Optional
+
+> **If a value is never going to change, hardcoding it directly in the code is a valid choice — environment variables are optional, not mandatory.** Simply not specifying anything in the task definition's environment variable section means the app falls back to whatever is hardcoded.
+
+---
+
+## Why They're Used (The Core Motivations)
+
+1. **Avoid hardcoding values inside the code.**
+2. **Support different values across environments** (dev, test, prod) without changing the application itself.
+3. **Keep secrets and configuration outside the codebase** — separating "what the app does" from "what values it happens to be configured with right now."
+
+---
+
+## Configuring Environment Variables in a Task Definition
+
+> **Two supported methods**: (1) **manually add key-value pairs directly** in the task definition's environment variables section (suitable for a handful of values — e.g. S3_BUCKET and AWS_REGION for this project); (2) **for a large number of environment variables, store them in a file and upload that file to S3**, then reference the file's S3 location in the task definition instead of listing every key-value pair by hand.
+
+---
+
+## Exam Framing
+
+> "An application's configuration (e.g. which S3 bucket to use) needs to differ between environments, without maintaining separate code branches or rebuilding the image for each environment" → **environment variables**, set per task definition — the same image runs unmodified across dev/test/prod, differentiated purely by what's injected into each environment's task definition. Remember: **environment variables are optional** — a value that genuinely never changes can still be hardcoded, and a task definition simply left with no environment variables falls back to the application's own hardcoded defaults.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
