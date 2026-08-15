@@ -5696,6 +5696,53 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-create-cluster-lab-and-management",
+      title: "Creating an EKS Cluster (Console Walkthrough) — and What the Console Can't Do At All",
+      shortDesc: "The console can view pod templates and replica sets, but it can never CREATE a pod — deploying actual workloads requires kubectl, since the console simply doesn't talk to the Kubernetes API server",
+      visuals: [],
+      content: `## Creating the Cluster (Auto Mode, Console Walkthrough)
+
+1. **Create Cluster** → provide a name → select the Kubernetes version.
+2. **Cluster IAM role**: click **"Create recommended role"** — opens the IAM console, pre-attaches the correct trust relationship (EKS auto cluster) and minimum policies automatically → return and select the newly created role.
+3. **Node IAM role**: same process — **"Create recommended role"** for the node role (EKS auto node) → select it once created.
+4. **VPC/subnets**: select the VPC and the subnets to use (e.g. two AZs for redundancy) — ⚠️ **some settings are FIXED once auto mode is chosen (e.g. VPC selection itself can't later be changed), while others (like specific subnets) remain editable.**
+5. **Create** → ⚠️ **cluster provisioning takes roughly 10 minutes** — the cluster must reach ACTIVE status before it's usable.
+
+---
+
+## ⚠️ Two Ways to Manage an EKS Cluster: Console vs kubectl
+
+> **The AWS Management Console and kubectl (paired with AWS CLI) are the two available management paths — and they are NOT interchangeable; each covers different ground.**
+
+### What the Console CAN Do
+
+- View cluster status, health, and Kubernetes version.
+- Manage **access** — IAM access entries, who can reach the cluster.
+- Manage **add-ons** (auto mode defaults to just the metric server; more can be added).
+- View (and in Classic Mode, manage) **node groups**.
+- View **networking** settings (VPC, subnets).
+- Configure **monitoring** (CloudWatch or third-party).
+
+### ⚠️ What the Console CANNOT Do At All
+
+> **The console cannot deploy or manage actual Kubernetes workloads** — it cannot create pods, deployments, services, or ingress resources; cannot exec into a container; cannot view live container logs; cannot manage ConfigMaps or Secrets; cannot scale a deployment. ⚠️ **The console can only VIEW existing resources (pod templates, replica sets) — it has no ability to CREATE them.** ⚠️ **The root cause: the console simply doesn't talk to the Kubernetes API server at all** — it only manages EKS as an AWS resource, not the Kubernetes objects running inside it.
+
+**⚠️ Real Kubernetes administration — actually deploying and managing workloads — requires kubectl**, covered in the next topic.
+
+---
+
+## ⚠️ A Subtlety in Auto Mode: Node Groups Are Still Visible, Just Unused
+
+> **Even though Auto Mode uses its own built-in node pool (AWS-managed worker nodes added automatically as needed), the "node groups" section still appears in the console** — because AWS gives the flexibility to ALSO add a node manually alongside auto mode's built-in pool, creating a hybrid setup. ⚠️ **The recommendation: don't touch node groups while in Auto Mode** — let the built-in node pool handle worker nodes entirely; manually managed node groups are only genuinely necessary in Classic Mode.
+
+---
+
+## Exam Framing
+
+> "Why can't a Kubernetes deployment be created directly from the EKS section of the AWS Console?" → **the console doesn't communicate with the Kubernetes API server at all — it only manages EKS as an AWS resource (cluster status, IAM access, add-ons, networking), never the actual Kubernetes objects (pods, deployments, services) running inside it.** Deploying real workloads requires **kubectl**. "In EKS Auto Mode, why does the 'node groups' section still show up in the console even though AWS manages worker nodes automatically?" → **it's there for the OPTIONAL flexibility of manually adding a node alongside Auto Mode's built-in node pool (a hybrid setup) — but standard guidance is to leave it untouched and let the built-in pool handle everything in Auto Mode.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
@@ -5712,12 +5759,7 @@ Container orchestrators manage containers in bulk. Options: **Docker Swarm** (si
 
 ---
 
-## Managing the Cluster
-
-- **AWS Console** — cluster settings only (status, IAM access, add-ons, node groups, networking, monitoring). It **can't** create pods/deployments, apply YAML, exec, view logs, or scale apps — it doesn't talk to the Kubernetes API server.
-- **kubectl** — the real Kubernetes control tool; talks directly to the API server. Install on your **local PC** (needs public/public+private endpoint) or on an **EC2 in the same VPC** (reaches private endpoints).
-
-**kubectl on EC2 (lab):** launch EC2 in the same VPC → \`aws configure\` → install kubectl (curl binary, chmod, move to /usr/local/bin) → \`aws eks update-kubeconfig --name <cluster> --region <region>\` → verify with \`kubectl cluster-info\`, \`get ns\`, \`get pods\`. (\`get nodes\` is empty in Auto Mode — normal.)`,
+`,
     },
     {
       id: "elastic-beanstalk",
