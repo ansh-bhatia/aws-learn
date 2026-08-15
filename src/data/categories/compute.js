@@ -5104,6 +5104,48 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-step-scaling-scale-in-lab",
+      title: "ECS Step Scaling – Configuring the Scale-In Policy After Service Creation (Console Walkthrough)",
+      shortDesc: "Adding a policy after service creation offers a combined add-and-remove option or a custom one — since scale-out already exists, custom is the only choice that adds scale-in alone without duplicating it",
+      visuals: [],
+      content: `## ⚠️ Two Options When Adding a Policy After Service Creation
+
+> **From an existing service's auto scaling settings → Create scaling policy → Step scaling reveals TWO configuration paths**: ⚠️ **"Add and remove task" (which sets up BOTH scale-out and scale-in together in one combined flow) and "Custom" (which sets up a single policy of your choosing).** ⚠️ **Since a scale-out policy was already created during the original service creation, "Add and remove task" is the WRONG choice here — it would create a duplicate/conflicting scale-out policy. "Custom" is used instead, specifically to add ONLY the missing scale-in policy.**
+
+---
+
+## Configuring the Scale-In CloudWatch Alarm — Mirror of Scale-Out, With One Key Flip
+
+> **Metric, statistic (average), and period configuration are identical in structure to the scale-out alarm** — the only meaningful difference is the alarm CONDITION direction. ⚠️ **Scale-out uses "greater than" (respond to rising load); scale-in uses "lower than" (respond to falling load).**
+
+**Worked example**: threshold = 80%, condition = lower, data points = 3 out of 3. ⚠️ **Meaning: CloudWatch checks CPU every period interval, and only triggers the scale-in alarm once CPU has been BELOW 80% for three consecutive checks** — the same "sustained condition, not a single blip" logic from the scale-out alarm, just mirrored to falling load instead of rising load.
+
+---
+
+## ⚠️ The Full 3-Tier Scale-In Configuration (Exact Mirror of Scale-Out)
+
+| CPU Range (lower–upper bound) | Action |
+|---|---|
+| 0% – 60% | Remove 2 tasks |
+| 60% – 70% | Remove 2 more tasks |
+| 70% – 80% | Remove 4 more tasks |
+
+⚠️ **Read carefully: this is the reverse of the scale-out table** — moving DOWN through the ranges (starting from the highest CPU tier) progressively removes tasks, eventually returning the service back to its configured minimum (e.g. 2 tasks) once CPU drops all the way below 60%. Just like the scale-out configuration, ⚠️ **each tier is entered as a separate adjustment, and the lower/upper bound pairing is easy to get backwards — always verify the final result against the intended tiers before finishing.**
+
+---
+
+## Verifying the Complete Setup
+
+> **After both policies exist, viewing the service's auto scaling settings should show TWO distinct policies: one scale-out (adding tasks as CPU rises through 60/70/80% tiers) and one scale-in (removing tasks as CPU falls back through the same tiers in reverse)** — together forming the complete, bidirectional step scaling behavior that a scale-out-only policy could never achieve on its own (see the earlier step-scaling concept topic).
+
+---
+
+## Exam Framing
+
+> "A scale-out step scaling policy already exists on a service, and a scale-in policy now needs to be added without disturbing it" → **use the "Custom" option when creating the new policy — "Add and remove task" would attempt to create a new scale-out policy alongside the existing one, which is not the goal.** "What's the one directional difference between how scale-out and scale-in CloudWatch alarms are configured?" → **scale-out uses a "greater than" condition; scale-in uses "lower than"** — everything else (metric, statistic, evaluation logic) follows the same structure in both directions.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
