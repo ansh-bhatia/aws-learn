@@ -6,6 +6,54 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "microservices-architecture-and-need-for-integration",
+      title: "Microservices Architecture – Independent Scaling, and Why Separation Forces Application Integration",
+      shortDesc: "Splitting cart, checkout, and payment into separate services means each can scale to its own actual demand — but it also means they can no longer just call each other's functions or share a database",
+      visuals: [],
+      content: `## What Microservices Architecture Actually Means
+
+> **Microservices architecture breaks an application into small, independent services, each responsible for ONE specific function — developed, deployed, and scaled SEPARATELY.** ⚠️ **This is a loosely coupled design, the direct opposite of monolithic's tightly coupled single unit.** ⚠️ **Each microservice can have its own database, and can even be written in a different programming language** — Amazon's cart service and checkout service, for example, need not share a database or a language at all.
+
+**Worked example — Amazon.com's actual internal structure**: separate services for user login/account, product catalog, cart (add/remove items), checkout flow, payment/transactions, order creation/tracking, delivery, and notifications — ⚠️ **each independently built, deployed, and scaled**, even though the end user experiences it as one seamless website.
+
+---
+
+## The Core Benefits
+
+- **Independent scaling** — the single biggest advantage, especially at Amazon's scale.
+- **Faster deployment** — small, focused codebases deploy far more easily than one giant application.
+- **Independent teams** — separate teams own separate services; an Amazon engineer working on cart service typically has no involvement in payment service.
+- **Easier to manage and troubleshoot** — small, focused codebases are simpler to reason about than one massive one.
+- **Technology flexibility** — different services can use different languages/frameworks as best fits each one's needs.
+
+---
+
+## ⚠️ Solving the Monolith's Scaling Waste, Directly
+
+> **Using the SAME funnel example from the earlier monolithic topic** (100,000 browsers → 10,000 cart adds → 4,000 checkouts → 2,000 payments): ⚠️ **in microservices architecture, EACH service scales independently to match its OWN actual demand** — the product service scales aggressively for 100,000 requests, while the payment service only needs capacity for 2,000. ⚠️ **No component is ever over-provisioned to match a different component's traffic** — directly eliminating the wasted-resource problem that defines monolithic scaling.
+
+---
+
+## ⚠️ The New Problem This Creates: How Do Separated Services Communicate?
+
+> **Once services are genuinely separate applications — different codebases, different databases, potentially different languages — they can no longer simply call each other's functions or query each other's database directly, the way components inside one monolith could.** ⚠️ **But they still MUST communicate**, since a real user flow spans multiple services: adding to cart is the cart service's job, but creating an order requires the order service to ask the cart service what was actually selected; the payment service then needs that same cart information to charge the customer correctly.
+
+**⚠️ This is precisely the gap application integration services exist to fill** — since normal in-process function calls and shared databases are no longer options, microservices instead communicate through APIs, queues, events, and messages.
+
+---
+
+## Two Communication Requirement Types
+
+> **Synchronous communication** (real-time, caller waits for a response) — handled by services like **API Gateway, ALB, HTTP, gRPC.** **Asynchronous communication** (fire-and-forget, just informing another service without waiting) — handled by services like **SQS, SNS, EventBridge, Amazon MQ, Step Functions.** ⚠️ **Choosing which type fits a given inter-service interaction is exactly what the rest of this application integration section covers.**
+
+---
+
+## Exam Framing
+
+> "Why can't two microservices in a modern application simply call each other's internal functions the way components inside a monolith could?" → **because they are genuinely separate applications — different codebases, different (possibly different-language) runtimes, and typically different databases — with no shared in-process call path between them.** "An e-commerce app needs its product-browsing service to handle 100,000 concurrent requests while its payment service only ever needs to handle 2,000" → **microservices architecture, specifically because each service scales independently based on its own actual demand** — directly solving the wasteful all-or-nothing scaling monolithic architecture forces.
+`,
+    },
+    {
       id: "monolithic-architecture",
       title: "Monolithic Architecture – Why Scaling for 100,000 Visitors Means Wastefully Scaling Payment Too",
       shortDesc: "A funnel drops from 100,000 browsers to 2,000 buyers, but a monolith scales the ENTIRE app — including payment — for all 100,000, since everything runs as one inseparable unit",
