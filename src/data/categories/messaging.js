@@ -6,6 +6,44 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "crud-and-api-gateway-lambda-dynamodb-flow",
+      title: "CRUD Operations and the Website → API Gateway → Lambda → DynamoDB Flow",
+      shortDesc: "DynamoDB simply refuses direct public access, so the frontend can never talk to it directly — the only path in is through an API, and API Gateway is what makes that API safely reachable",
+      visuals: [],
+      content: `## CRUD: The Four Operations Every Backend Performs
+
+> **CRUD = Create, Read, Update, Delete — the backbone of virtually every application that stores data.** ⚠️ **Each CRUD operation maps to a specific HTTP method**: Create → **POST**, Read → **GET**, Update → **PUT**, Delete → **DELETE**.
+
+**Mapped to DynamoDB operations specifically**: Create → **PutItem** (write a new record), Read → **GetItem / Scan**, Update → **UpdateItem**, Delete → **DeleteItem**.
+
+---
+
+## ⚠️ The Core Problem: DynamoDB Cannot Be Reached Directly From a Frontend
+
+> **A website's frontend (even one hosted on EC2) CANNOT talk to DynamoDB directly.** ⚠️ **DynamoDB does not allow direct public access at all — this is a deliberate security boundary, not a missing feature.** ⚠️ **The frontend must always go through an API instead** — there is no other supported path from a public-facing website into DynamoDB.
+
+---
+
+## The Solution: One API Per CRUD Operation
+
+> **Worked example — a user-profile system**: registering a user (Create/POST), viewing a profile (Read/GET), updating name/email (Update/PUT), and deleting an account (Delete/DELETE) each require a SEPARATE API, each performing its own DynamoDB operation. ⚠️ **Four distinct CRUD operations → four distinct APIs**, each doing exactly one job — directly mirroring the same "each service/API does one thing" principle from the earlier microservices topic.
+
+---
+
+## ⚠️ The Final Flow: Website → API Gateway → API (Lambda) → DynamoDB
+
+> **The frontend never talks to DynamoDB directly at any point.** ⚠️ **The complete chain**: Website → API Gateway → the actual API logic (hosted in Lambda in this course's lab) → DynamoDB — and the SAME chain runs in reverse for the response. ⚠️ **API Gateway's role in this specific chain**: exposing the four Lambda-hosted CRUD APIs safely to the public internet with a clean URL, plus the security/logging/throttling/authentication features already covered in earlier topics** — API Gateway is what makes those otherwise-private Lambda functions safely reachable from a public website at all.
+
+**⚠️ The underlying rule this whole chain enforces**: "create the API, write the CRUD logic (in Lambda), expose it securely through API Gateway" — this exact pattern is what the upcoming hands-on lab implements end-to-end.
+
+---
+
+## Exam Framing
+
+> "Why can't a website's frontend query DynamoDB directly, even though both are technically within the same AWS account?" → **DynamoDB deliberately does not allow direct public access — the frontend must always go through an API (typically backed by Lambda) instead, with API Gateway providing the public-facing, secured entry point into that API.** "An application needs four separate operations to manage user records: creating, viewing, updating, and deleting a profile" → **four separate CRUD-mapped APIs (POST/GET/PUT/DELETE respectively)**, each performing exactly one DynamoDB operation, all exposed through a single API Gateway.
+`,
+    },
+    {
       id: "websocket-api",
       title: "WebSocket API – The Connection That Never Closes After One Exchange",
       shortDesc: "Three exam keywords give it away instantly: two-way communication, real-time data, long-lived connection — and caching isn't just unsupported, it structurally makes no sense for live data",
