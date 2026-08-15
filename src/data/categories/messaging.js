@@ -6,6 +6,43 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-lab-introduction",
+      title: "API Gateway Hands-On Lab – The Four-Part Plan (HTTP API First, REST API Later for Direct Comparison)",
+      shortDesc: "This lab is deliberately built with HTTP API first — the exact same lab gets rebuilt with REST API next, specifically so the earlier feature comparison can be felt hands-on, not just memorized",
+      visuals: [],
+      content: `## What This Lab Builds
+
+> **A working front end → API Gateway → Lambda → DynamoDB flow, implementing 3 CRUD operations**: ⚠️ **POST (create a new record), GET (read a profile), and DELETE (delete an account)** — deliberately excluding UPDATE for this particular lab's scope. ⚠️ **This lab uses HTTP API specifically — the exact same lab gets repeated with REST API in a follow-up lab**, so the REST-vs-HTTP feature differences from the earlier comparison topics can be experienced hands-on, not just memorized.
+
+---
+
+## The Three Tools Used
+
+> **DynamoDB** (the backend data store), **AWS Lambda** (hosts the actual CRUD logic — though this specific choice of compute platform is arbitrary; EC2, ECS, or EKS would work just as well), and **API Gateway** (the secure, public-facing entry point that exposes the Lambda functions to the front end, with logging on every trigger).
+
+---
+
+## ⚠️ The Complete Request Flow
+
+> **Front end sends an HTTP request → API Gateway receives it and triggers the matching Lambda function → Lambda performs the actual DynamoDB operation.** ⚠️ **The front end never talks to DynamoDB or even Lambda directly — API Gateway is always the mandatory intermediary**, exactly matching the architecture established in the earlier CRUD topic.
+
+---
+
+## The Four-Part Lab Structure
+
+1. **Part 1 — Prerequisites**: setting up whatever needs to exist before building the actual API logic (e.g. the DynamoDB table, IAM roles).
+2. **Part 2 — Create the API using Lambda**: writing the actual CRUD logic as Lambda functions.
+3. **Part 3 — Create the API Gateway (HTTP API)**: exposing those Lambda functions publicly and securely.
+4. **Part 4 — Test the complete functionality**: verifying the full front-end-to-DynamoDB flow actually works end to end.
+
+---
+
+## Exam Framing
+
+> This is purely a lab-scoping overview — the one concrete detail worth remembering is that ⚠️ **this exact same lab gets repeated with REST API afterward, specifically as a deliberate teaching device to make the REST-vs-HTTP API feature differences tangible rather than purely theoretical.** The underlying architecture (front end → API Gateway → Lambda → DynamoDB, front end never touching the backend directly) stays identical between both versions — only the API Gateway TYPE changes.
+`,
+    },
+    {
       id: "crud-and-api-gateway-lambda-dynamodb-flow",
       title: "CRUD Operations and the Website → API Gateway → Lambda → DynamoDB Flow",
       shortDesc: "DynamoDB simply refuses direct public access, so the frontend can never talk to it directly — the only path in is through an API, and API Gateway is what makes that API safely reachable",
