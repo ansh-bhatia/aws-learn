@@ -6,6 +6,52 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-vs-http-api-part2",
+      title: "REST API vs HTTP API (Part 2) – The Real Decision Maker: Request/Response Transformation",
+      shortDesc: "HTTP API is fast precisely because it never touches the request — REST API's ability to modify, validate, and reshape data before it reaches the backend is what actually decides which type to pick",
+      visuals: [],
+      content: `## ⚠️ Request/Response Transformation: The Actual Decision Maker
+
+> **REST API can modify the request or response BEFORE it reaches the backend** — converting formats (e.g. XML to JSON), adding/removing fields, reshaping the payload entirely. ⚠️ **HTTP API does NONE of this — whatever arrives from the client gets forwarded to the backend completely untouched, with zero intervention.** ⚠️ **This is exactly WHY HTTP API is faster: skipping any transformation logic means less processing work per request.**
+
+**Three specific REST-API-only capabilities under this umbrella, ALL unsupported by HTTP API**:
+1. **Request/response transformation** — reshape data before it reaches the backend.
+2. **Input validation** — reject malformed requests before they ever reach the backend (e.g. a missing required email field gets blocked at the gateway).
+3. **Mapping templates** (Velocity Template Language) — customize input/output format via templates, e.g. restructuring the request body entirely.
+
+⚠️ **These three are grouped together because they all stem from the same root capability — REST API actively inspects and can alter the payload; HTTP API is a pure pass-through.**
+
+---
+
+## Performance and Cost
+
+- **Caching**: ⚠️ **REST API supports response caching (storing backend responses to serve repeat requests faster, with configurable refresh); HTTP API does NOT support caching at all** — but this is framed as a non-issue for HTTP API, since its pass-through design is already fast without needing a cache layer.
+- **Cost**: ⚠️ **HTTP API is roughly 70% cheaper than REST API** — the same figure from the earlier part-1 topic, now tied directly to the "fewer features = lower cost" tradeoff.
+
+---
+
+## Monitoring, Logging, and Integration Types — Where They're EQUAL
+
+> ⚠️ **CloudWatch Logs and access logs are supported identically by BOTH REST API and HTTP API** — no difference here, so this is never the deciding factor between the two.
+
+**Integration types**:
+- **Lambda integration**: ✅ supported by BOTH.
+- **HTTP URL integration** (calling a backend hosted on EC2 or on-premises): ✅ supported by BOTH.
+- **ALB (Application Load Balancer) integration**: ⚠️ **HTTP API ONLY — REST API does NOT support routing traffic directly to an ALB.**
+
+**Other features**:
+- **Custom domain**: ✅ both.
+- **CORS**: ✅ both.
+- **Private API** (VPC-only access): ⚠️ **REST API (specifically REST API Private) — yes. HTTP API — NO private-only option at all.**
+
+---
+
+## Exam Framing
+
+> "An API needs to validate incoming requests and reject malformed ones (e.g. a missing required field) before they ever reach the backend" → **REST API** — input validation, along with request/response transformation and mapping templates, is REST-API-exclusive. "An API needs to route traffic directly to an existing Application Load Balancer" → **HTTP API** — this is one of the rare cases where HTTP API supports something REST API does NOT. "An API must only be reachable from within a VPC, never the public internet" → **REST API Private** — HTTP API has no private-only equivalent at all. Remember the overall shape: **REST API = richer feature set (transformation, validation, caching, WAF, private access) at higher cost; HTTP API = fast, cheap pass-through, with ALB integration and native JWT/OAuth as its two specific advantages over REST API.**
+`,
+    },
+    {
       id: "rest-api-vs-http-api-part1",
       title: "REST API vs HTTP API (Part 1) – Older + Feature-Rich vs Newer + 70% Cheaper",
       shortDesc: "REST API natively supports API keys and WAF but not modern JWT/OAuth login; HTTP API is the reverse — no API keys, but native JWT support since it was built for the modern auth landscape",
