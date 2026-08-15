@@ -6,6 +6,79 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "data-processing-batch-vs-real-time",
+      title: "Batch vs Real-Time Processing – NEFT's 30-Minute Cycle vs UPI's Instant Transfer",
+      shortDesc: "It's never a question of which is 'better' — batch is the deliberate default because it's cheaper and simpler, and real-time is reached for only when the use case genuinely can't tolerate any delay",
+      visuals: [],
+      content: `## What Data Processing Actually Means
+
+> **Data processing means taking raw data and turning it into a useful result** — data is not inherently useful the moment it's generated; a system has to work on it first. ⚠️ **Two fundamentally different approaches: batch processing and real-time processing** — the choice between them is a requirements question, never a "good vs bad" one.
+
+---
+
+## Batch Processing: Collect First, Process Later
+
+> **Data is collected over a period of time and processed later, all at once, in a batch.** ⚠️ **Worked example — India's NEFT bank transfer**: a transaction is NOT processed instantly; NEFT batches all pending transactions together and executes them as one job roughly every 30 minutes. **The system deliberately waits and accumulates before acting.**
+
+## Real-Time Processing: Act the Instant Data Arrives
+
+> **Data is processed the moment it's generated — the system never waits to collect a batch first.** ⚠️ **Worked example — India's UPI QR-code payment**: scanning and paying transfers money and updates status INSTANTLY, with zero batching or waiting. Each transaction is handled the moment it happens.
+
+---
+
+## The 8-Point Trade-Off (Why Batch Is Still the Common Default)
+
+| Dimension | Batch | Real-Time |
+|---|---|---|
+| Operational burden | Flexible, easier to run | Demanding — needs immediate action |
+| Data handling | Wait and group | Continuous flow |
+| Speed | Slow, delay acceptable | Fast, no delay allowed |
+| Build complexity | Easy, simple logic | Hard, genuinely complex system |
+| Timing flexibility | Can adjust timing freely | Low flexibility, needs instant response |
+| Infrastructure | Simple, basic setup | Complex, advanced setup required |
+| Cost | Low | High |
+| Typical use cases | Reports, billing, monthly salary runs | Payments, live tracking, fraud/security alerts |
+
+---
+
+## ⚠️ The Decision Rule: Default to Batch, Reach for Real-Time Only When Forced To
+
+> **Always consider batch processing FIRST — it's cheaper, simpler, and easier to operate.** ⚠️ **Only move to real-time processing when the use case genuinely cannot tolerate any delay** — e.g. fraud alerts, live payment status, real-time tracking — situations where waiting even a few minutes defeats the entire purpose. Real-time systems are powerful but genuinely difficult and expensive to build and operate correctly.
+
+---
+
+## Exam Framing
+
+> "A report/billing/monthly-salary requirement, with no urgency mentioned" → **batch processing is the default, more cost-effective choice.** "An alert, live tracking, or fraud-detection requirement, where any delay defeats the purpose" → **real-time processing is required, despite its higher cost and complexity.** ⚠️ **This distinction is the entire reason Amazon Kinesis exists — it's AWS's answer to how to implement real-time processing without building the complex infrastructure from scratch.**
+`,
+    },
+    {
+      id: "amazon-kinesis-service-family-and-data-streams-intro",
+      title: "Amazon Kinesis – The Real-Time Data Family (Data Streams, Firehose, Managed Flink)",
+      shortDesc: "Worked through Uber's live ride-tracking use case — a driver app continuously producing location updates that a Kinesis Data Stream temporarily holds so multiple backend systems can each read and react in real time",
+      visuals: [],
+      content: `## Kinesis Is a Family of Three Services, Not One
+
+> ⚠️ **Amazon Kinesis is an umbrella covering three distinct services, used to collect, process, and analyze real-time streaming data at any scale**: **Kinesis Data Streams** — collects and STORES the data stream in real time; **Kinesis Data Firehose** — PROCESSES and DELIVERS the data (typically to a destination like S3); **Managed Service for Apache Flink** — PROCESSES and ANALYZES streaming data. Each has a distinct role in the pipeline — store, deliver, or analyze.
+
+---
+
+## Kinesis Data Streams: A Live Data Pipeline
+
+> **Data continuously arrives from many sources — apps, websites, logs, devices — and Kinesis Data Streams temporarily stores it so consumer applications can read and process it in real time.**
+
+### Worked Example: Booking an Uber Ride
+
+> When a rider taps "Book Ride," many things update live on screen: nearby drivers appear, one gets assigned, the driver's car icon moves on the map in real time. ⚠️ **Behind the scenes, this requires a system that continuously collects and temporarily holds live ride data (driver location, status) so MULTIPLE independent applications can each read and react to it** — this is exactly the role a service like Kinesis Data Streams plays (the instructor is explicit that this illustrates the pattern, not a claim about Uber's actual implementation).
+
+---
+
+## Exam Framing
+
+> "Real-time streaming data needs to be collected and temporarily stored so multiple consumers can process it independently" → **Kinesis Data Streams.** "Streaming data needs to be delivered to a destination like S3/Redshift without writing custom consumer code" → **Kinesis Data Firehose** (covered separately). ⚠️ **Remember Kinesis is a 3-service family — Data Streams (store), Firehose (deliver), Managed Apache Flink (analyze) — a question naming a specific need (storage vs. delivery vs. analysis) should point to the specific matching service, not "Kinesis" generically.**
+`,
+    },
+    {
       id: "eventbridge-hands-on-lab-ec2-rule-sns",
       title: "EventBridge Hands-On Lab – From 'Every EC2 Event' to One Precisely Filtered Notification",
       shortDesc: "The first rule (all EC2 events, no filter) fires an email for every single state transition — running→stopping→stopped→pending→running — before narrowing to a specific instance ID and state cuts that down to exactly one",
