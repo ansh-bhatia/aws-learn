@@ -6,6 +6,46 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-message-groups-and-deduplication-scope",
+      title: "SQS Message Groups & Deduplication Scope – Order Within a Customer, Parallel Across Customers",
+      shortDesc: "Message Group ID is how SQS learns 'these 3 messages are the same customer's checkout journey' — deduplication scope then decides whether duplicates are only rejected WITHIN that group, or across the entire queue",
+      visuals: [],
+      content: `## What a Message Group Actually Is
+
+> **A message group tells SQS which messages belong together, for the purpose of strict ordering.** ⚠️ **Messages in the SAME group are always processed one-by-one, in the exact order sent. Messages in DIFFERENT groups can be processed in parallel — they don't block each other at all.** ⚠️ **The Message Group ID is generated and attached by the PRODUCER application on every message — SQS never invents or assigns it, it only reads what the producer sends.** ⚠️ **A FIFO queue structurally cannot function without a Message Group ID on every message — this must be confirmed with the producer app's developer before a FIFO queue is even created.**
+
+### Worked Example: One Customer's Checkout Journey
+
+> **buy-now → payment-page → payment-complete → order-confirmed** — these 4 events for ONE customer all carry the SAME Message Group ID (e.g. "A"), so SQS processes them strictly in that arrival order. ⚠️ **A second customer's simultaneous checkout carries a DIFFERENT Message Group ID (e.g. "B") — SQS makes no ordering promise between A's messages and B's messages at all, they can run in parallel.**
+
+---
+
+## Deduplication Scope: WHERE Should SQS Look for Duplicates?
+
+> ⚠️ **Deduplication Scope has exactly two options, chosen at queue creation: Message Group (the default) or Queue.** This setting decides the BOUNDARY within which SQS checks for a duplicate — it does not change whether deduplication happens, only where it looks.
+
+### Scope = Message Group (Default, Faster)
+
+> **SQS only checks for duplicates WITHIN the same message group — an identical message in a DIFFERENT group is NOT flagged as a duplicate at all.** ⚠️ **Use this for customer-scoped actions — orders, cart actions, user workflows** — e.g. a user double-clicking "Buy Now" due to a slow connection produces two identical messages in the SAME group, correctly caught as a duplicate; unrelated customers' independent orders are never compared against each other.
+
+### Scope = Queue (Slower, for Global Uniqueness)
+
+> **SQS checks for duplicates across the ENTIRE queue, ignoring group boundaries entirely — even messages in a different group are compared.** ⚠️ **Use this when messages must be globally unique and duplicate processing would be a serious problem — the textbook case: unique payment transaction IDs, where a duplicate should never legitimately occur system-wide, regardless of which customer or group it came from.**
+
+---
+
+## ⚠️ Why Message Group Is Faster (and the Default)
+
+> **Message Group scope only has to check duplicates inside ONE group** — different groups are handled completely independently, requiring far less internal coordination, which scales well under high FIFO throughput. **Queue scope has to check duplicates across ALL groups in the entire queue** — inherently more coordination, inherently slower. ⚠️ **This is exactly why enabling High Throughput FIFO mode automatically selects Message Group as the deduplication scope (paired with per-message-group-ID throughput limits) — the faster option is the one that scales.**
+
+---
+
+## Exam Framing
+
+> "Prevent duplicate cart/order actions per customer, without slowing down unrelated customers' orders" → **Deduplication Scope = Message Group** (the default, and the faster option). "A payment transaction ID must never be processed twice, regardless of which customer or group it came from" → **Deduplication Scope = Queue** — broader, slower, but the only option that catches duplicates ACROSS groups. Remember: **Message Group ID itself is always producer-supplied and is what makes strict per-customer ordering possible in the first place — Deduplication Scope is a separate, later decision about the duplicate-detection boundary.**
+`,
+    },
+    {
       id: "sqs-dead-letter-queue-dlq-deep-dive",
       title: "SQS Dead-Letter Queue (DLQ) – Breaking the Infinite Retry Loop",
       shortDesc: "Without a DLQ, one poison message loops forever between the main queue and its consumer — visibility timeout expires, message reappears, fails again, repeat, wasting the consumer's time indefinitely",
