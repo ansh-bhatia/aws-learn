@@ -5846,6 +5846,56 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-vs-eks-exam-cheat-sheet",
+      title: "ECS vs EKS Exam Cheat Sheet – One Keyword Rule Solves 70% of Container Questions",
+      shortDesc: "Detect a container question from generic clues like microservices or Docker, then ask one single question — does it mention Kubernetes at all — and 70% of these questions are already answered",
+      visuals: [],
+      content: `## ⚠️ Why This Matters: Exam Questions Rarely Say "ECS" or "EKS" Directly
+
+> **Many exam questions describe a scenario using generic terms — containers, microservices — without ever naming ECS or EKS explicitly.** ⚠️ **Recognizing these generic trigger words is what tells you "this is a container question" in the first place** — the specific service choice comes after that recognition, not before it.
+
+---
+
+## Step 1: Detect a Container Question
+
+> ⚠️ **Common trigger keywords signaling a container question (ECS or EKS, not yet which one)**: containers, microservices, Docker, orchestration, cluster, CI/CD deployment, stateless service, service discovery, task scheduling, serverless container compute, Fargate.
+
+---
+
+## ⚠️ Step 2: The One-Question Rule That Solves 70% of These Questions
+
+> **Once a question is identified as container-related, ask exactly one question: does the scenario mention Kubernetes anywhere?** ⚠️ **Kubernetes mentioned → EKS. No Kubernetes mention → most likely ECS.** ⚠️ **This single rule alone resolves roughly 70% of container-service exam questions** — it's the fastest, highest-leverage check to run first.
+
+---
+
+## Step 3: Specific Keyword-to-Service Mapping
+
+| Keyword/Clue in the Question | Answer |
+|---|---|
+| Kubernetes, pods, nodes, kubectl, Helm | **EKS** |
+| Hybrid cloud, Kubernetes on-premises | **EKS** |
+| "100% portable to other clouds" | **EKS** — Kubernetes runs anywhere; ECS is AWS-only, not portable |
+| "Lowest operational overhead" / simplest / "no Kubernetes expertise" | **ECS**, often specifically **Fargate** — serverless, AWS-native |
+| Control plane cost, high availability of control plane | **EKS** (this is exactly the operational burden covered in the earlier Kubernetes architecture topic) |
+| Serverless container compute | **Fargate** — can be under EITHER ECS or EKS, so this alone doesn't disambiguate ECS vs EKS by itself |
+| "Vendor lock-in is acceptable" / "just run containers in AWS quickly" | **ECS** |
+
+⚠️ **Note that Fargate itself is not exclusive to ECS — it's also a valid worker node type for EKS (Classic Mode)** — so "Fargate" mentioned alone signals "serverless container," not automatically "ECS."
+
+---
+
+## ⚠️ What the Exam Does NOT Require
+
+> **The AWS Solutions Architect exam does not test actual Kubernetes command syntax or deep Kubernetes administration knowledge** — no kubectl command memorization required. ⚠️ **The exam tests keyword recognition and service selection, not hands-on Kubernetes fluency.**
+
+---
+
+## Exam Framing
+
+> "A question describes deploying containerized microservices but never explicitly names a service, and mentions no Kubernetes-related terms at all" → **ECS is the far more likely answer** — apply the one-question rule (no Kubernetes mention → ECS) before considering anything else. "A question mentions running the same container orchestration tooling both on-premises and in AWS" → **EKS** — this is precisely the hybrid-cloud, "same tooling everywhere" use case that makes EKS the correct choice over ECS, which is AWS-native only and offers no on-premises equivalent.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
