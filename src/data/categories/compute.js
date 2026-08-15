@@ -4872,6 +4872,52 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-cluster-autoscaling-vs-service-autoscaling",
+      title: "ECS Cluster Auto Scaling vs Service Auto Scaling: Two Independent Scaling Layers",
+      shortDesc: "Cluster auto scaling grows the EC2 fleet that hosts tasks and needs no manual policy at all — service auto scaling grows the task COUNT itself and requires an explicit CloudWatch-metric-based policy",
+      visuals: [],
+      content: `## Two Distinct Auto Scaling Layers in ECS
+
+> **ECS has TWO separate types of auto scaling, operating at completely different levels**: ⚠️ **cluster auto scaling scales the number of EC2 INSTANCES in the cluster; service auto scaling scales the number of TASKS within a service.** They solve different problems and can both be active simultaneously.
+
+---
+
+## Cluster Auto Scaling: EC2-Only, No Manual Policy Needed
+
+> **What it scales**: the number of EC2 instances (container hosts) in an ECS cluster. ⚠️ **Only relevant when using EC2 as the launch type — Fargate is serverless, so AWS already scales the underlying capacity automatically, making cluster auto scaling irrelevant/inapplicable there.**
+
+**How it works**: ⚠️ **uses a capacity provider combined with an Auto Scaling Group (ASG) to add/remove EC2 instances based on task placement needs** — when there isn't enough EC2 capacity to place all the tasks that need to run, cluster auto scaling adds more instances.
+
+**⚠️ Key distinguishing feature: no manual scaling policy or CPU/memory threshold needs to be set at all.** ECS's managed scaling (inside the capacity provider) automatically calculates how many EC2 instances are needed based on the current task placement demand — ⚠️ **the only thing manually configured is the ASG's minimum and maximum instance count boundaries**, everything else is automatic.
+
+**Worked example**: a service wants to run 8 tasks, but the cluster currently has only 1 EC2 instance with limited resources — not enough capacity for all 8. ⚠️ **Cluster auto scaling adds more EC2 instances so the tasks CAN actually be placed.**
+
+---
+
+## Service Auto Scaling: Both Fargate and EC2, Requires an Explicit Policy
+
+> **What it scales**: the number of tasks running inside a service. ⚠️ **Applies to BOTH Fargate and EC2 launch types** — regardless of the underlying infrastructure, a service can scale its task count up or down based on demand.
+
+**How it works**: ⚠️ **uses CloudWatch metrics (CPU utilization, memory utilization, ALB request count, etc.) to decide how many tasks should run**, governed by an explicit scaling policy that must be manually configured. ⚠️ **Unlike cluster auto scaling, service auto scaling does NOT calculate thresholds automatically — the scaling policy and its metric thresholds must be set up deliberately.**
+
+**Available policy types**: **target tracking** and **step scaling** are both configurable directly during service creation; a third type, **scheduled scaling**, becomes available only AFTER the service already exists (not during initial creation).
+
+**Worked example**: a service running 2 tasks experiences a traffic spike — ECS automatically increases the task count up to whatever maximum boundary was configured (e.g. up to 8 tasks), based on the scaling policy's metric threshold.
+
+---
+
+## Boundaries: Both Types Use Min/Max/Desired
+
+> **Both scaling types are bounded by minimum and maximum limits** — for cluster auto scaling, this is the ASG's min/max EC2 instance count; for service auto scaling, this is the service's min/max task count. ⚠️ **Neither type will scale beyond its configured maximum, regardless of demand.**
+
+---
+
+## Exam Framing
+
+> "A cluster's EC2 instances don't have enough capacity to place all the tasks a service wants to run" → **cluster auto scaling** — adds more EC2 instances via the ASG, EC2-launch-type-only, requires no manual scaling policy (ECS calculates capacity needs automatically). "A service needs to increase its running task count in response to a CPU or ALB request spike" → **service auto scaling** — applies to both Fargate and EC2, requires an explicitly configured policy (target tracking or step scaling) tied to a CloudWatch metric. Remember: **cluster scaling = EC2 instance count, automatic policy; service scaling = task count, manual policy, works on both launch types.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
