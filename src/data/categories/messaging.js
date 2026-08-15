@@ -6,6 +6,64 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-full-exam-cheat-sheet",
+      title: "SQS Exam Cheat Sheet – Every Keyword-to-Answer Mapping in One Place",
+      shortDesc: "The full keyword decision table for the entire SQS arc — decoupling, ordering, reliability, cross-account access, and every integration — condensed to the exact phrase that gives each answer away",
+      visuals: [],
+      content: `## Core Decoupling & Scaling Keywords
+
+| Keyword in the Question | Answer |
+|---|---|
+| "Variable workload," "decoupled components," "background processing," "asynchronous processing" | **SQS between producer and consumer** |
+| "Auto scaling based on queue," "backlog of messages," "scale workers automatically" | **EC2 Auto Scaling driven by SQS queue depth**, metric = **ApproximateNumberOfMessagesVisible** |
+
+---
+
+## Ordering & Exactly-Once Keywords
+
+| Keyword | Answer |
+|---|---|
+| "Strict order," "exactly once," "no duplicates" | **FIFO queue** |
+| "Very high throughput required," order not required | **Standard queue** |
+
+---
+
+## Reliability & Failure-Handling Keywords
+
+| Keyword | Answer |
+|---|---|
+| "Message processed multiple times," "poison message," "failed processing" | **Dead-Letter Queue (DLQ)** |
+| "Duplicate processing," "message reappears" | **Visibility timeout not set correctly** |
+
+---
+
+## Cross-Account & Integration Keywords
+
+| Keyword | Answer |
+|---|---|
+| "Another AWS account," "access SQS without sharing credentials" | **SQS Queue Policy** (a resource-based policy) |
+| "Worker nodes," "always running," "control polling logic," "background jobs" | **EC2 instance as a consumer, polling SQS** |
+| "Serverless," "event-driven," "no servers," "automatic scaling" (Lambda+SQS) | **SQS triggers Lambda via Event Source Mapping** |
+| "Who polls the queue?" / "no polling code," "fully managed consumer" | **AWS polls SQS on Lambda's behalf** — Event Source Mapping |
+| "Database cannot keep up," "sudden spike," "no downtime," "absorb traffic" | **Producer → SQS → worker writes to DB** (SQS protects the DB from the spike) |
+| "Paid user first," "free user can wait," "priority processing," "cost effective" | **Two separate standard queues (paid + free), consumer processes the paid queue first** |
+| "User uploads file," "processing later," "user should not wait," "background processing" | **S3 event notification → SQS → Lambda** |
+| "Reliable processing," "retry on failure," "durable event" (S3→Lambda) | **Insert SQS between S3 and Lambda** for durability + automatic retry — direct S3→Lambda skips this reliability layer entirely |
+
+---
+
+## ⚠️ The One-Hour-Before-the-Exam Ultra-Fast Rule
+
+> **A condensed keyword list**: priority, multiple queue, scaling, queue depth, Lambda polling / AWS does it, cross-account, queue policy, spike, SQS buffer, ordering, FIFO, retry on failure, DLQ. ⚠️ **If a question mentions ANY TWO of these together — spike+async, async+decouple, decouple+retry, retry+background, background+durability, or durability+spike — in most cases the answer is SQS**, even without recognizing the exact scenario.
+
+---
+
+## Exam Framing
+
+> This is the master reference for every SQS scenario-based question covered across the entire arc — decoupling/async, Standard vs FIFO, DLQ/visibility timeout, cross-account queue policies, and every major integration (EC2, Lambda, S3, database-spike-protection, priority queues). ⚠️ **The single biggest exam skill this cheat sheet trains: recognizing the SPECIFIC keyword phrase in a question and mapping it directly to the correct SQS feature or pattern, rather than reasoning through the full mechanics from scratch under time pressure** — exactly the same study strategy used for the API Gateway cheat sheet. **This closes out the entire SQS arc — SNS begins next.**
+`,
+    },
+    {
       id: "sqs-lambda-event-source-mapping-vs-ec2-polling",
       title: "SQS + Lambda – Why Event Source Mapping Exists (and Who Actually Owns It)",
       shortDesc: "Lambda's code never contains a single line of polling logic — AWS itself polls the queue on Lambda's behalf via Event Source Mapping, a facility that belongs to Lambda even when you set it up from the SQS console",
