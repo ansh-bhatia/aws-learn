@@ -6,6 +6,60 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-integration-types",
+      title: "REST API Integration Types – Five Backends, and Why VPC Link Can't Reach a Private Backend Alone",
+      shortDesc: "VPC Link doesn't talk directly to whatever's in your private subnet — it can only reach an ALB or NLB sitting in front of it, which is what actually forwards traffic the rest of the way",
+      visuals: [],
+      content: `## What Integration Type Actually Decides
+
+> **Integration = where a method's request actually gets sent once the client calls it.** ⚠️ **REST API supports FIVE integration types**, each suited to a different backend scenario.
+
+---
+
+## The Five Integration Types
+
+1. **Lambda function** — the most popular option; API Gateway invokes Lambda and returns its response. The standard choice for serverless backends.
+2. **HTTP** — forwards the request to any public HTTP endpoint (e.g. a company's own backend on EC2 or on-premises) — a simple pass-through, no AWS service involved.
+3. **Mock** — no real backend at all; API Gateway returns a fixed, predefined response. ⚠️ **Purpose-built for testing and demos**, not real traffic.
+4. **VPC Link** — a private bridge between API Gateway and resources inside a VPC.
+5. **AWS service** — API Gateway calls an AWS service (S3, DynamoDB, SQS, SNS, Kinesis, etc.) DIRECTLY, with no Lambda function in between.
+
+---
+
+## ⚠️ VPC Link: Why It Can't Reach the Private Backend Directly
+
+> **API Gateway is public; backend services can live in a private VPC subnet with no public access at all.** ⚠️ **VPC Link cannot communicate directly with resources sitting in that private subnet — it specifically requires an ALB or NLB in between.** ⚠️ **The real chain: API Gateway → VPC Link → ALB/NLB → the actual private backend.** VPC Link is the bridge to the load balancer, not directly to the backend resource itself.
+
+**⚠️ Version history matters**: ⚠️ **VPC Link v1 supports ONLY NLB; VPC Link v2 (the newer version) adds support for ALB as well** — so a modern VPC Link setup can front either load balancer type, but the older v1 was NLB-only.
+
+**Why this matters**: it enables secure backend access without ever exposing the private resource to the public internet.
+
+---
+
+## AWS Service Integration: Direct, No Lambda Needed
+
+> **API Gateway can call AWS services directly — S3, DynamoDB, SQS, SNS, Kinesis — completely bypassing Lambda.** ⚠️ **This requires: an IAM role granting the API Gateway permission to call the target service, AND request/response mapping (via Velocity Template Language / mapping templates)** to translate between the incoming HTTP request and whatever format the target AWS service expects. Example: a POST request configured to push records directly into a Kinesis Data Stream, with zero Lambda function involved anywhere in the flow.
+
+---
+
+## ⚠️ REST API vs HTTP API: Breadth of AWS Service Integration
+
+> **Both REST API and HTTP API support HTTP, VPC Link, and AWS service integration types** — but ⚠️ **REST API supports a genuinely BROADER, more flexible set of AWS service integrations, with advanced mapping capabilities; HTTP API supports only a LIMITED set of service integrations**, designed specifically for simpler, lower-cost use cases.
+
+---
+
+## ⚠️ Exam Tip: The Deciding Question
+
+> ⚠️ **"Direct integration with MANY AWS services, complex mapping requirements" → REST API.** ⚠️ **"Simple, low-cost API with a LIMITED set of AWS service integrations" → HTTP API.** This is a direct extension of the earlier cost/feature-set tradeoff already established between the two API types — broader integration flexibility is simply one more item on REST API's side of that tradeoff.
+
+---
+
+## Exam Framing
+
+> "A REST API needs to push data directly into a Kinesis Data Stream, without any Lambda function in the middle" → **AWS service integration** — API Gateway calling Kinesis directly, requiring an IAM role plus request/response mapping templates. "An API Gateway needs to reach a backend service sitting in a private VPC subnet with no public IP" → **VPC Link — but remember it requires an ALB or NLB in front of that private resource; VPC Link itself cannot connect directly to the private backend.** Choosing between REST and HTTP API purely on integration breadth: **many AWS services + complex mapping → REST API; simple + limited integrations + lower cost → HTTP API.**
+`,
+    },
+    {
       id: "rest-api-resources-and-methods",
       title: "REST API – Resources and Methods: The Structural Layer HTTP API Doesn't Have",
       shortDesc: "HTTP API just has flat routes triggering an integration directly — REST API forces every request through a resource-then-method hierarchy, which is exactly where all its advanced features actually live",
