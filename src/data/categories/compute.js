@@ -5250,6 +5250,45 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-capstone2-step4-deploy-alb",
+      title: "ECS Capstone Project – Step 4: Deploying the ALB in Advance (Target Group First, Then the Load Balancer Itself)",
+      shortDesc: "Both public subnets get selected during ALB creation — AWS spreads the load balancer's own nodes across every AZ chosen, mirroring the same multi-AZ redundancy already built into the VPC",
+      visuals: [],
+      content: `## ⚠️ Reaffirming: Create the ALB BEFORE the Service, Not During It
+
+> **This step deliberately creates the ALB in advance, from the EC2 console — NOT inline during ECS service creation.** ⚠️ **Creating an ALB during service creation risks accidentally placing it inside the PRIVATE subnet, making it unreachable from the internet** — exactly the gotcha covered in the earlier ECS Service Load Balancer Integration topic (lecture 45). Pre-creating it here sidesteps that risk entirely, since subnet selection is explicit in the EC2 console flow.
+
+---
+
+## Step A: Create the Target Group First
+
+> **Target group creation always comes before the load balancer itself.** ⚠️ **Target type must be "IP addresses," not "instances"** — matching the earlier target-group topic's reasoning, since ECS tasks aren't EC2 instances and get auto-registered by their IP once the service exists. ⚠️ **No targets are manually added at this stage** — the target group is created empty; ECS populates it automatically once tasks actually launch in a later step.
+
+---
+
+## Step B: Create the Application Load Balancer
+
+1. **Type: Application Load Balancer** (not Network Load Balancer) — ⚠️ **stick with the type the lab specifies on a first pass through the material**; experimenting with alternate load balancer types is fine later, but switching mid-lab risks confusing the concept being taught.
+2. **Scheme: internet-facing, IPv4.**
+3. **VPC: the project's custom VPC** (created in Step 1).
+4. **⚠️ Availability Zones/subnets: BOTH public subnets must be selected** — one from each AZ. AWS then places the load balancer's own infrastructure across all selected AZs, mirroring the same multi-AZ redundancy already designed into the VPC itself.
+5. **⚠️ Security group: the ALB-specific security group created in Step 2 — and the DEFAULT security group must be explicitly REMOVED from this list**, since a load balancer isn't restricted to just one security group by default; leaving the default attached alongside the custom one would partially undermine the deliberate security-group design from Step 2.
+6. **Listener: HTTP port 80 → forward to the target group created in Step A.**
+
+---
+
+## After Creation: Copy the DNS Name, but Don't Expect It to Work Yet
+
+> **Once the ALB finishes provisioning (typically 2-3 minutes), its DNS name becomes available and should be noted down for later use** (verifying the deployed application once a service actually exists). ⚠️ **The DNS name will NOT resolve to a working application yet at this point — no service or running tasks exist to receive traffic** — this is expected, not a sign of misconfiguration; the ALB is simply "ready and waiting" until the service is created in a later step.
+
+---
+
+## Exam Framing
+
+> "Why does an ALB created directly through the ECS service-creation console sometimes end up unreachable from the internet?" → **it can get silently placed in the same subnet selected for the task's own networking — typically private — since that flow doesn't expose explicit subnet choice. Creating the ALB in advance via the EC2 console (where subnet selection is explicit) avoids this entirely.** "When creating an ALB across a multi-AZ VPC, how many subnets should be selected?" → **one PUBLIC subnet per AZ the load balancer should span — AWS then places load-balancer infrastructure across all of them, providing the same AZ-level redundancy the rest of the architecture already has.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
