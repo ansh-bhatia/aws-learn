@@ -5743,6 +5743,46 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-kubectl-local-vs-ec2-endpoint-access",
+      title: "kubectl Access to EKS – Why a Private-Only Cluster Endpoint Breaks Local-PC Access Entirely",
+      shortDesc: "The console genuinely never talks to the Kubernetes API server at all — kubectl is the only tool that does, and where you install it depends entirely on whether the cluster's endpoint is public or private",
+      visuals: [],
+      content: `## ⚠️ Why the Console Structurally Cannot Do This
+
+> **The AWS Console only interacts with EKS as an AWS resource (cluster settings) — it is NOT a Kubernetes client, and Kubernetes resources (pods, deployments) are created through the Kubernetes API SERVER, which is part of the control plane.** ⚠️ **The console simply cannot send requests to that API server at all** — this isn't a missing feature, it's an architectural boundary. ⚠️ **kubectl is the official Kubernetes CLI tool, and it's the only thing that talks directly to the API server** — described concretely as "the real remote control of Kubernetes."
+
+---
+
+## Two Installation Options, Governed Entirely by Endpoint Visibility
+
+> **kubectl can be installed in two places: a local PC, or an EC2 instance inside the same VPC as the cluster — and which one works depends entirely on the cluster's configured endpoint access type (public, private, or both).**
+
+### Option 1: kubectl + AWS CLI on a Local PC
+
+> **Requirements**: install both kubectl and AWS CLI locally, plus valid AWS access key/secret key for authentication. ⚠️ **This is the most common method for cloud/DevOps/Kubernetes engineers** — full remote access from anywhere, no need to be inside AWS or the same VPC.
+
+**⚠️ Critical requirement: the EKS cluster's endpoint must be PUBLIC or PUBLIC+PRIVATE — a PRIVATE-ONLY endpoint breaks this option entirely.** ⚠️ **A local PC accessing over the public internet simply cannot reach a private-only endpoint at all** — private endpoints aren't exposed to the internet, by design. ⚠️ **The only way to still use a local PC against a private-only endpoint is through a VPN, AWS Direct Connect, or a secure tunnel into the VPC** — without one of these, access fails outright, no exceptions.
+
+### Option 2: kubectl + AWS CLI on an EC2 Instance in the Same VPC
+
+> ⚠️ **An EC2 instance inside the SAME VPC as the EKS cluster can reach public, private, AND public+private endpoints — all three, unconditionally** — because being inside the VPC already grants network visibility to the private endpoint, with no VPN or tunnel needed.
+
+**Requirements on the EC2 instance**: install kubectl and AWS CLI, ⚠️ **ensure the instance's security group allows OUTBOUND HTTPS (TCP port 443)**, and attach an IAM role/permissions granting access to the EKS cluster.
+
+---
+
+## The Decision Rule
+
+> **If the cluster's endpoint is public (or public+private) and remote access from anywhere is wanted → local PC.** **If the cluster's endpoint is private-only (or a VPN/tunnel setup is undesirable) → an EC2 instance inside the same VPC** is the simpler, unconditionally-working path.
+
+---
+
+## Exam Framing
+
+> "A cluster's endpoint access is set to private-only, and kubectl from a local PC (with no VPN configured) can't reach it at all" → **expected — a private-only endpoint is genuinely unreachable from outside the VPC without a VPN, Direct Connect, or secure tunnel.** "How can kubectl reliably reach a private-only EKS endpoint without setting up a VPN?" → **install kubectl and AWS CLI on an EC2 instance inside the SAME VPC as the cluster** — being in the VPC already provides the necessary network visibility to the private endpoint, no additional connectivity setup required.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
