@@ -5289,6 +5289,36 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-ecr-image-scanning-vulnerabilities",
+      title: "ECR Image Scanning – Finding Out About Vulnerabilities Before They Ship in a Task",
+      shortDesc: "ECR can scan a pushed image for known vulnerabilities right in the console — findings that exist whether or not anyone ever looks at them",
+      visuals: [],
+      content: `## What This Step Actually Verifies
+
+> **Before referencing an image in a task definition, ECR provides a way to confirm exactly what's about to be deployed** — the exact image tag (e.g. "latest"), its digest, and its full URI (needed later when creating/updating the task definition). ⚠️ **This step is purely verification — no new image is built or pushed here, it's confirming what already exists in the private ECR repository from the earlier build-and-push steps.**
+
+---
+
+## ⚠️ ECR's Built-In Image Vulnerability Scanning
+
+> **ECR provides a scanning feature that checks a pushed image for known vulnerabilities directly in the console** — surfacing findings (including potentially critical-severity issues) without needing any separate third-party security tool. ⚠️ **These findings exist in the image regardless of whether anyone actually opens the scan results** — an unscanned or unreviewed image can still be deployed with real, un-remediated vulnerabilities baked in; the scan just makes them visible.
+
+**Practical framing for a learning/demo context**: ⚠️ **finding critical vulnerabilities in a demo image doesn't block deployment for testing/learning purposes** — but in a genuinely production context, reviewing and addressing scan findings before deploying is the responsible practice, not something to routinely skip.
+
+---
+
+## Why Verifying the URI Matters Before the Next Step
+
+> **The image URI copied here is exactly what gets pasted into the task definition's image field in the next step** — ⚠️ **getting this URI wrong (a typo, a stale tag, the wrong repository) would cause the task definition to reference an image that doesn't match what was actually intended**, so confirming the exact, current URI directly from the ECR console (rather than relying on memory or an old note) is the point of this verification step.
+
+---
+
+## Exam Framing
+
+> "How can a team check a container image already pushed to ECR for known security vulnerabilities before deploying it?" → **ECR's built-in image scanning feature**, viewable directly in the console for that specific image — surfacing vulnerability findings without needing a separate external scanning tool. Remember: **scan findings exist in the image whether or not they're ever reviewed** — skipping the review doesn't make the vulnerabilities disappear, it just means they go into production unnoticed.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
