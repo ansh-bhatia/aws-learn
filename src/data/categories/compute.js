@@ -3915,6 +3915,165 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-network-mode-awsvpc",
+      title: "ECS Network Mode – awsvpc: A Dedicated ENI and Private IP for Every Task",
+      shortDesc: "The only mode Fargate supports, and the most-used mode on EC2 too — each task acts like its own mini EC2 instance with its own IP, security group, and subnet",
+      visuals: [],
+      content: `## What Network Mode Controls
+
+> **A task definition's network mode determines how a container connects to the network, and whether it shares networking with the host machine or gets its own dedicated IP.** ⚠️ **ECS offers five network modes total** — this topic covers awsvpc, the most important and most commonly used one.
+
+---
+
+## awsvpc: Each Task Gets Its Own ENI
+
+> **In awsvpc mode, every task gets a dedicated Elastic Network Interface (ENI) and its own private IP address from the VPC** — ⚠️ **it does NOT share networking with the underlying host machine at all.**
+
+**How it works mechanically**: an EC2 instance (part of the ECS cluster) already has its own host ENI. Creating a task with awsvpc mode attaches a SEPARATE, dedicated ENI specifically for that task — with its own private IP, its own attachable security group, and its own subnet association. ⚠️ **Each task effectively behaves like a mini EC2 instance in its own right.** Launching a second task creates a second, entirely separate ENI with its own distinct IP — ⚠️ **there is no cross-access between tasks' ENIs; each is fully isolated from the others.**
+
+---
+
+## ⚠️ The Only Mode Fargate Supports
+
+> **awsvpc is the ONLY network mode Fargate supports** — all other four modes are exclusively available on the EC2 launch type. This is exactly why, when creating a task definition with Fargate selected, the network mode field is grayed out and locked to awsvpc.
+
+**Even on EC2 (where all five modes are technically available), awsvpc remains the most commonly used** — because it provides the strongest isolation, full VPC feature access (security groups, routing) per task, and the same networking model regardless of whether the task runs on Fargate or EC2.
+
+---
+
+## Configuring It
+
+> With awsvpc selected, only the **container port** needs to be specified when configuring a task's container — since the task already has its own dedicated ENI and IP, there's no host-to-container port mapping to configure at all (that complexity is specific to bridge mode, covered next).
+
+---
+
+## Exam Framing
+
+> "Which ECS network mode is required for Fargate, and gives each task its own dedicated network interface and private IP?" → **awsvpc** — the only mode Fargate supports, and the generally-recommended mode even on EC2 for the strongest task-level network isolation.
+`,
+    },
+    {
+      id: "ecs-network-mode-bridge",
+      title: "ECS Network Mode – Bridge: All Tasks Share the Host's ENI Through a Virtual Bridge",
+      shortDesc: "No dedicated IP per task this time — Docker creates an internal virtual bridge and NATs traffic through the single shared host ENI, requiring explicit port mapping",
+      visuals: [],
+      content: `## The Core Difference From awsvpc
+
+> ⚠️ **In bridge mode, tasks do NOT get a dedicated ENI at all — every task shares the single host ENI**, unlike awsvpc where each task gets its own. ⚠️ **Bridge mode is only available on EC2 — Fargate does not support it.**
+
+---
+
+## How Sharing Actually Works
+
+> **Docker creates an internal virtual bridge on the EC2 host** — functioning as a gateway with its own internal IP (e.g. an address like 172.17.0.1). This bridge connects to the host's ENI, so ⚠️ **all incoming/outgoing task traffic ultimately flows through that single shared ENI, with Docker performing NAT (network address translation) behind the scenes** to bridge between the bridge's internal IP range and the host ENI's actual VPC-facing IP.
+
+**When a task starts**: Docker creates a virtual Ethernet pair connecting the task to the bridge, and the bridge assigns the task an **internal IP** (not a VPC IP — this address only exists inside the Docker host, invisible to the wider VPC).
+
+---
+
+## ⚠️ Port Mapping Is Mandatory in Bridge Mode
+
+> **Since the task has no IP of its own that's reachable from outside the host, external access requires explicit port mapping**: a specific host port is mapped to a specific container port. Example: host port 8080 might map to task-1's container port 80; host port 8081 might map to task-2's container port 80 — ⚠️ **each task needs a DIFFERENT host port, since they're all sharing the one host ENI/IP.**
+
+**Configuring this**: when setting up a task's container in bridge mode, both a **host port** and a **container port** must be specified — directly contrasting with awsvpc mode, which only asks for a container port (since it doesn't need this mapping at all).
+
+---
+
+## Exam Framing
+
+> "A task needs to share the underlying host's network interface rather than getting its own dedicated one, using explicit host-to-container port mapping" → **bridge mode**, EC2-only, not supported by Fargate. Remember: **bridge mode requires configuring BOTH a host port and a container port** — the defining configuration difference from awsvpc's container-port-only setup.
+`,
+    },
+    {
+      id: "ecs-network-mode-default",
+      title: "ECS Network Mode – Default: The Windows-Only Equivalent of Bridge Mode",
+      shortDesc: "The 'Default' mode specifically means NAT networking for a Windows container host — Linux hosts use bridge as their default instead, so this mode's name is a bit misleading",
+      visuals: [],
+      content: `## ⚠️ Standalone Docker's OS-Dependent Default Networking
+
+> **Standalone Docker's default networking behavior itself depends on the host OS**: ⚠️ **a Linux Docker host defaults to bridge mode; a Windows Docker host defaults to NAT mode instead** — Windows containers don't support Linux-style bridge networking at all.
+
+---
+
+## What ECS's "Default" Mode Actually Means
+
+> ⚠️ **In ECS specifically, the "default" network mode option is really just NAT networking, and it's supported ONLY on Windows container hosts.** ⚠️ **Linux container hosts do not support this "default" mode at all** — a Linux host instead uses the explicitly-named "bridge" mode covered in the previous topic for equivalent functionality.
+
+**The practical decision rule**: running a Windows-based application (e.g. a .NET/IIS workload) on an EC2 Windows container host, and not using awsvpc? → select **default**. Running on a Linux container host instead? → select **bridge**, not default (default won't even function correctly there).
+
+---
+
+## ⚠️ Fargate and Windows
+
+> Since Fargate only supports awsvpc mode, this "default"/NAT mode is exclusively relevant to **EC2 launch type with a Windows container host** — never Fargate, and never a Linux EC2 host either.
+
+---
+
+## Exam Framing
+
+> "A Windows-based ECS task needs NAT-style networking on an EC2 host" → **default mode.** ⚠️ **Don't confuse this with a generic "recommended default"** — the name is specific to this one Windows-only networking behavior, not a general best-practice recommendation (awsvpc remains the generally-recommended mode for most workloads).
+`,
+    },
+    {
+      id: "ecs-network-mode-host-and-none",
+      title: "ECS Network Mode – Host and None: No Virtual Bridge, or No Networking At All",
+      shortDesc: "Host mode skips the bridge entirely and shares the host's IP directly (faster, but every task needs a unique port); None mode disables outside networking entirely",
+      visuals: [],
+      content: `## Host Mode: No Virtual Bridge At All
+
+> **Host mode removes the virtual bridge that bridge mode relies on entirely** — ⚠️ **a task in host mode uses the SAME IP address as the underlying host ENI directly**, with no NAT, no bridge, no internal IP translation layer whatsoever.
+
+**The direct consequence**: since every task shares the exact same host IP, ⚠️ **only the container's port number distinguishes one task's traffic from another's — port mapping in the bridge-mode sense doesn't exist, but every task MUST use a unique port**, since two tasks cannot both bind the same port on the one shared IP. Attempting to run two tasks on the same port produces an error.
+
+**Configuring it**: only a **container port** needs to be specified (similar to awsvpc in that respect) — but unlike awsvpc, that port is reached directly via the host's own IP, not a task-specific one.
+
+**Performance note**: ⚠️ **host mode is faster than bridge mode**, since there's no NAT/routing layer for traffic to pass through — requests go straight to the host ENI and directly to the bound port.
+
+**Availability**: EC2 only (Fargate doesn't support it), and specifically Linux — not supported on Windows container hosts.
+
+---
+
+## None Mode: No External Networking At All
+
+> **None mode disables outside-world network access for the container entirely.** ⚠️ **Best for testing scenarios or special-purpose workloads that genuinely don't need any external connectivity** — there's little configuration involved since there's effectively nothing to expose. Also EC2-only, not supported by Fargate.
+
+---
+
+## Exam Framing
+
+> "Fastest possible EC2-based networking mode, at the cost of every task needing a distinct port since they all share the host's IP directly" → **host mode.** "A task that deliberately should have zero external network access, e.g. for isolated batch processing or testing" → **none mode.** Both are EC2-only — Fargate never supports either.
+`,
+    },
+    {
+      id: "ecs-network-mode-port-mapping-summary",
+      title: "ECS Network Modes – The Port Mapping Cheat Sheet (A Common Interview Question)",
+      shortDesc: "Only bridge and default modes actually require configuring a host port; awsvpc and host only need a container port; none needs nothing at all",
+      visuals: [],
+      content: `## The Four-Mode Comparison (None Excluded — Nothing to Configure)
+
+> ⚠️ **This exact comparison is called out as a favorite interview question** — worth memorizing as a clean summary table rather than five separate mental models.
+
+| Network Mode | Port Mapping Needed? | IP Type |
+|---|---|---|
+| **awsvpc** | ❌ Container port only | Task's own dedicated private IP |
+| **Bridge** | ✅ Host port + container port | Shared host ENI, internal bridge IP per task |
+| **Default** (Windows NAT) | ✅ Host port + container port | Shared host ENI (Windows-specific NAT) |
+| **Host** | ❌ Container port only (but must be unique per task) | Shared host IP directly, no translation layer |
+
+---
+
+## ⚠️ The Core Pattern to Remember
+
+> **Only two modes genuinely require explicit host-port-to-container-port mapping: Bridge (Linux) and Default (Windows)** — both because multiple tasks are sharing one underlying network layer that needs traffic routed to the correct task. ⚠️ **awsvpc and Host mode both skip port mapping entirely**, but for opposite reasons: awsvpc because each task has its own fully separate IP (no sharing, no need for a distinguishing port mapping), and Host because the task deliberately shares the host's IP directly with no translation layer to configure a mapping through in the first place.
+
+---
+
+## Exam Framing
+
+> "Which ECS network modes require configuring both a host port and a container port?" → **only Bridge and Default** — the two modes where multiple tasks genuinely share one underlying network layer that has to route incoming traffic to the correct task by port number. awsvpc and Host both need only a container port (for entirely different underlying reasons), and None needs no port configuration since there's no external access to route at all.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
