@@ -5178,6 +5178,44 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-capstone2-step1-secure-network",
+      title: "ECS Capstone Project – Step 1: Building the VPC (2 Public + 2 Private Subnets, IGW, NAT Gateway)",
+      shortDesc: "Fargate can select its VPC AFTER the cluster already exists, but EC2 launch type cannot — the private subnet's tasks need NAT specifically to pull images from ECR and reach S3",
+      visuals: [],
+      content: `## ⚠️ Fargate vs EC2: Does the VPC Need to Exist BEFORE the Cluster?
+
+> **Since this project uses Fargate, the VPC does NOT need to exist before the ECS cluster is created — Fargate lets the VPC/subnet be selected later, at service-creation time.** ⚠️ **This is the opposite of EC2 launch type: if EC2 instances are used as container hosts, the VPC (and its subnets) MUST exist first**, since choosing EC2 during cluster creation requires selecting a subnet for those instances immediately. Building the VPC first in this project is simply a matter of logical sequencing, not a hard Fargate requirement.
+
+---
+
+## Target Architecture: 2 Public + 2 Private Subnets Across 2 AZs
+
+> **The design uses 2 Availability Zones, each with one public and one private subnet — 4 subnets total.** ⚠️ **This redundancy (one of each subnet type per AZ) is what lets the application survive a single AZ outage** — the same 2-tier public/private design already covered in the earlier VPC 2-tier architecture topics and the earlier ECS Service Networking topic (lecture 44), just now applied concretely.
+
+**Clean-environment recommendation**: ⚠️ **delete the account's default VPC before starting, rather than building alongside it** — working with multiple VPCs simultaneously (multiple route tables, subnets, etc.) creates avoidable confusion while learning; production environments would handle this differently, but for a clean lab build, one deliberate VPC is simpler to reason about.
+
+---
+
+## ⚠️ Why the Private Subnet Specifically Needs a NAT Gateway
+
+> **The Internet Gateway (IGW) provides internet connectivity for resources in the PUBLIC subnet (e.g. the load balancer)** — but the ECS tasks live in the PRIVATE subnet and still need OUTBOUND internet access for two concrete reasons: ⚠️ **(1) pulling the container image from ECR when a task launches, and (2) the application's own S3 access for file uploads.** ⚠️ **A NAT Gateway is what provides this outbound-only internet path for the private subnet** — the same NAT mechanism covered in the earlier VPC section, now tied to a concrete ECS use case (image pulls + S3 access) rather than an abstract example.
+
+**Mechanical requirements**: the NAT Gateway itself must be created INSIDE a public subnet, and requires an Elastic IP attached (since the NAT Gateway itself reaches the internet through the IGW). ⚠️ **NAT Gateway is a paid resource — modest but nonzero cost — and skipping it will break later steps that depend on the private subnet's outbound connectivity**, so it's not optional despite the small recurring charge.
+
+---
+
+## Route Tables: Two Distinct Tables, Not One Shared
+
+> ⚠️ **Two separate route tables are required: a PUBLIC route table (default route 0.0.0.0/0 → Internet Gateway, associated with both public subnets) and a PRIVATE route table (default route 0.0.0.0/0 → NAT Gateway, associated with both private subnets).** ⚠️ **The account's auto-created "main" route table is deliberately NOT used** — both custom route tables are created fresh and explicitly associated with their respective subnets, since the main route table doesn't reflect this project's specific public/private split.
+
+---
+
+## Exam Framing
+
+> "An ECS task running in a private subnet needs to pull its container image and upload files to S3 — what networking component makes this possible?" → **a NAT Gateway, placed in a public subnet with an Elastic IP, providing outbound-only internet access to the private subnet** — the IGW alone doesn't help here, since it only provides connectivity to resources actually IN the public subnet. "Does an ECS cluster using Fargate require the VPC to exist before cluster creation?" → **no — Fargate allows VPC/subnet selection later, at service-creation time; this flexibility does NOT extend to the EC2 launch type**, which requires the VPC to exist first since EC2 instance placement needs a subnet immediately during cluster setup.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
