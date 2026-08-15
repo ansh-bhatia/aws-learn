@@ -5,6 +5,13 @@ import "./ChatBot.css";
 const WELCOME =
   "Hi! Ask me anything about AWS — I'll search AWS's official documentation to answer.";
 
+const TOOL_LABELS = {
+  web_search: "Searching AWS docs…",
+  web_fetch: "Reading AWS documentation…",
+};
+
+const REQUEST_TIMEOUT_MS = 100000;
+
 export default function ChatBot() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([{ role: "assistant", content: WELCOME }]);
@@ -25,14 +32,26 @@ export default function ChatBot() {
     setInput("");
 
     const nextMessages = [...messages, { role: "user", content: text }];
-    setMessages([...nextMessages, { role: "assistant", content: "" }]);
+    setMessages([...nextMessages, { role: "assistant", content: "", status: "searching" }]);
     setLoading(true);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+    const updateLast = (patch) => {
+      setMessages((prev) => {
+        const copy = prev.slice();
+        copy[copy.length - 1] = { ...copy[copy.length - 1], ...patch };
+        return copy;
+      });
+    };
 
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ messages: nextMessages }),
+        signal: controller.signal,
       });
 
       if (!res.ok || !res.body) {
@@ -43,30 +62,47 @@ export default function ChatBot() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let acc = "";
+      let buffer = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        acc += decoder.decode(value, { stream: true });
-        setMessages((prev) => {
-          const copy = prev.slice();
-          copy[copy.length - 1] = { role: "assistant", content: acc };
-          return copy;
-        });
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let evt;
+          try {
+            evt = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (evt.t === "text") {
+            acc += evt.v;
+            updateLast({ content: acc, status: undefined });
+          } else if (evt.t === "tool") {
+            updateLast({ status: TOOL_LABELS[evt.v] || "Searching AWS docs…" });
+          } else if (evt.t === "tool_done") {
+            updateLast({ status: undefined });
+          }
+        }
       }
       if (!acc) {
-        setMessages((prev) => {
-          const copy = prev.slice();
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content: "I didn't get a response — please try asking again.",
-          };
-          return copy;
+        updateLast({
+          content: "I didn't get a response — please try asking again.",
+          status: undefined,
         });
       }
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      const timedOut = err.name === "AbortError";
+      setError(
+        timedOut
+          ? "This is taking longer than expected. Try a shorter or more specific question."
+          : err.message || "Something went wrong."
+      );
       setMessages((prev) => prev.slice(0, -1));
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -98,8 +134,9 @@ export default function ChatBot() {
 
           <div className="chatbot-messages" ref={listRef}>
             {messages.map((m, i) => {
-              const isPending = loading && i === messages.length - 1 && !m.content;
-              if (isPending) {
+              const isLast = i === messages.length - 1;
+              const searching = loading && isLast && m.status;
+              if (searching && !m.content) {
                 return (
                   <div key={i} className="chatbot-msg chatbot-msg-assistant chatbot-msg-pending">
                     <span className="chatbot-dots" aria-hidden="true">
@@ -107,13 +144,23 @@ export default function ChatBot() {
                       <span />
                       <span />
                     </span>
-                    Searching AWS docs…
+                    {m.status}
                   </div>
                 );
               }
               return (
                 <div key={i} className={`chatbot-msg chatbot-msg-${m.role}`}>
                   {m.content}
+                  {searching && (
+                    <div className="chatbot-status-inline">
+                      <span className="chatbot-dots" aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                      {m.status}
+                    </div>
+                  )}
                 </div>
               );
             })}

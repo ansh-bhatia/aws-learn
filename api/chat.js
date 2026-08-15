@@ -70,7 +70,9 @@ export default async function handler(req) {
     });
   }
 
-  // Relay the SSE stream from Anthropic, forwarding only text deltas as plain text
+  // Relay Anthropic's SSE stream as newline-delimited JSON events so the client
+  // can tell "generating text" apart from "a server-side tool is running" —
+  // web_search/web_fetch calls can take many seconds with no text in between.
   const reader = anthropicRes.body.getReader();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
@@ -78,6 +80,8 @@ export default async function handler(req) {
   const stream = new ReadableStream({
     async start(controller) {
       let buffer = "";
+      const emit = (obj) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -91,7 +95,18 @@ export default async function handler(req) {
           try {
             const evt = JSON.parse(data);
             if (evt.type === "content_block_delta" && evt.delta?.type === "text_delta") {
-              controller.enqueue(encoder.encode(evt.delta.text));
+              emit({ t: "text", v: evt.delta.text });
+            } else if (
+              evt.type === "content_block_start" &&
+              evt.content_block?.type === "server_tool_use"
+            ) {
+              emit({ t: "tool", v: evt.content_block.name || "web_search" });
+            } else if (
+              evt.type === "content_block_start" &&
+              (evt.content_block?.type === "web_search_tool_result" ||
+                evt.content_block?.type === "web_fetch_tool_result")
+            ) {
+              emit({ t: "tool_done" });
             }
           } catch {
             // ignore malformed/partial SSE lines
@@ -103,6 +118,6 @@ export default async function handler(req) {
   });
 
   return new Response(stream, {
-    headers: { "content-type": "text/plain; charset=utf-8" },
+    headers: { "content-type": "application/x-ndjson; charset=utf-8" },
   });
 }
