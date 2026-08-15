@@ -4792,6 +4792,48 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-networking-private-subnet-alb",
+      title: "ECS Service Networking – Why the Task Runs in a Private Subnet With No Public IP, and the ALB Makes It Reachable Anyway",
+      shortDesc: "The task itself becomes deliberately unreachable from the internet — the Application Load Balancer sits in the public subnet instead and is the ONLY thing users actually talk to",
+      visuals: [],
+      content: `## ⚠️ Skip the Default VPC — Design a Custom One Instead
+
+> **The default VPC makes every subnet public, which isn't the best-practice design for a production task.** ⚠️ **The recommended design uses a custom VPC with TWO availability zones** (so a single AZ outage doesn't take the application down), each containing both a public subnet and a private subnet.
+
+---
+
+## ⚠️ The Task Goes in the PRIVATE Subnet, Deliberately
+
+> **The task itself is launched into the private subnet, not the public one — meaning it has NO direct internet accessibility at all.** ⚠️ **This is a deliberate security choice, not an oversight**: resources in a private subnet simply cannot be reached from the internet, which is exactly the point — the task's own compute is kept off the public internet entirely.
+
+**Matching this**: **public IP is turned OFF for the task** — since nothing in the private subnet can be reached from the internet anyway, assigning a public IP to it would serve no purpose.
+
+---
+
+## Security Group: Scoped to the Task's Actual Traffic
+
+> **Since Fargate uses awsvpc networking mode, each task gets its own dedicated ENI — and the security group attached governs exactly what traffic that ENI allows in and out.** Example: an application listening on port 80 needs a security group rule explicitly allowing port 80 — everything else stays restricted by default.
+
+---
+
+## ⚠️ The Obvious Question: If It's Unreachable, How Do Users Access It?
+
+> **The Application Load Balancer (ALB) is the answer** — ⚠️ **the ALB itself runs in the PUBLIC subnet and is the only public-facing component; the task stays private and is reached ONLY through the ALB.** Users access the application via the ALB's URL — the ALB receives the request, then routes it to one of the backend tasks (running privately) to actually handle it. ⚠️ **The private-subnet task never needs to be reachable directly — the ALB is the sole entry point**, and it's configured directly during service creation (covered in an upcoming topic).
+
+---
+
+## The Full Picture
+
+> **Public subnet**: holds the ALB, publicly reachable. **Private subnet**: holds the actual application tasks, completely unreachable from the internet directly. **Traffic flow**: user → ALB (public) → task (private) — the task is protected behind the load balancer at every step, never exposed on its own.
+
+---
+
+## Exam Framing
+
+> "A containerized application must never be directly reachable from the internet, but still needs to serve real user traffic" → **place the task in a PRIVATE subnet with no public IP, and put an Application Load Balancer in a PUBLIC subnet in front of it** — the ALB is the only internet-facing component; the task itself stays fully private. "Why does a task in a private subnet not need a public IP assigned?" → **it's genuinely unreachable from the internet regardless, so a public IP would serve no purpose** — public IP is only meaningful for resources actually meant to be reached directly from outside the VPC.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
