@@ -6,6 +6,88 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sns-hands-on-lab-topic-subscriber-publisher-chain",
+      title: "SNS Hands-On Lab – Building the Full Publisher → Topic → Subscriber Chain",
+      shortDesc: "A new email subscriber sits in Pending until the confirmation link is clicked — then S3 itself becomes the publisher, proving a real AWS service (not just a manual test click) can trigger the whole broadcast chain end to end",
+      visuals: [],
+      content: `## Step 1: Create the Topic, Then Add a Subscriber
+
+> Create a Standard topic with a display name, default options otherwise. ⚠️ **A brand-new subscriber's status starts as Pending — SNS will NOT deliver anything to it until the subscription is explicitly confirmed.** For an email subscriber, SNS sends a confirmation email immediately after the subscription is created; only after clicking "Confirm subscription" does the status flip to confirmed and the subscriber start actually receiving messages.
+
+---
+
+## Step 2: Manually Test With Publish Message
+
+> Once confirmed, the console's own **"Publish Message"** button lets you send a test message (subject + body) directly from the topic itself — every confirmed subscriber receives it. ⚠️ **This is purely a testing facility — in a real architecture, an actual AWS service or application plays the Publisher role, not a manual console click.**
+
+---
+
+## Step 3: Give the Topic a Real Publisher — S3 Event Notification
+
+> ⚠️ **An S3 bucket can be configured as a genuine publisher via its own Event Notification settings** — under bucket properties, create an event notification for "All object create events," and choose the SNS topic as the destination (instead of Lambda or SQS). ⚠️ **If publisher and topic are in the SAME AWS account, the topic can be selected directly from a dropdown; a CROSS-account setup instead requires manually specifying the topic ARN plus a topic access policy explicitly permitting that external account.**
+
+---
+
+## Step 4: Prove the Full Chain End to End
+
+> Uploading a file to the bucket → S3 fires the event notification → SNS topic broadcasts → the confirmed email subscriber receives a real Amazon S3 notification email containing the bucket name, object key, and file size. ⚠️ **This is the complete Publisher (S3) → Topic (SNS) → Subscriber (email) chain working with a genuine AWS service as the publisher, not just the manual test button from Step 2.**
+
+---
+
+## Exam Framing
+
+> "A new SNS subscriber isn't receiving any messages" → **check whether the subscription is still Pending** — it must be explicitly confirmed (e.g. via the email confirmation link) before SNS will deliver anything to it. ⚠️ **S3 (and many other AWS services) can publish directly to an SNS topic via its own event-notification configuration — no custom application code required to act as the "publisher."**
+`,
+    },
+    {
+      id: "sns-full-exam-cheat-sheet",
+      title: "SNS Exam Cheat Sheet – Every Keyword-to-Answer Mapping in One Place",
+      shortDesc: "The full keyword decision table for SNS — pub/sub fan-out, push-based delivery, the SNS-vs-SQS distinction, filtering, and FIFO topics — condensed to the exact phrase that gives each answer away",
+      visuals: [],
+      content: `## Core Pub/Sub & Fan-Out Keywords
+
+| Keyword in the Question | Answer |
+|---|---|
+| "Multiple consumers," "same message to many," "event distribution," "real-time notification" | **SNS Fan-Out architecture** |
+| "Broadcast message," "parallel processing," "microservices communication" | **SNS topic with multiple subscribers** |
+| "Slow polling," "instant delivery," "event trigger," "real-time system" | **SNS push-based messaging** |
+
+---
+
+## ⚠️ SNS vs SQS Keywords — The Classic Confusion Pair
+
+| Keyword | Answer |
+|---|---|
+| "Fan-out," "notify multiple systems," "real-time communication" | **SNS** |
+| "Buffer messages," "retry," "store messages" | **SQS** |
+| "Fan-out + durability," "multiple queues," "decouple services" (combined) | **SNS + SQS integration** — SNS broadcasts, each SQS queue durably buffers its own copy |
+
+---
+
+## Subscribers, Filtering & FIFO Keywords
+
+| Keyword | Answer |
+|---|---|
+| "Email notification," "SMS alert," "HTTP webhook," "Lambda trigger" | **SNS supports multiple subscriber protocols** |
+| "Send message selectively," "region-based filtering," "event-type filtering" | **SNS Subscription Filter Policy** |
+| "Metadata in message," "key-value pair," "useful for filtering" | **Message Attributes** (what a Filter Policy actually matches against) |
+| "Strict order," "no duplicates," "financial systems" | **SNS FIFO topic** |
+| ".fifo required," "message group," "deduplication" (for a topic, not a queue) | **SNS FIFO Configuration** |
+
+---
+
+## ⚠️ The One-Line Exam Rule
+
+> **Condensed keyword list**: fan-out, multiple consumer, real-time push, filtering, broadcast, event notification. ⚠️ **If a question mentions any TWO of these together — broadcast + notification, multiple-subscriber + real-time, real-time + fan-out, or fan-out + event-driven — in most cases the answer is SNS.**
+
+---
+
+## Exam Framing
+
+> This is the master reference for every SNS scenario-based question — pub/sub fan-out, push vs pull (the core SNS-vs-SQS distinction), subscriber protocol variety, filter policies, message attributes, and FIFO topics. ⚠️ **The recurring exam skill: recognizing the specific keyword phrase and mapping it directly to the correct feature, exactly the same study strategy already used for the API Gateway and SQS cheat sheets.** **This closes out the entire SNS arc — EventBridge begins next.**
+`,
+    },
+    {
       id: "sqs-full-exam-cheat-sheet",
       title: "SQS Exam Cheat Sheet – Every Keyword-to-Answer Mapping in One Place",
       shortDesc: "The full keyword decision table for the entire SQS arc — decoupling, ordering, reliability, cross-account access, and every integration — condensed to the exact phrase that gives each answer away",
