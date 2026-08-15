@@ -6,6 +6,61 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-security-layers-api-keys-usage-plans",
+      title: "API Gateway's Four Security Layers, and Why an API Key Alone Does Absolutely Nothing",
+      shortDesc: "An API key is just a password string with no concept of a username — it never proves WHO is calling, only that they happen to know a string, and it literally can't function without a usage plan attached",
+      visuals: [],
+      content: `## ⚠️ API Security Is Never One Feature — It's Four Independent Layers
+
+> **Real-world API security is applied across MULTIPLE layers, each solving a different problem** (⚠️ **explicitly NOT the OSI networking layers — a separate concept entirely**):
+
+1. **Usage control** — API keys and usage plans.
+2. **Access control** — API Gateway resource policy.
+3. **Edge protection** — AWS WAF.
+4. **Authentication and authorization** — IAM, Cognito, Lambda authorizer.
+
+This topic covers Layer 1. ⚠️ **WebSocket API is explicitly noted as out of scope for the Solutions Architect exam — these security features are asked about for REST/HTTP API specifically.**
+
+---
+
+## API Key: Just a Password String, Nothing More
+
+> **An API key is a unique string identifying a calling client — sent with every request, checked by API Gateway before forwarding to the backend.** ⚠️ **Critical framing: it's just a password, with NO username concept at all** — one string value, verified as correct or not, with no identity attached to it.
+
+**⚠️ An API key CANNOT function alone — it requires a Usage Plan to be associated with it, plus that usage plan must itself be associated with a stage.** Without a usage plan, an API key literally does nothing.
+
+---
+
+## Usage Plan: Two Configurable Controls
+
+### Throttling — Controlling Request SPEED
+
+> **Rate**: the average number of requests allowed per second, sustained continuously (e.g. rate=10 means 10 requests/second, indefinitely). **Burst**: ⚠️ **a TEMPORARY allowance above the rate limit, for short traffic spikes only — not sustained.** ⚠️ **Worked example: rate=10, burst=5 → a client can briefly send up to 15 requests at once, before settling back down to the sustained 10/second limit.** ⚠️ **Exceeding the throttling limits (rate + burst combined) returns a 429 "Too Many Requests" error.**
+
+### Quota — Controlling Total VOLUME Over Time
+
+> **Sets a hard cap on the total number of requests allowed over a period — per day, per week, or per month.** ⚠️ **Worked example: 1,000 requests per day — once the 1,000th request is made, the API stops accepting further requests from that key until the quota resets the next day.** ⚠️ **Exceeding the quota also returns a 429 error** — the same error code as throttling, just triggered by a different condition (total volume vs momentary speed).
+
+---
+
+## ⚠️ API Key's Real Limitations — Why More Layers Are Needed
+
+> **API keys do NOT restrict WHERE a request comes from** — any client, from any country or data center, with the correct key string, is accepted. ⚠️ **API keys do NOT provide genuine user authentication** — there's no username, no identity, just a matching string; this is fundamentally different from something like a Google login. ⚠️ **API keys cannot block public internet access by themselves** — a public API remains reachable by anyone who obtains the key. ⚠️ **If a key leaks, it stays usable/misusable until it's explicitly rotated or disabled** — there's no automatic revocation mechanism tied to key exposure.
+
+---
+
+## ⚠️ Support Differences: REST API vs HTTP API
+
+> **REST API fully supports API keys. HTTP API has only LIMITED API key support** — one more item in the ongoing REST-vs-HTTP feature-set tradeoff already established across earlier topics.
+
+---
+
+## Exam Framing
+
+> "An API key alone is configured for a REST API, with no usage plan attached — does the key function?" → **no — an API key structurally cannot work without an associated usage plan (and that plan's stage association); the key alone does nothing.** "A client's requests suddenly spike well above the sustained rate limit for a few seconds, then return to normal" → **the burst setting is what determines whether this brief spike is tolerated or rejected** — burst allows temporary excess above the steady-state rate limit; exceeding rate+burst together returns a 429 error, the same code returned when a longer-term quota (daily/weekly/monthly) is exhausted.
+`,
+    },
+    {
       id: "rest-api-lab-part4-testing-and-keep-resources",
       title: "REST API Lab – Part 4: Testing Complete, and Why Nothing Gets Deleted This Time",
       shortDesc: "Unlike the HTTP API lab where the gateway got deleted afterward, this REST API stays alive — the upcoming API key and usage plan labs are built directly on top of it",
