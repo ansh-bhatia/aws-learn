@@ -4074,6 +4074,46 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-task-size",
+      title: "ECS Project Step 5 (Part 5) – Task Size: CPU/Memory Sizing, and Why It Behaves Differently on Fargate vs EC2",
+      shortDesc: "Fargate forces you into fixed, compatible CPU-memory pairs; EC2 lets you pick any value — but only if your actual instance has that much capacity to give",
+      visuals: [],
+      content: `## What Task Size Actually Configures
+
+> **Task size defines how much CPU and memory ECS allocates to a task** — directly analogous to choosing an EC2 instance type's vCPU/RAM when hosting an application on a VM, just applied to a task instead of a whole instance.
+
+---
+
+## ⚠️ Fargate: Fixed, Compatible CPU/Memory Combinations Only
+
+> **On Fargate, CPU and memory must be selected as a compatible PAIR from a fixed list — arbitrary combinations are not allowed.** Example: selecting 1 vCPU restricts memory to a specific compatible range (e.g. 2GB–8GB) — anything outside that range is simply not selectable. ⚠️ **Memory increases in fixed 1GB increments only** — decimal values like 4.1GB or 4.6GB are not possible; the next step up from 3GB is exactly 4GB, nothing in between.
+
+**Since Fargate is serverless, capacity is never actually a constraint** — whatever valid CPU/memory combination is selected, Fargate provisions it on demand. There's no risk of "not enough resources available" the way there is on EC2.
+
+---
+
+## ⚠️ EC2: Any Value, But Bounded by the Actual Instance's Real Capacity
+
+> **On EC2, task size can be set to any value directly** — no forced compatible-pair restriction like Fargate. ⚠️ **But whatever is specified must actually fit within the real capacity of the EC2 instance(s) registered in the cluster** — the task size is a request against real, finite hardware, not an abstraction like Fargate's on-demand provisioning.
+
+**Concrete failure scenario**: a cluster's EC2 infrastructure is a T2 micro (1 vCPU, 1GB RAM). A task definition requests 1 full vCPU. ⚠️ **This task can fail to launch, because the actual EC2 instance genuinely may not have that much CPU free to allocate** — the request exceeds what the real underlying hardware can actually provide.
+
+**The practical rule**: ⚠️ **task size on EC2 must always be checked against the real, available capacity of the registered EC2 instances** — mismatches here are a genuine, common source of task launch failures, not a compatibility-list restriction like on Fargate.
+
+---
+
+## ⚠️ Right-Sizing: Avoid Over-Provisioning Either Way
+
+> **Over-allocating CPU/memory "just to be safe" isn't free** — more resources means a higher bill, on both Fargate (billed per allocated vCPU/memory) and EC2 (larger instances cost more). ⚠️ **Correct sizing genuinely can't be determined up front purely by guessing** — it comes from running the application, monitoring its real resource usage, and adjusting the task size based on that observed data, the same right-sizing principle that applies to EC2 instance selection generally.
+
+---
+
+## Exam Framing
+
+> "A task fails to launch on an EC2-backed ECS cluster even though the task definition itself is otherwise correct" → **check whether the task's requested CPU/memory actually fits within the real capacity of the registered EC2 instance(s)** — this is an EC2-specific failure mode that simply doesn't exist on Fargate, since Fargate provisions matching capacity on demand rather than drawing from a fixed, already-existing instance. Remember Fargate's fixed CPU-memory compatible-pair restriction (with 1GB memory increments) as a separate, distinct constraint from EC2's real-capacity limitation.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
