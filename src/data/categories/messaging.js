@@ -6,6 +6,38 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-canary-deployment",
+      title: "API Gateway Canary Deployment – REST API Only, and It Works With Lambda ALIASES, Never Versions",
+      shortDesc: "Canary routes a small percentage of live traffic to a new Lambda alias while most users stay on the stable one — but this entire mechanism is unavailable on HTTP or WebSocket API, REST API only",
+      visuals: [],
+      content: `## What Canary Deployment Actually Does
+
+> **Canary deployment releases API changes safely by testing with a SMALL percentage of live traffic first, rather than shifting 100% of users at once.** ⚠️ **The WhatsApp analogy**: a new feature ships to a small slice of users first (e.g. 10%) — if feedback and performance metrics are good, it's rolled out to everyone; if there are problems, it's rolled back — without ever having affected the full user base.
+
+---
+
+## ⚠️ How It Works Mechanically: Lambda Aliases, Not Versions
+
+> **The stable deployment (e.g. named "stable") points to a Lambda function via an ALIAS** (e.g. alias "prod" pointing at version 1) — ⚠️ **canary deployment always works with Lambda ALIASES, never Lambda versions directly.** When a new Lambda version is created (version 2, with a NEW alias, e.g. "canary"), a canary deployment can be configured to send a defined PERCENTAGE of traffic to that new alias, while the remainder continues hitting the stable alias.
+
+**Worked example**: 90% of traffic continues hitting the old stable Lambda (via its alias); 10% is routed to the new version's canary alias. ⚠️ **The percentage split is configured directly at the API Gateway stage's Canary settings.**
+
+**Decision point after testing**: if the 10% canary traffic shows good metrics and positive feedback, shift 100% of traffic to the new version; if problems are found, roll back — the old stable version was never touched or disrupted during the test.
+
+---
+
+## ⚠️ Two Critical Scope Limitations
+
+> **Canary deployment works ONLY with REST API — it is NOT available for HTTP API or WebSocket API.** ⚠️ **Canary deployment is configured at the STAGE level in API Gateway** — it's a stage-scoped feature, not something set per-method or per-resource.
+
+---
+
+## Exam Framing
+
+> "A team wants to test a new Lambda-backed API version with only 10% of live traffic before fully rolling it out" → **API Gateway Canary Deployment — but only available for REST API, never HTTP or WebSocket API.** "Canary deployment routes traffic based on a Lambda VERSION directly" → **false — canary deployment always routes based on a Lambda ALIAS, not a version number directly; each version needs its own alias for canary routing to reference it.** Remember the scope: **REST-API-only, configured at the stage level, alias-based not version-based.**
+`,
+    },
+    {
       id: "api-gateway-waf-edge-protection",
       title: "API Gateway Layer 3 – WAF Edge Protection: Blocking Attacks Before the Request Even Reaches API Gateway",
       shortDesc: "WAF sits ahead of everything else in the security stack, filtering out malicious traffic at Layer 7 before API Gateway itself ever processes the request",
