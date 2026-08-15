@@ -4954,6 +4954,56 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-target-tracking-scaling-cooldowns",
+      title: "ECS Target Tracking Scaling Policy – Metrics, and Why Scale-Out and Scale-In Cooldowns Are Deliberately Asymmetric",
+      shortDesc: "Scale-out is fast because slow growth hurts users; scale-in is deliberately slow because removing capacity too eagerly is what actually causes the performance problems companies fear most",
+      visuals: [],
+      content: `## What Target Tracking Does
+
+> **Target tracking increases or decreases the number of running tasks to keep a chosen metric near a defined target value.** ⚠️ **Three metrics available directly through the console**: CPU utilization, memory utilization, and ALB request count per target (⚠️ **only usable if an ALB is actually integrated with the service**). ⚠️ **A fourth option — custom CloudWatch metrics — exists but is NOT available through the console UI; it requires setting up the service via CLI instead.**
+
+**Example**: target = CPU utilization 60% → ⚠️ **CPU rising above 60% triggers a scale-out event (more tasks added); CPU dropping below 60% triggers a scale-in event (tasks removed).**
+
+---
+
+## ⚠️ Why Cooldowns Exist: Preventing Flapping
+
+> **Without any cooldown, auto scaling can add and remove tasks too rapidly in response to metric fluctuations** — wasting resources and hurting application stability (a pattern often called "flapping"). ⚠️ **Cooldowns introduce a mandatory waiting period between successive scaling events of the same direction**, preventing this back-and-forth thrashing.
+
+---
+
+## ⚠️ Scale-Out Cooldown: Short, Because New Tasks Need Time to Become Ready
+
+> **After a scale-out event adds a task, ECS waits for the scale-out cooldown timer (e.g. 60 seconds) before triggering ANOTHER scale-out event** — ⚠️ **even if the load metric is still above target during this window, no new task launches until the cooldown expires and metrics are re-checked.** The primary purpose: giving the newly launched task time to actually become ready/healthy before deciding whether even MORE capacity is needed.
+
+---
+
+## ⚠️ Scale-In Cooldown: Deliberately Much Longer
+
+> **Scale-in cooldown is typically set much longer than scale-out (e.g. 300 seconds vs 60 seconds) — and this asymmetry is entirely deliberate.** ⚠️ **Scale-in (removing tasks) is inherently riskier than scale-out**: removing capacity to save money is fine during genuinely low traffic, but if a sudden traffic spike hits right after tasks were removed, user performance suffers. ⚠️ **Given the choice between saving money and protecting user performance, companies virtually always prioritize performance** — which is exactly why scale-in is deliberately slow and cautious, while scale-out is kept fast and responsive.
+
+**What the scale-in cooldown actually blocks**: ⚠️ **NO additional tasks are removed during the scale-in cooldown window — that part is strictly enforced.**
+
+---
+
+## ⚠️ The Critical Asymmetry: Scale-Out Can Interrupt a Scale-In Cooldown, But Never the Reverse
+
+> **If a scale-out trigger occurs WHILE a scale-in cooldown timer is still running, AWS immediately adds the needed task anyway — and the scale-in cooldown timer gets CANCELLED.** ⚠️ **This is one-directional: scale-out is never blocked by an in-progress scale-in cooldown, but scale-in IS always blocked by its own cooldown until it expires.** The logic follows directly from the performance-over-cost priority: a real traffic spike should never be delayed just because a cooldown from a prior scale-in event happens to still be running.
+
+---
+
+## Disabling Scale-In Entirely
+
+> **A separate toggle lets scale-in be disabled entirely while keeping scale-out active** — the policy will only ever ADD tasks automatically, never remove them. ⚠️ **Useful for scenarios like warm-up periods, product launches, sales events, or exams — anywhere a temporary guarantee against capacity ever shrinking unexpectedly (fear of "flapping") matters more than cost savings.**
+
+---
+
+## Exam Framing
+
+> "Why are ECS scale-out and scale-in cooldown periods typically set to very different durations (e.g. 60s vs 300s)?" → **scale-out is kept fast because slow capacity growth directly hurts users during a traffic spike; scale-in is kept deliberately slow because removing capacity too eagerly is what actually causes performance problems — companies prioritize performance over cost savings.** "A scale-out event is triggered while a scale-in cooldown is still counting down — what happens?" → **the task is added immediately regardless, and the scale-in cooldown timer is cancelled** — scale-out always takes priority and is never blocked by a scale-in cooldown.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
