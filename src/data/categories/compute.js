@@ -5216,6 +5216,40 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-capstone2-step2-security-groups",
+      title: "ECS Capstone Project – Step 2: Chaining Security Groups So the Task Only Trusts the Load Balancer",
+      shortDesc: "The task's security group source isn't an IP range at all — it's the ALB's security group ID itself, so only traffic that's already passed through the ALB can ever reach the task",
+      visuals: [],
+      content: `## Two Security Groups, Two Different Jobs
+
+> **ALB security group**: allows HTTP (port 80) traffic from anywhere (0.0.0.0/0) — since the load balancer is the intended public entry point, it must accept traffic from any internet source. **ECS task security group**: allows port 80 traffic, but ⚠️ **ONLY from the ALB's security group as the source — never from 0.0.0.0/0 or any other IP range.**
+
+---
+
+## ⚠️ The Key Mechanism: Security-Group-as-Source, Not an IP Range
+
+> **When configuring the task security group's inbound rule, the SOURCE field is set to the ALB's SECURITY GROUP itself — not an IP address or CIDR range at all.** ⚠️ **This means the task only ever accepts traffic that is already tagged as originating from something using the ALB's security group** — genuinely enforcing that the task is reachable exclusively through the load balancer, since nothing else in the VPC carries that security group. Any HTTP traffic hitting the task directly from another source (even if it somehow reached the private subnet) is rejected outright, regardless of port.
+
+---
+
+## ⚠️ Common Setup Mistakes to Avoid
+
+> **Never use or modify the account's default security group** — creating dedicated, purpose-built security groups is the correct practice; relying on the default (which typically allows broad traffic) is explicitly flagged as bad practice, not just a style preference. ⚠️ **Watch outbound rules carefully — a common mistake is accidentally editing the OUTBOUND rule while intending to edit INBOUND.** For both security groups here, outbound is left untouched (default allow-all), since only inbound traffic needs restricting — the task's outbound access must stay fully open so it can reach ECR (image pulls) and S3 (application storage) via the NAT Gateway.
+
+---
+
+## Neither Security Group Is Actually Attached Yet
+
+> **Both security groups are created in this step, but NOT yet attached to anything** — the ALB doesn't exist yet, and neither does the service. ⚠️ **They'll be wired in during the later load balancer and service creation steps** — this step is purely about having the two security groups ready in advance.
+
+---
+
+## Exam Framing
+
+> "How can a security group be configured so that only traffic already passed through a specific load balancer is accepted, rather than any traffic on the right port from any source?" → **set the source of the target's inbound rule to the LOAD BALANCER's security group itself, rather than an IP range** — this is a security-group-to-security-group reference, and it's what genuinely enforces "only via the ALB," since nothing else in the VPC carries that specific security group. This chained-security-group pattern is the concrete mechanism behind "the task is unreachable except through the load balancer," first introduced conceptually in the earlier ECS Service Networking topic (lecture 44).
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
