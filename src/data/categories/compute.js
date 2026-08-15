@@ -5656,6 +5656,46 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-cluster-and-node-iam-roles",
+      title: "EKS IAM Roles – Cluster Role, Node Role, and the 'Create Recommended Role' Shortcut",
+      shortDesc: "Every EKS setup needs exactly two roles no matter which cluster mode is chosen — the console's recommended-role button already pre-attaches the correct minimum policies, so nothing needs to be memorized",
+      visuals: [],
+      content: `## ⚠️ Every EKS Cluster Needs At Least Two Roles, Regardless of Mode
+
+> **Whether Quick Configuration, Custom Configuration + Auto Mode, or Classic Mode is used, EVERY EKS setup requires at minimum one CLUSTER role and one COMPUTE (node) role.** ⚠️ **Without correctly configured IAM roles, cluster creation fails outright, or workloads simply won't launch** — these aren't optional conveniences, they're structural requirements.
+
+---
+
+## Cluster IAM Role: Permission for the Control Plane Itself
+
+> **The cluster role grants the EKS control plane permission to create and manage AWS resources on your behalf** — EC2 instances (in Auto Mode), networking, and load balancers. ⚠️ **This is required in EVERY mode**, since the control plane always needs to orchestrate at least some AWS resources regardless of how worker nodes are managed.
+
+---
+
+## Node IAM Role / Fargate Pod Execution Role: Permission for Worker Nodes/Pods
+
+> **The node role (EC2) or Fargate pod execution role (Fargate) grants worker nodes/pods permission to**: register themselves with the EKS control plane, pull container images from ECR, communicate with CloudWatch Logs and SSM, and access other AWS services like S3 or DynamoDB as the application requires. ⚠️ **Concrete example: an application needing to read/write S3 gets that permission by attaching the appropriate policy to the NODE role** — the application inherits it automatically, the same conceptual pattern as an ECS task role or EKS's IRSA mechanism.
+
+**⚠️ Fargate pod execution role is exclusively a Classic Mode concept** — it only applies when Fargate is chosen as the node type, which (per the earlier node-groups topic) is itself Classic-Mode-only.
+
+---
+
+## ⚠️ Don't Memorize Policies — Use "Create Recommended Role"
+
+> **The console provides a "Create recommended role" button during cluster/node role creation that auto-selects the correct trust relationship AND auto-attaches the minimum required policies** — removing any need to memorize which specific IAM policies belong to which role.
+
+**For the cluster role**, the recommended-role flow pre-attaches: Amazon EKS Block Storage Policy, Amazon EKS Cluster Policy, Amazon EKS Compute Policy, Amazon EKS Load Balancing Policy, Amazon EKS Networking Policy.
+
+**For the node role**, it pre-attaches: Amazon EC2 Container Registry Pull-Only policy and the Amazon EKS Worker Node minimal policy. ⚠️ **Additional policies (e.g. S3 access) can still be attached on top of this baseline**, depending on what the specific application actually needs.
+
+---
+
+## Exam Framing
+
+> "How many IAM roles are minimally required to create any EKS cluster, regardless of Quick/Custom/Classic mode?" → **at least two: one CLUSTER role (control plane permissions) and one COMPUTE role (node role for EC2, or Fargate pod execution role for Fargate)** — every mode needs both. "An application running in an EKS pod needs to read/write an S3 bucket — how is this permission granted?" → **attach the appropriate S3 policy to the NODE IAM role (or use IRSA for pod-level granularity)** — the application inherits the permission automatically, mirroring the same role-attachment pattern used for ECS task roles.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
@@ -5669,16 +5709,6 @@ Container orchestrators manage containers in bulk. Options: **Docker Swarm** (si
 **EKS = Kubernetes as a managed AWS service** — you get all of Kubernetes; AWS handles the hard setup, patching & control plane.
 
 > 🔑 Main reason to choose EKS: **hybrid cloud**. Run Kubernetes on-prem AND in AWS with the **same** tooling/skills, instead of juggling Kubernetes on-prem and ECS in the cloud.
-
----
-
-## EKS IAM Roles
-
-Create **before** cluster creation (or it fails):
-- **Cluster role** — lets the EKS control plane manage AWS resources (EC2, networking, load balancers) on your behalf. Required in all modes.
-- **Node role (EC2) / Fargate Pod Execution role** — lets nodes/pods register with the control plane, pull images from **ECR**, send logs to CloudWatch, access S3/DynamoDB.
-
-> ✅ Use the console's **"Create recommended role"** — it auto-attaches the minimum required policies.
 
 ---
 
