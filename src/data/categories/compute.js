@@ -3498,6 +3498,47 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-objective",
+      title: "ECS Hands-On Project – Deploying a Scalable PHP Web App With Image Uploads to S3",
+      shortDesc: "The scenario that every subsequent ECS lecture builds on: a PHP app on ECS (Fargate AND EC2), behind an ALB, pushing images to S3, with the image itself built via Docker and stored in ECR",
+      visuals: [],
+      content: `## Why This Project Exists
+
+> **The mission is closing the gap between theoretical ECS knowledge and real-world deployment** — rather than learning ECS features in isolation, every remaining ECS lecture builds toward implementing one continuous, realistic project: **deploying a scalable PHP web application on Amazon ECS.**
+
+---
+
+## The Application
+
+> **A simple but genuinely illustrative PHP web app**: it lets a user upload an image through the browser, and that image is stored in **Amazon S3.** ⚠️ **The simplicity is deliberate** — the point isn't the PHP code itself, it's everything AROUND it: how an ECS-hosted container talks to other AWS services (S3), how it's exposed to the internet, and how the whole deployment follows AWS best practices rather than shortcuts.
+
+---
+
+## Project Objectives — What Gets Learned Along the Way
+
+- **Deploy a production-simulating PHP workload** — not a toy example disconnected from real deployment patterns.
+- ⚠️ **Run the app on ECS using BOTH Fargate and EC2** — directly reinforcing the earlier EC2-vs-Fargate infrastructure comparison with a real working example of each.
+- **Expose the app to the internet via an Application Load Balancer** — tying ECS together with the ALB concepts from earlier in the course.
+- **Support image upload to S3** — demonstrating cross-service AWS integration from within a container.
+- **Build the container image with Docker and store it in Amazon ECR** (Elastic Container Registry) — introducing ECR as the AWS-native counterpart to Docker Hub, closely paired with ECS.
+- ⚠️ **Follow AWS best practices for IAM roles and environment configuration throughout** — the project explicitly contrasts the "shortcut" way of doing something against the "best practice" way, and deliberately follows best practice, since a shortcut approach carries real security risk in production.
+
+---
+
+## The Eight-Step Implementation Plan
+
+> The project unfolds as roughly eight sequential steps (spanning many individual lectures each): **(1) create the ECS cluster** (Fargate + EC2 compatible), followed by **building/testing the Docker image, understanding and setting up ECR, authenticating and pushing the image to ECR, building the ECS task definition** (a substantial cluster of sub-lectures covering network modes, roles, placement, storage, and more), **running the task for testing, creating the ECS service, and configuring service deployment/networking/load balancing/auto-scaling.**
+
+⚠️ **Every subsequent hands-on lecture in this section is a specific step within this same continuous project** — later lectures assume this PHP-app-with-S3-uploads scenario as their working context, rather than introducing a new unrelated example each time.
+
+---
+
+## Exam Framing
+
+> This lecture itself isn't a source of testable facts — it's the scenario map for everything that follows. The practical takeaway worth internalizing now: **a realistic ECS deployment touches far more than just ECS itself** — ECR (image storage), IAM (roles for both the task and its execution), S3 (application data), and ALB (traffic distribution) are all standard companions to a real ECS deployment, not optional extras.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
