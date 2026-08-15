@@ -4453,6 +4453,58 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step6-create-task-definition-lab",
+      title: "ECS Project Step 6 – Creating the Task Definition (Console Walkthrough)",
+      shortDesc: "Two prerequisite resources first (an S3 bucket and a task role granting S3 access), then every earlier task-definition topic gets applied together in one real console flow",
+      visuals: [],
+      content: `## ⚠️ Two Prerequisite Resources Must Exist Before the Task Definition
+
+> **The web application stores uploaded images in an S3 bucket, so before creating the task definition, two resources must already exist**: (1) an **S3 bucket** to actually store the data, and (2) an **ECS task role** granting the application permission to write to that bucket. ⚠️ **Both must be created FIRST — the task definition references them, it doesn't create them.**
+
+---
+
+## Step A: Create the S3 Bucket
+
+1. Go to **S3** → choose a region (e.g. Mumbai / ap-south-1) → **Create bucket**, under General Purpose bucket.
+2. Give the bucket a globally unique name (e.g. "my-web-app-new").
+3. No public access or special permissions needed — a plain private bucket is enough.
+4. ⚠️ **Note down two things after creation: the exact bucket name, and the exact region it was created in** — both values get typed into the task definition's environment variables later.
+
+---
+
+## Step B: Create the ECS Task Role
+
+1. Go to **IAM → Roles → Create role**.
+2. Trusted entity type: **AWS service** → specifically **Elastic Container Service → Elastic Container Service Task** (not just "EC2" or a generic service role — the task-specific trust relationship matters).
+3. Attach a permissions policy: **S3 full access** for simplicity in this walkthrough. ⚠️ **Explicitly flagged as NOT production-appropriate — production should use a custom policy scoped to only the specific bucket**, not full S3 access.
+4. Name the role descriptively (e.g. "ECS-task-role-my-web-app") → **Create role.**
+
+---
+
+## Step C: Create the Task Definition Itself
+
+1. **ECS → Task Definitions → Create new task definition.** Give it a name (e.g. "my-web-app-final").
+2. **Launch type: Fargate.**
+3. **OS/architecture: Linux, x86-64.**
+4. **Network mode: awsvpc** — the only option, since Fargate was selected (matches the earlier network-mode topic exactly).
+5. **Task size: 1 vCPU, 2GB memory** — sufficient for this application.
+6. **Task role: select the ECS task role created in Step B** — this is what lets the running application actually write to S3.
+7. **Task execution role: choose "Create new role"** — ⚠️ **AWS automatically creates a role with the standard Amazon ECS Task Execution Role policy attached, covering image pulls from ECR, CloudWatch log delivery, and fetching secrets at startup** — no manual policy authoring needed for this default case.
+8. **Container name**: e.g. "web" → **Image**: paste the ECR image URI copied from the ECR repository (from the earlier push-image topic). ⚠️ **No private registry authentication needed here, since the image execution role already covers ECR authentication automatically** — private registry setup is only relevant for non-ECR private registries.
+9. **Container port: 80** (the application's listening port) — left as default otherwise.
+10. **CPU/GPU limits at the container level: skipped** — not needed for this simple single-container setup.
+11. **Environment variables — the two values noted in Step A get typed in here**: key \`S3_BUCKET\` → value = the exact bucket name from Step A; key \`AWS_REGION\` → value = the exact region from Step A (e.g. "ap-south-1"). ⚠️ **These key names must match EXACTLY what the PHP application code expects** — this is the same environment-variable mechanism covered in the earlier dedicated topic, now applied for real.
+12. **Storage: left at the Fargate default (20GB ephemeral)** — no additional storage configuration needed for this application.
+13. **Create.** The task definition now exists, ready to actually launch a task or service from — covered in the next lecture.
+
+---
+
+## Exam Framing
+
+> "What two resources must exist before creating a task definition for an application that writes to S3?" → **an S3 bucket to store the data, and a task role granting the application permission to access that bucket** — both created BEFORE the task definition references them. Remember the two-role split carried through this whole walkthrough: **task role = S3 access for the application** (created manually, Step B); **task execution role = ECR pull + CloudWatch logs** (auto-created by AWS via "Create new role," no manual policy work needed for the standard case).
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
