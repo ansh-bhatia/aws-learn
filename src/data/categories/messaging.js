@@ -6,6 +6,63 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-full-exam-cheat-sheet",
+      title: "API Gateway Exam Cheat Sheet – Every Keyword-to-Answer Mapping in One Place",
+      shortDesc: "The full keyword decision table for the entire API Gateway arc — endpoint types, private integration, and all four security layers, condensed to the exact phrase that gives each answer away",
+      visuals: [],
+      content: `## Endpoint Type Keywords
+
+| Keyword in the Question | Answer |
+|---|---|
+| "Global users worldwide," "clients," "low latency globally" | **Edge-Optimized REST API endpoint** |
+| "Clients are in the same region," "reduce latency in one region only," "multi-region not required" | **Regional REST API endpoint** |
+| "Accessible only from inside VPC," "internal API, not from the internet" | **Private REST API + VPC interface endpoint + resource policy** |
+| "Convert a private API to edge-optimized" | ⚠️ **Not possible — an endpoint type cannot be changed after the fact this way** |
+
+---
+
+## Private API vs Private Integration — Don't Confuse These Two
+
+> ⚠️ **Private API means the API ITSELF has endpoint type = private** — the API is only reachable from inside a VPC. **Answer: Private REST API + VPC interface endpoint + resource policy.**
+
+> ⚠️ **Private INTEGRATION means the BACKEND lives inside a VPC, but the API ITSELF can still be public.** "Expose a backend inside a VPC, but the API can remain public" → **REST API + VPC Link.** ⚠️ **"Connect API to a private ALB" → VPC Link v2** (the newer version — v1 supported only NLB; v2 added ALB support, matching the earlier integration-types topic).
+
+---
+
+## Security Layer Keywords (All Four Layers)
+
+| Keyword | Answer |
+|---|---|
+| "Protect a public REST API from web exploits," "SQL injection," "cross-site scripting," "XSS" | **AWS WAF attached to API Gateway** |
+| "Allow only a specific IP," "allow only a specific AWS account," "VPC endpoint only" | **API Gateway Resource Policy** |
+| "User login," "JWT token," "sign-in required" | **Cognito User Pool authorizer** |
+| "Custom authentication," "custom token validation," "external IDPs," "specific custom rule" | **Lambda Authorizer** |
+| "AWS service-to-service," "IAM user/role," "SigV4 signing," "sign the request" | **IAM authorization on the API Gateway method** |
+
+---
+
+## Quick-Reference: Additional Recurring Themes From This Arc
+
+- **Custom domain + HTTPS** → performance/branding keyword, points to configuring a custom domain with ACM certificate.
+- **"Usage control"** → API key + usage plan (rate/burst throttling, quota).
+- **"Small percentage of traffic to a new version"** → Canary deployment (REST API only, Lambda aliases not versions).
+- **"Direct integration with many AWS services, complex mapping"** → REST API. **"Simple, low-cost, limited integrations"** → HTTP API.
+- **"Real-time, two-way, long-lived connection"** → WebSocket API.
+
+---
+
+## ⚠️ The Study Strategy This Cheat Sheet Is Built For
+
+> **Three preparation tiers**: (1) a full pass through the material immediately after learning it, (2) a 24-48-hour-before-exam review using cheat sheets exactly like this one, and (3) a final "ultra-fast decision table" pass in the hour before the exam — deliberately compressed to the exact keyword-to-answer mappings above, skipping all explanatory detail, for a genuinely fast last-minute refresh.
+
+---
+
+## Exam Framing
+
+> This is the master reference for every API Gateway scenario-based question covered across this entire arc — endpoint types, private API vs private integration (a common point of confusion), and all four security layers (usage control, access control, edge protection, authentication). ⚠️ **The single biggest exam skill this cheat sheet trains: recognizing the SPECIFIC keyword phrase in a question and mapping it directly to the correct AWS feature, rather than reasoning through the full mechanics from scratch under time pressure.**
+`,
+    },
+    {
       id: "api-gateway-custom-domain-routing-modes-api-mapping-vs-rules",
       title: "Custom Domain Routing Modes (Part 1) – API Mapping Only vs Routing Rules Only",
       shortDesc: "API mapping only ever looks at the URL path — routing rules can additionally check an HTTP header, but that extra power comes at the cost of REST-API-only support",
