@@ -4340,6 +4340,62 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-storage-fargate",
+      title: "ECS Project Step 5 (Part 10) – Storage Options on Fargate: Ephemeral, Bind Mount, EBS, and EFS",
+      shortDesc: "One shared ephemeral disk per task regardless of container count, invisible to containers by default — and only EFS actually survives the task stopping or spans multiple tasks",
+      visuals: [],
+      content: `## Ephemeral Storage: The Automatic Default
+
+> **Every Fargate task gets exactly ONE shared ephemeral storage volume — 20GB by default, upgradeable up to 200GB — regardless of how many containers run inside that task.** ⚠️ **Three containers in one task still share a single ephemeral volume, not one each.** This storage is used internally by ECS to store container image layers — ⚠️ **containers CANNOT access or store data on it by default.**
+
+**Persistence**: ⚠️ **NOT persistent — stopping the task deletes the ephemeral storage along with it.**
+
+---
+
+## Bind Mount: Sharing the Ephemeral Volume Between Containers
+
+> **By default, containers in the same Fargate task cannot share data via ephemeral storage at all.** ⚠️ **To enable sharing, a NAMED volume must be defined and explicitly bind-mounted into each container that needs access** — this named volume acts as shared space carved out of the task's ephemeral storage. ⚠️ **Mounting is configured through the Dockerfile.**
+
+- **Persistent?** ⚠️ **No — the underlying ephemeral storage itself isn't persistent, so neither is anything bind-mounted onto it.**
+- **Shared across tasks?** No — ephemeral storage belongs exclusively to the one task that created it.
+- **Shared between containers in the SAME task?** ⚠️ **Yes — this is exactly what bind mount exists for.**
+
+---
+
+## Amazon EBS: CLI/JSON Only, Not in the Console
+
+> **Block-level storage attached per task — only ONE EBS volume per task.** ⚠️ **On Fargate, EBS is supported only via CLI, SDK, or a raw JSON task definition — it is NOT available in the ECS console UI at all**, which is exactly why it doesn't appear as a selectable option when configuring storage through the console.
+
+- **Persistent?** ⚠️ **Conditional — persistent when attached to a standalone TASK, but ephemeral when attached to a SERVICE.**
+- **Shared across tasks?** No.
+- **Shared between containers in the same task?** Yes — same as ephemeral storage.
+- **Mount required?** Yes, via the Dockerfile.
+
+---
+
+## Amazon EFS: The Only Genuinely Persistent, Multi-Task Option
+
+> **EFS (Elastic File System) is a Linux-based, fully managed network file system — the most useful storage option of the four**, since it's the only one that's both persistent AND shareable across MULTIPLE tasks (not just multiple containers within one task).
+
+- **Persistent?** ⚠️ **Yes.**
+- **Shared across tasks?** ⚠️ **Yes — the only one of the four options that supports this.** Two separate ECS tasks needing a common shared storage location should use EFS.
+- **Shared between containers in the same task?** Yes.
+- **Mount required?** Yes, via the Dockerfile.
+
+---
+
+## ⚠️ What Fargate Explicitly Does NOT Support
+
+> **Fargate does not support Docker volumes or FSx for Windows** — ⚠️ **both of those are EC2-launch-type-only options**, covered separately in the next topic on EC2 storage. Calling this out explicitly here avoids assuming Fargate's storage options are a strict subset that also includes these two.
+
+---
+
+## Exam Framing
+
+> "Two separate Fargate tasks need to read and write to the same shared storage location" → **EFS** — the only Fargate storage option that persists AND spans multiple tasks; ephemeral storage, bind mount, and EBS are all scoped to a single task at most. "A Fargate task's EBS volume needs to be configured, but the option isn't showing up in the console" → **expected — EBS on Fargate is CLI/SDK/JSON-only, never available through the ECS console UI.** Remember the persistence split: ephemeral and bind mount both die with the task; EBS is conditionally persistent (standalone task = yes, service = no); EFS alone is unconditionally persistent.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
