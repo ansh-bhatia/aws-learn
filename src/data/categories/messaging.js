@@ -6,6 +6,46 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-lab-part1-prerequisites",
+      title: "API Gateway Lab – Part 1: DynamoDB Table, Separated Lambda Functions, and the IAM Role Lambda Needs to Even Talk to DynamoDB",
+      shortDesc: "Three separate Lambda functions instead of one, on purpose — cramming create/read/delete into a single function works technically, but violates separation of concerns and becomes harder to test and maintain",
+      visuals: [],
+      content: `## Step 1: Create the DynamoDB Table (the Backend)
+
+> **Table name: "user_table"** (use the exact same name — it gets referenced directly in the Lambda code in the next lab part). **Partition key: "userID"** (note the capitalization — capital ID, everything else lowercase), **type: String.** No other settings need to be touched.
+
+---
+
+## ⚠️ Step 2 (Conceptual): Why an API Is Needed at All
+
+> **A mobile app (React Native, Flutter, etc.) cannot talk to the DynamoDB table directly** — the same "frontend can never reach DynamoDB directly" rule from the earlier CRUD topic, now applied concretely. ⚠️ **APIs are needed specifically to store new records, fetch records, and delete records** on behalf of the frontend.
+
+**API logic** = the actual backend code that runs when a user saves, fetches, or deletes data — can be written in any language (Python, Node.js, Java, PHP, Go), and can be hosted on any compute platform (Lambda, EC2, ECS, EKS). This lab specifically uses Lambda.
+
+---
+
+## ⚠️ Three SEPARATE Lambda Functions, Deliberately — Not One Combined Function
+
+> **The plan: create user function, get user function, delete user function — three distinct Lambda functions, each handling exactly one CRUD task.** ⚠️ **Technically, all three tasks COULD be crammed into a single Lambda function — but this is explicitly called out as bad practice.** ⚠️ **Reasoning: a single combined function becomes messy and harder to manage; separate, single-purpose functions follow the separation-of-concerns principle, and are genuinely easier to test and maintain.** This directly echoes the "each microservice does one job" principle from the earlier microservices topic, now applied at the individual-function level.
+
+---
+
+## Step 3: The IAM Role Lambda Needs to Access DynamoDB
+
+> ⚠️ **AWS services cannot act on each other by default — a Lambda function needs an explicit IAM role granting it permission before it can read or write DynamoDB at all.** ⚠️ **The analogy: just like a person can't enter a building without an ID card, Lambda needs a "digital permission card" (an IAM role) to access DynamoDB** — without it, every DynamoDB operation from the Lambda functions would simply fail.
+
+**Creating the role**: IAM → Roles → Create role → trusted entity **Lambda** → attach **AmazonDynamoDBFullAccess** (both v1 and v2 versions selected) → name it **"Lambda-DynamoDB-execution-role"** (use this exact name — it gets referenced again in upcoming lab steps).
+
+⚠️ **Best-practice callout, explicitly acknowledged and deliberately skipped for this lab**: production should scope this permission to the SPECIFIC DynamoDB table only, not full account-wide DynamoDB access — full access is used here purely to keep focus on learning API Gateway itself, not IAM policy scoping.
+
+---
+
+## Exam Framing
+
+> "Why does a Lambda function fail with an access-denied error when trying to read/write a DynamoDB table, even though both are in the same AWS account?" → **AWS services never have implicit permission to act on each other — the Lambda function needs an explicit IAM role (e.g. with DynamoDBFullAccess or a table-scoped policy) attached before it can perform any DynamoDB operation.** "Why build three separate Lambda functions instead of one function handling create, read, and delete together?" → **separation of concerns — a single combined function becomes harder to test, maintain, and reason about; one function per responsibility is the established best practice, mirroring the same principle behind microservices architecture generally.**
+`,
+    },
+    {
       id: "api-gateway-lab-introduction",
       title: "API Gateway Hands-On Lab – The Four-Part Plan (HTTP API First, REST API Later for Direct Comparison)",
       shortDesc: "This lab is deliberately built with HTTP API first — the exact same lab gets rebuilt with REST API next, specifically so the earlier feature comparison can be felt hands-on, not just memorized",
