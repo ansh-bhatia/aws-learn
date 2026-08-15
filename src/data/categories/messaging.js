@@ -6,6 +6,44 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-strict-mode-domain-fronting",
+      title: "API Gateway Strict Mode – Catching a Domain-Fronting Attack by Checking If the TLS Handshake Lies About the HTTP Request",
+      shortDesc: "A normal request always names the same domain twice — once during the TLS handshake, once in the HTTP host header — domain fronting exploits the rare case where those two names quietly disagree",
+      visuals: [],
+      content: `## ⚠️ When Endpoint Access Mode Even Appears
+
+> **Endpoint Access Mode (Basic vs Strict) only shows up when a strong/modern security policy is selected — e.g. TLS 1.3 or post-quantum cryptography.** ⚠️ **Selecting an older/legacy TLS version (e.g. TLS 1.0) makes this option disappear entirely** — Strict Mode is fundamentally tied to using a modern TLS policy, not a standalone independent setting.
+
+**Basic mode**: allows all clients to access the API — no additional protection beyond the TLS policy itself. **Strict mode**: adds real, additional protection — specifically against domain-fronting attacks.
+
+---
+
+## ⚠️ Understanding Domain Fronting First
+
+> **Every client-to-API request actually involves TWO separate steps that name a domain**: (1) the **TLS handshake**, where the client sends a Server Name Indication (SNI) saying essentially "I want to connect to api.example.com," and the server responds with its certificate, and (2) the actual **HTTP request**, which includes a **hostname** in its Host header — normally the SAME domain named in step 1.
+
+**⚠️ In a NORMAL, legitimate request, the SNI (from the TLS handshake) and the HTTP Host header ALWAYS match** — both name the same domain, e.g. api.example.com in both places.
+
+**⚠️ Domain fronting exploits the case where they DON'T match**: the TLS handshake claims one domain (e.g. api.example.com, giving the connection a legitimate-looking certificate), but the actual HTTP request's Host header names a completely DIFFERENT domain. ⚠️ **This mismatch lets an attacker hide or misroute traffic behind a legitimate-looking TLS connection** — the TLS handshake succeeds normally, but the request gets routed somewhere the client never openly declared during the handshake.
+
+---
+
+## ⚠️ What Strict Mode Actually Checks
+
+**Check 1 — Same endpoint type**: ⚠️ **the incoming request must originate from the SAME endpoint type the API is actually configured for.** A regional API must receive requests via the regional path; a private API must receive requests via its VPC endpoint; an edge-optimized API must receive requests via CloudFront. ⚠️ **A request arriving through the "wrong" path for the configured endpoint type is rejected outright.**
+
+**Check 2 — SNI-to-hostname matching**: ⚠️ **available ONLY for regional and private endpoints** — strict mode verifies that the domain named in the TLS handshake's SNI genuinely matches the domain named in the HTTP request's Host header. ⚠️ **A mismatch means the request is REJECTED — this is exactly what prevents a domain-fronting attack from succeeding.**
+
+**⚠️ For edge-optimized endpoints specifically, SNI/hostname matching is NOT performed by strict mode directly — instead, protection against domain fronting comes from CloudFront's own built-in domain-fronting protection**, since edge-optimized APIs are always fronted by CloudFront anyway.
+
+---
+
+## Exam Framing
+
+> "An attacker successfully establishes a TLS connection claiming to be api.example.com, but the actual HTTP request inside that connection targets a completely different, unrelated domain" → **this is a domain-fronting attack** — enabling Strict Mode on the REST API's endpoint access setting rejects requests where the TLS SNI and the HTTP Host header don't match, directly closing this attack path. "Does Strict Mode's SNI/hostname verification apply the same way to an edge-optimized endpoint as it does to a regional endpoint?" → **no — SNI/hostname matching is Strict Mode's own mechanism for regional and private endpoints specifically; edge-optimized endpoints instead rely on CloudFront's own built-in domain-fronting protection**, since those requests are always routed through CloudFront first.
+`,
+    },
+    {
       id: "rest-api-tls-security-policy",
       title: "REST API TLS Security Policy – Options Are Endpoint-Type-Dependent, and Scoped Only to the Default Invoke URL",
       shortDesc: "The available TLS policy options change based on which endpoint type was already selected — and whatever's chosen here only governs AWS's default invoke URL, never a custom domain, which gets its own separate policy",
