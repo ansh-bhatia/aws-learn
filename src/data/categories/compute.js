@@ -4834,6 +4834,44 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-load-balancer-integration",
+      title: "ECS Service Load Balancer Integration – Why the Load Balancer Must Be Created BEFORE the Service, Not During It",
+      shortDesc: "Creating the ALB from inside the service-creation flow silently drops it into the task's own private subnet — the fix is pre-creating it from EC2 first, where subnet choice is actually exposed",
+      visuals: [],
+      content: `## ⚠️ The Critical Gotcha: Don't Create the Load Balancer From the Service Wizard
+
+> **The ECS "create service" flow offers a "create new load balancer" option directly inline — but this option should be AVOIDED.** ⚠️ **The service-creation wizard does NOT let you choose which subnet the load balancer goes into — it silently places the new load balancer into the SAME subnet selected for the task's own networking (the private subnet).** Since the whole point is an internet-facing load balancer in the PUBLIC subnet reaching a task hidden in the PRIVATE subnet, a load balancer created this way ends up in the wrong subnet entirely and defeats the design.
+
+**The fix**: ⚠️ **create the Application Load Balancer separately, in advance, directly from the EC2 console** — which DOES expose explicit subnet selection — then choose "use an existing load balancer" when creating the ECS service.
+
+---
+
+## Creating the Target Group First (Required Before the ALB)
+
+> **An ALB requires a target group to route traffic to.** ⚠️ **When creating this target group for an ECS/Fargate service, the target type must be "IP addresses" — NOT "instances."** Reasoning: ECS tasks aren't EC2 instances themselves (even on the EC2 launch type, a task isn't the same thing as the instance it runs on), so the instance-based target type doesn't fit. ⚠️ **With IP-address targeting, ECS automatically registers each new task's IP as a target the moment the task launches** — no manual target registration needed.
+
+**No targets need to be added manually at target-group creation time** — the target group is created empty; ECS populates it automatically once the service actually starts launching tasks.
+
+---
+
+## Creating the ALB Itself
+
+> From the EC2 console → Load Balancers → Create → **Application Load Balancer**, internet-facing → ⚠️ **explicitly select the PUBLIC subnets** (this is exactly the subnet-selection control missing from the ECS service wizard) → attach the target group created above.
+
+---
+
+## Wiring It Into the Service
+
+> **Back in the ECS service creation flow**: enable load balancing → choose **"use an existing load balancer"** (never "create new," per the gotcha above) → select the ALB created in EC2 → **"use existing listener"** (already created alongside the ALB) → **"use existing target group"** (the IP-based one created earlier). ⚠️ **The task itself still goes into the PRIVATE subnet during the service's own networking configuration — only the ALB lives in the public subnet.**
+
+---
+
+## Exam Framing
+
+> "An ECS service's load balancer keeps ending up in the wrong (private) subnet, even though public subnets exist in the VPC" → **the load balancer was created inline through the ECS service-creation wizard**, which doesn't expose subnet choice and defaults to the task's own subnet. **Fix: pre-create the ALB from the EC2 console (where subnet selection is explicit), then attach it to the service via "use an existing load balancer."** "What target type should an ECS/Fargate target group use?" → **IP addresses, not instances** — ECS automatically registers each task's IP as it launches, with zero manual target management required.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
