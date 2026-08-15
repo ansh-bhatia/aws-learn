@@ -6,6 +6,56 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-endpoint-types",
+      title: "REST API Endpoint Types – Regional, Edge-Optimized, Private, and the One-Endpoint-Per-API Rule",
+      shortDesc: "One REST API gets exactly ONE endpoint type — needing both public and VPC-only access means creating two separate APIs, never one API switching between modes",
+      visuals: [],
+      content: `## ⚠️ Three Endpoint Types, Each Controlling How Clients Reach the API
+
+> **REST API supports three endpoint types, each deciding how clients physically reach the API and how AWS routes the request internally.**
+
+---
+
+## Regional Endpoint
+
+> **The API deploys into ONE specific AWS region — clients connect directly over the internet, and the request travels straight to that region.** ⚠️ **Flow: client → internet → API Gateway (in its one region) → backend logic (Lambda, etc.)**
+
+**When to use**: users are geographically near the API's region — e.g. an India-focused application hosted in ap-south-1, used almost entirely by users in India, gets genuinely low latency.
+
+**⚠️ Limitation**: users far from the region experience meaningfully higher latency — a US or European user hitting an India-hosted regional API has to route all the way to India for every request.
+
+---
+
+## Edge-Optimized Endpoint
+
+> **Uses Amazon's global CDN (CloudFront) in front of the REST API — solving regional endpoint's international-latency problem.** ⚠️ **Flow: global client → connects to their NEAREST CloudFront edge location → CloudFront routes the request to the API's actual region.** ⚠️ **The API still physically lives in one region — CloudFront just gets users to that region faster** by using AWS's global edge network for the first hop.
+
+**When to use**: a public API with genuinely global users — e.g. a mobile app used across many countries needing consistently low latency worldwide.
+
+**⚠️ Limitations**: slightly more expensive (CloudFront usage adds cost), and latency can occasionally be higher due to CloudFront propagation delay when changes are first deployed.
+
+---
+
+## Private Endpoint
+
+> **Accessible ONLY from within a VPC — never from the public internet at all.** ⚠️ **Flow: a resource inside a VPC (EC2, Lambda, ECS) → VPC interface endpoint → private API Gateway.** ⚠️ **A VPC interface endpoint MUST be explicitly created to provide this connectivity** — the API Gateway itself isn't placed inside the VPC; the endpoint is what bridges the VPC to the private API.
+
+**When to use**: internal company APIs, secure backend-to-backend communication where public internet access must be structurally blocked. ⚠️ **"Only accessible inside the VPC" isn't really a limitation here — it's the entire point of choosing this endpoint type.**
+
+---
+
+## ⚠️ The Critical Rule: One API, One Endpoint Type — Never Multiple
+
+> **A single REST API can have ONLY ONE endpoint type — regional, edge-optimized, OR private, never a combination, and never switchable per-request.** ⚠️ **If a use case genuinely needs BOTH public access AND VPC-only access, the solution is creating TWO SEPARATE REST APIs** — one configured regional (or edge-optimized) for public access, and a second configured private for VPC-only access — never one API attempting to serve both modes.
+
+---
+
+## Exam Framing
+
+> "An application needs to serve both public internet users AND internal VPC-only backend services from the same logical API" → **two separate REST APIs are required — one public-facing (regional or edge-optimized) and one private** — a single REST API cannot have more than one endpoint type. "A public API serves users spread across multiple continents, and latency needs to be minimized for all of them" → **edge-optimized endpoint**, using CloudFront's global edge network to get each user to the API's region via the shortest possible path — plain regional endpoint would leave distant users with meaningfully higher latency.
+`,
+    },
+    {
       id: "api-gateway-lab-part4-postman-testing-and-cleanup",
       title: "API Gateway Lab – Part 4: Testing From Outside AWS With Postman, and What to Delete (and Not Delete) Afterward",
       shortDesc: "Postman stands in for a real frontend entirely — the earlier Lambda console tests only proved the backend logic worked, this is the first time the request genuinely originates from OUTSIDE AWS",
