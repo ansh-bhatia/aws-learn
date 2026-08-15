@@ -5536,6 +5536,36 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-auto-mode-quick-configuration",
+      title: "EKS Auto Mode – Quick Configuration: AWS Manages Worker Nodes Too, With Zero Room to Customize",
+      shortDesc: "Before Auto Mode, AWS only managed the control plane and everything else was yours; Auto Mode extends AWS's management all the way down to worker nodes — Quick Configuration just means you can't touch any of those settings",
+      visuals: [],
+      content: `## ⚠️ Before Auto Mode: AWS Manages Only the Control Plane
+
+> **Traditionally, creating an EKS cluster meant AWS provided ONLY the control plane** — everything else was the customer's responsibility: ⚠️ **provisioning EC2 instances for worker nodes, installing/configuring the Kubernetes agent (kubelet) on them, setting up networking/subnets/security groups, handling scaling and patching and version upgrades of worker nodes, and replacing failed/unhealthy nodes.** ⚠️ **This traditional, fully manual setup is still available today** — choose Custom Configuration and explicitly disable Auto Mode to get it.
+
+---
+
+## ⚠️ Auto Mode: AWS Extends Its Management Down to Worker Nodes Too
+
+> **Auto Mode is a way to run EKS where AWS automatically manages worker nodes, networking, scaling, AND patching — not just the control plane.** ⚠️ **Concretely, with Auto Mode enabled, AWS handles**: creating and managing worker nodes on demand, scaling up/down based on actual load, managing networking/IP allocation/DNS setup, installing and updating add-ons (CoreDNS, VPC CNI, kube-proxy), integrating storage and load balancers, and automatically patching/replacing nodes for maintenance or security. ⚠️ **The customer's responsibility shrinks down to just deploying and managing applications** — infrastructure management is entirely AWS's job.
+
+---
+
+## Quick Configuration vs Custom Configuration (Both With Auto Mode)
+
+> **Quick Configuration with EKS Auto Mode**: ⚠️ **the fastest, simplest cluster-creation path — Auto Mode is turned ON AUTOMATICALLY and CANNOT be disabled.** ⚠️ **Only three inputs are needed: cluster name, VPC, and IAM role** — every other setting is decided entirely by AWS, with zero customization allowed. ⚠️ **This is described as "true" Auto Mode** — full AWS management, full acceptance of AWS's defaults.
+
+**⚠️ The core limitation of Quick Configuration**: ⚠️ **no Auto Mode setting can be edited or customized at all** — whatever AWS decides becomes the cluster's configuration, no exceptions. This is precisely why Custom Configuration exists as a separate path (covered in the next topic) — it still uses Auto Mode, but allows selectively modifying some of Auto Mode's default settings rather than accepting all of them blindly.
+
+---
+
+## Exam Framing
+
+> "What's the core difference in AWS's responsibility before and after EKS Auto Mode existed?" → **before Auto Mode, AWS managed only the control plane and the customer handled everything about worker nodes (provisioning, scaling, patching, node replacement); Auto Mode extends AWS's managed responsibility down to worker nodes, networking, and add-ons too.** "A cluster created via Quick Configuration with EKS Auto Mode needs one specific Auto Mode setting adjusted — is this possible?" → **no — Quick Configuration provides zero customization of Auto Mode settings; adjusting any Auto Mode setting requires Custom Configuration (with Auto Mode still enabled) instead**, covered in the next topic.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
@@ -5549,15 +5579,6 @@ Container orchestrators manage containers in bulk. Options: **Docker Swarm** (si
 **EKS = Kubernetes as a managed AWS service** — you get all of Kubernetes; AWS handles the hard setup, patching & control plane.
 
 > 🔑 Main reason to choose EKS: **hybrid cloud**. Run Kubernetes on-prem AND in AWS with the **same** tooling/skills, instead of juggling Kubernetes on-prem and ECS in the cloud.
-
----
-
-## Cluster Creation Modes
-
-**EKS Auto Mode** lets AWS manage worker nodes, networking, scaling & patching (not just the control plane).
-- **Quick + Auto Mode** — fastest; Auto Mode always on (can't disable); accept all AWS defaults. You give only name, VPC, IAM role.
-- **Custom + Auto Mode** — automation **and** control: customize upgrade policy, **compute class** (general/system), cluster access, customer KMS key, ARC zonal shift, deletion protection, endpoint access, monitoring, add-ons.
-- **Classic Mode (Auto off)** — AWS manages only the control plane; **you manage worker nodes via node groups**. Max control; required for Fargate & full manual setups.
 
 ---
 
