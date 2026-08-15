@@ -6,6 +6,36 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-encryption-sse-sqs-vs-kms",
+      title: "SQS Encryption – SSE-SQS's Zero-Config Simplicity vs KMS's Full Key Control",
+      shortDesc: "Both options encrypt messages at rest, but only KMS lets you actually control permissions, rotation, and auditing on the key itself — SSE-SQS is fully AWS-managed and completely invisible to you",
+      visuals: [],
+      content: `## Two Distinct Encryption Concerns: At Rest vs In Transit
+
+> **Encryption in transit**: data flowing between producer → SQS → consumer is ALWAYS protected via HTTPS/TLS — ⚠️ **no configuration is needed at all; this is automatic and non-optional.** **Encryption at rest**: protects messages WHILE they're sitting stored in the queue (recall: messages can remain queued anywhere from 1 minute to 14 days, per the message retention period) — ⚠️ **this is the configurable option, called Server-Side Encryption (SSE).**
+
+---
+
+## Server-Side Encryption: Enabled by Default, Two Key-Management Modes
+
+> **SSE can be enabled or disabled when creating a queue — ⚠️ enabled by default, and leaving it enabled is the recommended, secure choice.**
+
+### SSE-SQS: AWS Manages the Key, Fully Transparent
+
+> **AWS manages the entire encryption key lifecycle — completely transparent to the user, with NO key management required at all.** ⚠️ **Simple, and recommended for most use cases** where deep control over the encryption key itself isn't a specific requirement.
+
+### SSE-KMS: Customer-Managed Key, Full Control
+
+> **Uses an AWS KMS (Key Management Service) key that must be set up separately** (KMS itself is covered in depth in a later dedicated topic). ⚠️ **Because it's a customer-managed key, you get direct control over key permissions, key rotation, and auditing** — genuinely useful for compliance requirements or strict security policies where SSE-SQS's fully-automatic, zero-visibility approach isn't sufficient.
+
+---
+
+## Exam Framing
+
+> "A queue needs message encryption at rest with zero key-management overhead" → **SSE-SQS** — AWS manages the entire key lifecycle transparently, no setup required. "A queue needs encryption at rest where the organization must control key rotation, permissions, and maintain an audit trail for compliance" → **SSE-KMS** — using a customer-managed KMS key gives that level of control, unlike SSE-SQS's fully opaque AWS-managed key. Remember: **encryption in transit (HTTPS/TLS) is always on with zero configuration; encryption at rest (SSE) is the configurable choice between SSE-SQS and SSE-KMS.**
+`,
+    },
+    {
       id: "api-gateway-full-exam-cheat-sheet",
       title: "API Gateway Exam Cheat Sheet – Every Keyword-to-Answer Mapping in One Place",
       shortDesc: "The full keyword decision table for the entire API Gateway arc — endpoint types, private integration, and all four security layers, condensed to the exact phrase that gives each answer away",
