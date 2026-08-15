@@ -5369,6 +5369,40 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-scheduled-scaling-and-auto-target-registration",
+      title: "ECS Scheduled Scaling – Testing Auto Scaling Without Generating Real Load, and Why Fargate Never Needs Manual Target Registration",
+      shortDesc: "Scheduled scaling exists here mainly to let a demo prove auto scaling works without artificially spiking CPU — and unlike an EC2 ASG, Fargate tasks register with the ALB target group with zero manual wiring",
+      visuals: [],
+      content: `## ⚠️ Why Scheduled Scaling Is Used HERE Instead of Target Tracking or Step Scaling
+
+> **Both target tracking and step scaling require actually generating real load (CPU/memory spikes) to trigger and verify the policy — genuinely difficult to demonstrate cleanly in a lab.** ⚠️ **Scheduled scaling instead triggers at a specific predefined time, completely independent of actual traffic** — making it far easier to verify a scaling policy is working correctly on demand, without needing to artificially stress-test the application first.
+
+**What scheduled scaling is for in the real world**: predictable, calendar-based demand patterns — e.g. scaling up during business hours and back down overnight, or ahead of a known high-traffic event — where the timing is known in advance rather than reactive to a live metric.
+
+---
+
+## ⚠️ One Schedule Action = One Direction Only, So Two Policies Are Required
+
+> **A single scheduled scaling action can only move in ONE direction** — exactly the same one-directional limitation already established for step scaling's scale-out-only policies. ⚠️ **Demonstrating both scale-out and scale-in requires creating TWO separate scheduled actions**: one action with a higher minimum/maximum (triggering scale-out at its scheduled time) and a second, later-scheduled action with a lower minimum/maximum (triggering scale-in).
+
+**Worked example structure**: baseline 2 tasks → scheduled action #1 at time T sets min=4/max=10 → task count grows to 4 → scheduled action #2 at time T+X sets min=2/max=2 → task count shrinks back to 2. ⚠️ **Each action can optionally repeat** (e.g. every weekend, via a cron-style expression) or run just once for a one-time test — both scale-out and scale-in support the same repeat/one-time choice.
+
+---
+
+## ⚠️ The Critical Fargate vs EC2 Auto Scaling Difference: No Manual Target Registration Needed
+
+> **In EC2 Auto Scaling, the ASG's target group must be EXPLICITLY attached to the Auto Scaling Group itself** — this is what makes newly launched EC2 instances automatically register (and terminated ones automatically deregister) with the load balancer. ⚠️ **In ECS Fargate, this manual attachment step doesn't exist at all — the target group was already wired to the SERVICE back when the service itself was created**, so every time auto scaling adds or removes a task (regardless of policy type — scheduled, target tracking, or step), ECS automatically registers/deregisters that task's IP with the ALB target group with zero additional configuration.
+
+**Practical implication verified in this lab**: after a scale-out event adds 2 new tasks (bringing the total to 4), the ALB's target group immediately shows all 4 targets registered — no manual re-registration step was needed, confirming the auto-registration behavior directly.
+
+---
+
+## Exam Framing
+
+> "Why is scheduled scaling often used to demonstrate or test that ECS auto scaling is configured correctly, rather than target tracking or step scaling?" → **scheduled scaling triggers based purely on a predefined time, requiring no actual load generation to verify — target tracking and step scaling both require genuinely spiking CPU/memory to trigger, which is far harder to reproduce reliably in a test.** "When an ECS Fargate service scales out, does the new task need to be manually registered with the ALB's target group, the way a new EC2 instance would need explicit ASG-to-target-group attachment?" → **no — ECS automatically registers/deregisters each task's IP with the target group as it scales, since the target group is already tied to the service itself; this is a genuine operational simplification Fargate provides over EC2 Auto Scaling Groups.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
