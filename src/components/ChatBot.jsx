@@ -97,11 +97,26 @@ export default function ChatBot() {
           </div>
 
           <div className="chatbot-messages" ref={listRef}>
-            {messages.map((m, i) => (
-              <div key={i} className={`chatbot-msg chatbot-msg-${m.role}`}>
-                {m.content || (loading && i === messages.length - 1 ? "…" : "")}
-              </div>
-            ))}
+            {messages.map((m, i) => {
+              const isPending = loading && i === messages.length - 1 && !m.content;
+              if (isPending) {
+                return (
+                  <div key={i} className="chatbot-msg chatbot-msg-assistant chatbot-msg-pending">
+                    <span className="chatbot-dots" aria-hidden="true">
+                      <span />
+                      <span />
+                      <span />
+                    </span>
+                    Searching AWS docs…
+                  </div>
+                );
+              }
+              return (
+                <div key={i} className={`chatbot-msg chatbot-msg-${m.role}`}>
+                  {m.content}
+                </div>
+              );
+            })}
             {error && <div className="chatbot-error">{error}</div>}
           </div>
 
