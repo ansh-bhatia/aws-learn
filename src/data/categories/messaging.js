@@ -6,6 +6,52 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-proxy-integration",
+      title: "REST API Proxy Integration – The Courier Boy Who Never Opens the Parcel",
+      shortDesc: "Proxy mode forwards the request completely untouched, letting a powerful backend handle everything itself — turn it off specifically when a legacy backend needs API Gateway to reshape the request first",
+      visuals: [],
+      content: `## ⚠️ The Courier Boy Analogy
+
+> **Proxy integration means API Gateway forwards the FULL request to the backend without changing anything at all — no filtering, no modification, no extra processing.** ⚠️ **API Gateway = a courier boy who never opens the parcel, just delivers it exactly as received; the backend (Lambda/HTTP server) = the office worker who actually opens it, reads it, and decides what to do.** ⚠️ **With proxy integration enabled, API Gateway is purely a pass-through — the backend gets the raw, unmodified request and is fully responsible for interpreting it.**
+
+---
+
+## ⚠️ What Gets Forwarded Untouched
+
+> **In proxy mode, everything from the original request passes through as-is**: HTTP method, URL path, query parameters, HTTP headers, and the request body — all forwarded exactly as the client sent them, with zero transformation by API Gateway.
+
+**⚠️ Supported by**: Lambda, HTTP, and VPC Link integrations. ⚠️ **NOT available for AWS service integration** — direct AWS service calls always require the request/response mapping covered in the earlier integration-types topic, since the target service needs its own specific request format.
+
+---
+
+## ⚠️ When to Enable Proxy Integration (the common case — ~90% of modern setups)
+
+> **Use it when**: a simple, fast setup is wanted; the backend is genuinely powerful enough to handle raw requests entirely on its own; API Gateway-level complexity isn't needed; building a modern REST API where the backend already does all its own request parsing and validation. ⚠️ **In most modern applications, the backend is capable enough that this is the default, near-universal choice.**
+
+## ⚠️ When to Disable Proxy Integration
+
+> **Use it when**: API Gateway itself needs to modify the request, filter specific fields, or change the response format — i.e. logic needs to live in API Gateway, not the backend. ⚠️ **The classic real-world case: a legacy backend expects a fixed, older request format, but modern clients send extra fields the legacy system doesn't understand** — API Gateway can filter those extra fields out before forwarding, something proxy mode structurally cannot do since it never inspects the request at all.
+
+---
+
+## Response Transfer Mode: Buffered vs Streamed (Only Relevant When Proxy Is On)
+
+> **Buffered (the common case, ~90% of setups)**: ⚠️ **API Gateway waits for the backend to complete its FULL response before forwarding anything to the client.** **Streamed**: ⚠️ **the backend's response is forwarded to the client in chunks, AS it's generated — the client starts receiving data while the backend is still actively working**, rather than waiting for full completion.
+
+---
+
+## ⚠️ Integration Timeout: Where the 504 Error Comes From
+
+> **The maximum time API Gateway will wait for a backend response before giving up.** ⚠️ **If the backend doesn't respond within this configured time limit, API Gateway returns a 504 error to the client** — regardless of whether the backend eventually would have responded, the client sees a timeout failure once the limit is exceeded.
+
+---
+
+## Exam Framing
+
+> "An API needs to filter out extra fields a legacy backend doesn't understand, or reshape the request before it reaches the backend" → **disable proxy integration** — proxy mode forwards the request completely untouched, so any request modification must happen with proxy OFF, using API Gateway's own mapping/transformation logic instead. "A client receives a 504 error from an API Gateway-fronted API" → **the backend didn't respond within the configured integration timeout** — this is specifically an API Gateway timeout, distinct from a backend-side error response. Remember: **buffered response mode waits for the FULL backend response before forwarding; streamed mode forwards data in chunks as the backend produces it.**
+`,
+    },
+    {
       id: "rest-api-integration-types",
       title: "REST API Integration Types – Five Backends, and Why VPC Link Can't Reach a Private Backend Alone",
       shortDesc: "VPC Link doesn't talk directly to whatever's in your private subnet — it can only reach an ALB or NLB sitting in front of it, which is what actually forwards traffic the rest of the way",
