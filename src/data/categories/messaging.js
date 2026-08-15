@@ -6,6 +6,40 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "app-integration-basics",
+      title: "Application Integration Basics – Application-to-Application vs Microservices-to-Microservices",
+      shortDesc: "UPI payments and flight booking sites are app-to-app integration between separate companies; Amazon's cart/checkout/notification split is microservices-to-microservices integration within one company",
+      visuals: [],
+      content: `## What Application Integration Actually Solves
+
+> **Application integration is what lets two or more applications or microservices communicate and exchange data reliably** — sending information, receiving responses, and triggering actions across systems, ⚠️ **even when those systems are built on completely different technologies.** The core value: multiple independent systems working together as one seamless experience, without the end user ever noticing the handoffs.
+
+---
+
+## Type 1: Application-to-Application Integration
+
+> **Two entirely SEPARATE applications or systems (often built by different companies) communicate to complete a task.** ⚠️ **Common whenever different companies, departments, or independently-built systems need to work together.**
+
+**Worked example 1 — UPI payment**: scanning a QR code to pay via Google Pay or Paytm actually involves ⚠️ **THREE separate systems communicating**: the UPI app itself (built by a private company), NPCI (the government body managing UPI payment rails), and the bank's own system. All three exchange data to complete a single payment — pure application-to-application integration across three independently-operated organizations.
+
+**Worked example 2 — flight booking aggregators**: booking a flight through Skyscanner (or Goibibo/MakeMyTrip) involves the aggregator (Skyscanner) talking directly to the airline's own system (e.g. Emirates) — first to fetch fare/schedule details, then again to actually confirm the booking on the airline's side. ⚠️ **Two distinct companies' systems, integrated so the user experiences it as one continuous booking flow.**
+
+---
+
+## Type 2: Microservices-to-Microservices Integration
+
+> **Small, independent services INSIDE ONE application talking to each other to fulfill a single user request.** ⚠️ **Each microservice deliberately does exactly ONE job — meaning they MUST communicate with each other to function as a complete system**, since no single microservice can fulfill an entire user request alone.
+
+**Worked example — Amazon.com's internal architecture**: from the outside, Amazon.com looks like one website. Internally, ⚠️ **the product page, the cart, checkout/payment, and order notifications are all separate microservices** — adding an item to cart means the product service talks to the cart service; placing an order means the order service talks to the payment service, then the notification service to send an update. ⚠️ **This is the modern replacement for the older monolithic application model**, where all of this logic would have lived in one single deployable unit instead.
+
+---
+
+## Exam Framing
+
+> "Two completely separate companies' systems (e.g. a payment app and a bank) need to communicate to complete a transaction" → **application-to-application integration** — distinct organizations, distinct systems, integrated to appear seamless to the end user. "Within a single e-commerce application, the cart service needs to notify the payment service once an order is placed" → **microservices-to-microservices integration** — independent services inside ONE application, each doing one job, that must talk to each other to complete the overall request. Both types are what AWS's application integration services (API Gateway, SQS, SNS, EventBridge — covered next) exist to implement reliably.
+`,
+    },
+    {
       id: "sqs",
       title: "SQS – Simple Queue Service",
       shortDesc: "Managed message queuing (async decoupling)",
