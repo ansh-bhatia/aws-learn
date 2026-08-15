@@ -6,6 +6,76 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "kinesis-data-streams-terminology-producer-shard-consumer",
+      title: "Kinesis Data Streams Terminology – Shards as Highway Lanes for Live Uber Cab Data",
+      shortDesc: "One shard is one lane on the highway — a handful of cabs sending updates fits fine in one lane, but thousands of cabs streaming location, speed, and trip status need multiple shards or the traffic simply can't move",
+      visuals: [],
+      content: `## Producer: The System That Generates and Sends Data
+
+> **A producer is the application that generates data and sends it to Kinesis as a stream of records.** Worked example: the **Uber driver app** continuously sends live updates — location, trip started, trip completed, payment received — making it the producer.
+
+## Record: One Single Piece of Data
+
+> **A record is one small unit of data sent to Kinesis — one event, one message, typically in JSON format.** Worked example: **one cab location update = one record.** If a driver app sends a location update every 5 seconds, each one becomes a brand-new record.
+
+## Stream: The Live Pipeline Records Flow Into
+
+> **A stream is the main live data pipeline you create inside Kinesis — once created, it's ready to continuously receive records.** ⚠️ **Think of a stream like a live road where data moves continuously** — this is exactly the pipeline that receives the Uber driver app's record flow.
+
+---
+
+## ⚠️ Shard: One Lane on the Data Stream's Highway
+
+> **A shard is a small partition of a Kinesis Data Stream — think of the stream as a highway and each shard as one lane.** ⚠️ **More lanes (shards) means the highway (stream) can handle more traffic (records) — a handful of cabs sending occasional updates might fit fine in a single shard, but thousands of cabs continuously streaming location, speed, and trip status need MULTIPLE shards, configured at stream creation, or the traffic simply can't move smoothly.** (The exact read/write capacity per shard is deferred to hands-on practice, not covered at this conceptual stage.)
+
+---
+
+## Sequence Number: An Auto-Generated Ordering ID
+
+> **Every record gets a unique sequence number, assigned automatically BY KINESIS — never by the producer.** ⚠️ **This exists so a consumer reading a continuous real-time stream can tell which record arrived first, second, third**, even though it's purely an internal Kinesis mechanic the producer never has to think about.
+
+---
+
+## Consumer: The System That Reads and Acts on the Stream
+
+> **A consumer is an application or service that reads data from the stream and processes it — producers send, Kinesis temporarily stores, consumers read.** ⚠️ **Multiple independent consumers can read the SAME stream for entirely different purposes** — worked example: live-tracking (shows cab movement on the rider's map), fare calculation, customer notifications, an analytics dashboard, and fraud detection could all consume the SAME Uber driver-update stream simultaneously, each for its own purpose.
+
+---
+
+## Exam Framing
+
+> "A live stream needs to scale to handle a much higher volume of concurrent records" → **add more shards** — each shard is a fixed-capacity lane, and total stream throughput scales with shard count. ⚠️ **Remember: sequence numbers are Kinesis-generated, never producer-supplied** — this is the opposite of SQS FIFO, where the deduplication ID/message group ID are producer-supplied.
+`,
+    },
+    {
+      id: "kinesis-hands-on-lab-data-stream-firehose-s3",
+      title: "Kinesis Hands-On Lab – Data Stream to Firehose to S3, With Cognito-Authenticated Test Data",
+      shortDesc: "A public Kinesis Data Generator tool (auth handled by a one-click Cognito CloudFormation template) floods the stream with records — then a genuinely visible lag appears before Firehose actually lands the data in S3",
+      visuals: [],
+      content: `## The Pipeline Being Built: Stream → Firehose → S3
+
+> **Architecture: an application generates streaming data → sends it to a Kinesis Data Stream → a Kinesis Data Firehose reads from that stream → delivers it into an S3 bucket.** Setup order: (1) create the Data Stream, (2) create the Firehose delivery stream (source = the Data Stream, destination = an S3 bucket), (3) generate test data to prove the pipeline actually works.
+
+---
+
+## ⚠️ Generating Test Data: A Public Tool, Authenticated via Cognito
+
+> **AWS provides a public GitHub-hosted "Kinesis Data Generator" web tool that acts as a fake producer, letting you push simulated records into the stream without writing any code.** ⚠️ **The tool requires authentication, provisioned via a ONE-CLICK CloudFormation template that creates a Cognito user (username/password) — no prior Cognito knowledge is needed, just following the documented steps.** Once signed in, select the target region and stream, choose a constant record rate (e.g. 100 records/second), and start sending.
+
+---
+
+## ⚠️ The Delivery Lag: "Real-Time" Doesn't Mean Instant at Every Hop
+
+> **After sending ~1,000 test records: the Data Stream itself shows the records arriving almost immediately (visible in its monitoring metrics) — but Firehose's "data read from Kinesis" metric, and the destination S3 bucket, both show ZERO for a noticeable stretch of time.** ⚠️ **This is expected, not a failure — Firehose buffers and batches before writing to S3, so there's a genuine, visible delay between "the stream has the data" and "the data has landed in S3," even though the overall pipeline is still considered real-time streaming.** Waiting resolves it: eventually a dated folder structure appears in the bucket, and downloading a delivered file shows the individual JSON records exactly as generated.
+
+---
+
+## Exam Framing
+
+> "Streaming data must be delivered to S3 without writing and maintaining custom consumer code" → **Kinesis Data Stream + Kinesis Data Firehose**, with Firehose handling the actual delivery. ⚠️ **A practical exam-adjacent trap this lab exposes: don't assume "real-time" means zero latency at every stage of a streaming pipeline — Firehose specifically introduces a buffering delay between the stream and the final destination, which is normal, expected behavior, not a misconfiguration.**
+`,
+    },
+    {
       id: "data-processing-batch-vs-real-time",
       title: "Batch vs Real-Time Processing – NEFT's 30-Minute Cycle vs UPI's Instant Transfer",
       shortDesc: "It's never a question of which is 'better' — batch is the deliberate default because it's cheaper and simpler, and real-time is reached for only when the use case genuinely can't tolerate any delay",
