@@ -3670,6 +3670,149 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step3-understand-ecr",
+      title: "ECS Project Step 3 (Part 1) – Why an Image Can't Go Directly From a Build Machine to ECS",
+      shortDesc: "ECR is the required bridge between where an image is built and where ECS runs it — and it beats Docker Hub on security, latency, and rate limits for this exact use case",
+      visuals: [],
+      content: `## ⚠️ The Core Problem: Build Machine and ECS Can't Talk Directly
+
+> **A Docker image built on a standalone EC2 "build machine" cannot be sent directly to ECS.** ⚠️ **ECS never pulls images from an EC2 instance — it only pulls images from a container registry.** This gap is exactly what **ECR (Elastic Container Registry)** exists to bridge.
+
+---
+
+## What ECR Is
+
+> **ECR is AWS's fully managed container image registry service** — a repository purpose-built for storing container images, deeply integrated into the AWS ecosystem.
+
+---
+
+## ⚠️ Why ECR Over Docker Hub for This Use Case
+
+**1. Security and access control.** ⚠️ **ECR images are private by default** — Docker Hub offers both public and private repositories, but ECR is private-only, and access is controlled cleanly through **IAM roles** rather than separate registry credentials.
+
+**2. Faster performance / lower latency.** ⚠️ **An ECR repository lives in the same AWS region as the ECS cluster using it** (e.g. both in Mumbai) — meaning genuinely low-latency image pulls. Docker Hub gives no guarantee about where an image physically lives relative to the ECS cluster pulling it, potentially introducing real cross-region latency.
+
+**3. No rate limits.** Docker Hub applies pull/push rate limits; ECR does not — another consistent performance advantage for AWS-hosted workloads specifically.
+
+---
+
+## The Role ECR Plays in This Project
+
+> **Sequence**: build machine has the tested Docker image → **create a private ECR repository** → **push the image from the build machine to that ECR repository** → when the ECS task definition is created, **ECS securely pulls the image from ECR** (never from the build machine directly).
+
+⚠️ **ECR is explicitly the bridge between the build machine and ECS** — every future application update follows the same pattern: update source code → rebuild the image on a build machine (or via CI/CD) → push the new image to ECR → ECS pulls the refreshed image from there.
+
+---
+
+## Exam Framing
+
+> "Why can't a Docker image be deployed to ECS directly from the EC2 instance it was built on?" → **ECS only pulls images from a container registry (like ECR), never directly from an EC2 instance.** "Why use ECR instead of Docker Hub for an AWS-hosted deployment?" → **private-by-default images with IAM-based access control, same-region low-latency pulls, and no rate limiting** — all direct advantages over Docker Hub specifically for AWS-native workloads.
+`,
+    },
+    {
+      id: "ecs-project-step3-create-ecr-repo",
+      title: "ECS Project Step 3 (Part 2) – Creating the ECR Repository: Mutable vs Immutable Tags",
+      shortDesc: "Mutable tags let you accidentally overwrite last week's working image with today's broken one — immutable tags make that impossible",
+      visuals: [],
+      content: `## Creating the Repository
+
+> **ECR repositories are always private** — there is no public-repository option, unlike Docker Hub. Creating one just requires a name (⚠️ **using the exact same name shown in any along-video reference material avoids friction in later steps, since the name is referenced again when pushing the image**).
+
+---
+
+## ⚠️ Image Tag Mutability — A Real Rollback-Safety Decision
+
+> **Tag mutability controls whether pushing an image with an already-used tag (e.g. "latest") is allowed to silently overwrite the existing one.**
+
+**Worked example**: an image is pushed the first time tagged "latest." The application is later updated, rebuilt, and pushed again — also tagged "latest."
+
+- **Mutable**: ⚠️ **the second push silently overwrites the first image under the same tag** — convenient for rapid iteration, but genuinely dangerous, since there's no way to roll back to the previous "latest" once overwritten.
+- **Immutable**: ⚠️ **the second push with the same tag is REJECTED outright** — forcing a new, distinct tag for every new image version, which preserves every prior version and makes rollback always possible.
+
+**The recommendation**: ⚠️ **mutable is acceptable for learning/development environments where rapid iteration matters more than history**; ⚠️ **immutable is the correct choice for production, specifically to prevent an accidental overwrite from destroying the ability to roll back.**
+
+---
+
+## Encryption Setting
+
+> **AES-256 (ECR-managed encryption)** is the default — AWS manages the encryption key entirely, similar to S3's default encryption. **AWS KMS (customer-managed keys)** is the alternative for higher security/compliance needs, adding customer control over the key and CloudTrail-based auditability. For this project, the simpler AES-256 default is used, keeping focus on the overall ECS workflow rather than key management specifics.
+
+---
+
+## Exam Framing
+
+> "A production container registry needs to guarantee that a previously-deployed image can always be rolled back to" → **immutable tags** — mutable tags allow a later push to silently destroy the ability to recover an earlier version under the same tag. This distinction (mutable = convenient but risky, immutable = safer but stricter) is directly analogous to similar "convenience vs safety" trade-offs seen elsewhere in AWS (e.g. S3 versioning, RDS deletion protection).
+`,
+    },
+    {
+      id: "ecs-project-step4-authenticate-ecr",
+      title: "ECS Project Step 4 (Part 1) – Authenticating the Build Machine to ECR Without Hardcoded Credentials",
+      shortDesc: "Two authentication layers, both solved by an IAM role instead of AWS access keys typed directly into the instance",
+      visuals: [],
+      content: `## Two Separate Authentication Steps Are Needed
+
+> **Pushing an image from the build machine to ECR requires TWO layers of authentication**: (1) the EC2 instance itself must be authorized to make AWS API calls (specifically ECR-related ones) via the AWS CLI, and (2) the Docker client running on that instance must be authorized specifically to push/pull from the private ECR registry.
+
+---
+
+## ⚠️ Step 1: Authenticating the EC2 Instance — IAM Role, Not Access Keys
+
+> **The "quick" way** is running an AWS CLI configuration command and entering an access key and secret key directly on the instance. ⚠️ **This is explicitly flagged as bad practice** — hardcoding credentials onto an EC2 instance means a compromised instance directly exposes those credentials to an attacker, who could then use them to compromise the broader AWS account.
+
+**The correct way**: ⚠️ **create an IAM role and attach it to the EC2 instance instead** — no credentials ever get typed or stored on the instance at all.
+
+**Concretely**: create a role trusted by the EC2 service, attach the AWS-managed policy **"Amazon EC2 Container Registry Full Access,"** name it descriptively (e.g. "ECR access role"), then attach that role to the build machine instance directly (via its security settings → modify IAM role). ⚠️ **Once attached, the instance can run ECR-related AWS CLI commands with no separate login step at all** — the role's permissions apply automatically to anything running on that instance.
+
+---
+
+## Step 2: Authenticating Docker Itself With ECR
+
+> **Even with the EC2 instance authorized via IAM, the Docker client specifically still needs a short-lived login token to interact with the private ECR registry.** ⚠️ **This token is generated via the AWS CLI and piped directly into a Docker login command** — AWS provides a ready-to-copy "view push commands" sequence directly from the ECR console for the specific repository, eliminating any need to hand-construct this command.
+
+**A successful login reports "Login Succeeded"** — confirming the Docker client on the build machine can now authenticate against that specific ECR repository for subsequent push operations.
+
+---
+
+## Exam Framing
+
+> "How should an EC2 instance authenticate to another AWS service (like ECR) without hardcoding credentials?" → **attach an IAM role directly to the instance**, rather than running a CLI login with a manually-entered access key/secret key. This is the exact same IAM-role-over-hardcoded-credentials pattern established earlier when testing the PHP application locally (that topic's environment-variable/IAM-role best practices) — now applied to the build machine's own AWS authentication, not just the application's S3 access.
+`,
+    },
+    {
+      id: "ecs-project-step4-push-image-to-ecr",
+      title: "ECS Project Step 4 (Part 2) – Tagging and Pushing the Image, So ECS Can Finally Pull It",
+      shortDesc: "The tag is what tells Docker WHERE to push an image — a locally-built image has no destination information until it's explicitly tagged with the ECR repository's URI",
+      visuals: [],
+      content: `## ⚠️ Why Tagging Is Mandatory Before Pushing
+
+> **A locally-built Docker image has no information about where it should be pushed to** — ⚠️ **tagging the image with the ECR repository's specific URI is what tells Docker its destination.** Without this tagging step, there is no way for Docker to know which remote repository a push command should target.
+
+**The URI format**: account-id.dkr.ecr.region.amazonaws.com/repository-name — visible directly in the ECR console for the specific repository (no need to construct it by hand).
+
+**The tagging command** associates the locally-built image (identified by its local name/tag, e.g. "cloudfox-php-app:latest") with that full ECR URI as a new tag. ⚠️ **Verifying with the image-listing command afterward shows TWO entries** — the original locally-tagged image, and the newly ECR-URI-tagged copy pointing at the same underlying image — confirming the tagging step succeeded before attempting the actual push.
+
+---
+
+## Pushing the Image
+
+> **The final push command uploads the ECR-tagged image to the repository** — again, AWS's "view push commands" panel in the ECR console provides the exact ready-to-copy command for the specific repository, removing any need to hand-construct it.
+
+**Verifying success**: refreshing the ECR repository in the console shows the newly pushed image now listed there — confirming the image has successfully traveled from the build machine, through tagging, to its final destination in ECR, ready for ECS to pull.
+
+---
+
+## What This Enables Going Forward
+
+> ⚠️ **This build → tag → push sequence is exactly what would be automated by a CI/CD pipeline in a real production setup** — updating source code, rebuilding the image, and pushing the new version to ECR automatically on every code change, rather than manually repeating these steps by hand each time (a pattern belonging to AWS DevOps tooling, covered separately elsewhere in the course).
+
+---
+
+## Exam Framing
+
+> "A Docker image is built locally but a push to ECR fails or goes to the wrong place" → check whether the image was **tagged with the correct ECR repository URI first** — pushing an untagged (or wrongly-tagged) image has no way to reach the intended ECR destination. The tag-then-push sequence (never push directly without tagging) is the concrete, testable mechanical detail here.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
