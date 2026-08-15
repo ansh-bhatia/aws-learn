@@ -5450,6 +5450,56 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-architecture-control-plane-worker-nodes-pods",
+      title: "Kubernetes Architecture (Part 1) – Control Plane, Worker Nodes, and Pods: On-Premises vs EKS",
+      shortDesc: "The exact same kubectl commands and control-plane components exist either way — the only thing EKS actually removes is who's on the hook for running and patching them",
+      visuals: [],
+      content: `## The Control Plane: Kubernetes' Brain
+
+> **The control plane makes every scheduling decision** — where to run pods, how many replicas to maintain, when to restart a failed one, and how to scale. ⚠️ **A pod is Kubernetes' smallest deployable unit — directly analogous to an ECS task**, capable of running one or more containers together.
+
+**Four core control plane components**:
+1. **API server** — the main entry point for all commands; ⚠️ **kubectl (the Kubernetes CLI) communicates with the control plane exclusively through the API server** — every kubectl command is ultimately an API server request.
+2. **Scheduler** — decides which worker node a given pod actually runs on.
+3. **Controller manager** — continuously verifies the cluster matches its desired state (e.g. the right number of replicas actually running).
+4. **etcd** — a key-value database storing the cluster's entire state.
+
+---
+
+## ⚠️ On-Premises: You Install, Patch, and Scale Every Control Plane Component Yourself
+
+> **Setting up Kubernetes on-premises means provisioning a machine, installing an OS, then installing and wiring together all four control plane components by hand.** ⚠️ **High availability, upgrades, patching, and backups of the control plane are all the Kubernetes administrator's direct responsibility** — this operational burden is widely considered Kubernetes' single biggest complexity.
+
+---
+
+## ⚠️ EKS: AWS Runs the Same Control Plane, You Never Touch It
+
+> **EKS provides the exact same control plane components (API server, scheduler, controller manager, etcd) — but AWS runs and fully manages all of them.** ⚠️ **Multi-AZ, secured, and auto-scaled by AWS — no manual patching, no HA setup, no etcd reliability concerns on the user's part at all.** This is precisely the "no operational headache" advantage that makes EKS attractive over self-managed Kubernetes, regardless of environment.
+
+---
+
+## Worker Nodes: Where Containers Actually Run
+
+> **Worker nodes are the machines that actually run application containers — the control plane never runs pods directly, only manages them.** ⚠️ **On-premises: each worker node requires an OS install plus kubelet, kube-proxy, and a container runtime installed manually, and the administrator handles all patching, scaling, and health checks.**
+
+**⚠️ EKS offers TWO worker node types**: **EC2-based node groups** (full control over instance type/size, scaled via standard EC2 Auto Scaling) or **Fargate** (fully serverless — ⚠️ **zero infrastructure-scaling responsibility at all**, AWS provisions capacity automatically per pod).
+
+---
+
+## Pods and Containers: Same kubectl Commands, Different Infrastructure Burden
+
+> ⚠️ **Pods are created using kubectl — the identical command-line tool and workflow used on-premises and in EKS.** This is the concrete payoff of choosing Kubernetes over a cloud-native-only orchestrator for a hybrid environment: **the day-to-day interface for deploying and managing pods never changes**, regardless of where the cluster actually runs.
+
+**The only real difference**: ⚠️ **on-premises, ensuring the underlying infrastructure has capacity to run those pods is entirely the administrator's job; in EKS, AWS handles infrastructure scaling automatically** (via EC2 Auto Scaling for node groups, or Fargate's built-in serverless scaling) — the pod-creation workflow itself is unchanged either way.
+
+---
+
+## Exam Framing
+
+> "What is the single biggest operational burden EKS removes compared to running Kubernetes on-premises?" → **managing the control plane itself — high availability, patching, upgrades, and etcd reliability all become AWS's responsibility, not the administrator's.** "Does the day-to-day process of creating and managing pods differ between on-premises Kubernetes and EKS?" → **no — the same kubectl commands and workflow apply in both environments; the difference is entirely in who manages the underlying control plane and worker node infrastructure, not in how pods themselves are created or managed.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
@@ -5463,16 +5513,6 @@ Container orchestrators manage containers in bulk. Options: **Docker Swarm** (si
 **EKS = Kubernetes as a managed AWS service** — you get all of Kubernetes; AWS handles the hard setup, patching & control plane.
 
 > 🔑 Main reason to choose EKS: **hybrid cloud**. Run Kubernetes on-prem AND in AWS with the **same** tooling/skills, instead of juggling Kubernetes on-prem and ECS in the cloud.
-
----
-
-## Kubernetes Architecture (On-Prem vs EKS)
-
-- **Control Plane** (the brain) — API Server, Scheduler, Controller Manager, etcd. *On-prem:* you install/run/patch it all. *EKS:* AWS runs it — multi-AZ, secure, auto-scaled.
-- **Worker Nodes** (run your containers) — kubelet, kube-proxy, runtime. *On-prem:* you manage servers. *EKS:* EC2 node groups or serverless Fargate; scaling via AWS Auto Scaling.
-- **Pods & Containers** (smallest unit, like an ECS task) — created with kubectl, run on worker nodes. *EKS:* you focus on pods; AWS handles infra.
-
-**Cluster services** also integrate natively in EKS: **VPC CNI** (each pod gets a VPC IP + SG/NACL), **LoadBalancer** service auto-creates an ALB/NLB, **IAM/IRSA + KMS** for security, **CloudWatch/Container Insights/X-ray** for monitoring.
 
 ---
 
@@ -5515,7 +5555,7 @@ Create **before** cluster creation (or it fails):
 - **AWS Console** — cluster settings only (status, IAM access, add-ons, node groups, networking, monitoring). It **can't** create pods/deployments, apply YAML, exec, view logs, or scale apps — it doesn't talk to the Kubernetes API server.
 - **kubectl** — the real Kubernetes control tool; talks directly to the API server. Install on your **local PC** (needs public/public+private endpoint) or on an **EC2 in the same VPC** (reaches private endpoints).
 
-**kubectl on EC2 (lab):** launch EC2 in the same VPC → \`aws configure\` → install kubectl (curl binary, chmod, move to /usr/local/bin) → \`aws eks update-kubeconfig --name <cluster> --region <region>\` → verify with \`kubectl cluster-info\`, \`get ns\`, \`get pods\`. *(\`get nodes\` is empty in Auto Mode — normal.)*`,
+**kubectl on EC2 (lab):** launch EC2 in the same VPC → \`aws configure\` → install kubectl (curl binary, chmod, move to /usr/local/bin) → \`aws eks update-kubeconfig --name <cluster> --region <region>\` → verify with \`kubectl cluster-info\`, \`get ns\`, \`get pods\`. (\`get nodes\` is empty in Auto Mode — normal.)`,
     },
     {
       id: "elastic-beanstalk",
