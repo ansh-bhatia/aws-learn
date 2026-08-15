@@ -6,6 +6,38 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "monolithic-architecture",
+      title: "Monolithic Architecture – Why Scaling for 100,000 Visitors Means Wastefully Scaling Payment Too",
+      shortDesc: "A funnel drops from 100,000 browsers to 2,000 buyers, but a monolith scales the ENTIRE app — including payment — for all 100,000, since everything runs as one inseparable unit",
+      visuals: [],
+      content: `## What "Monolithic" Actually Means
+
+> **Monolithic (tightly coupled) architecture means every component — UI, business logic, authentication, payment, notifications, database access — is built, deployed, and scaled together as ONE single unit.** ⚠️ **One codebase, one deployment package (e.g. a single WAR/JAR file or Docker image), and typically one shared database.** This was the standard way of building applications before cloud-native microservices became practical.
+
+---
+
+## ⚠️ Problem 1: You Can't Update or Redeploy One Piece Alone
+
+> **Even a small change to ONE feature (e.g. the checkout process) requires redeploying the ENTIRE application** — there's no way to update just the checkout logic in isolation, since everything ships as a single deployable unit.
+
+---
+
+## ⚠️ Problem 2: Scaling Is All-Or-Nothing, Even When Demand Isn't
+
+> **The core scaling problem: different parts of an application experience wildly different traffic volumes, but a monolith can only scale as ONE unit — so the least-used component still gets scaled to match the MOST-used one.**
+
+**⚠️ Worked example — a realistic e-commerce traffic funnel**: 100,000 users browse products in an hour → only ~10% (10,000) add something to cart → only ~4% of the original (4,000) reach checkout → only ~2% of the original (2,000) actually complete payment. ⚠️ **In a monolith, since everything runs as one inseparable unit, the ENTIRE application — including the payment system that only 2,000 people actually use — must be scaled to handle all 100,000 visitors.** The payment service ends up provisioned for 50x more capacity than it will ever actually use.
+
+**⚠️ Direct consequences**: more compute resources than genuinely needed, higher cost, longer deployment times, and — combined with Problem 1 — even a single small change forces a full redeploy of everything.
+
+---
+
+## Exam Framing
+
+> "An application's checkout/payment component is massively over-provisioned relative to its actual usage, purely because the product-browsing component needs that much capacity" → **this is the classic monolithic scaling problem** — every component scales together as one unit, so the busiest component (browsing) forces every other component (however lightly used) to match its capacity. This exact wasteful-resource pattern is the primary motivation for microservices architecture (covered in the next topic), where each component scales independently based on its own actual demand.
+`,
+    },
+    {
       id: "app-integration-basics",
       title: "Application Integration Basics – Application-to-Application vs Microservices-to-Microservices",
       shortDesc: "UPI payments and flight booking sites are app-to-app integration between separate companies; Amazon's cart/checkout/notification split is microservices-to-microservices integration within one company",
