@@ -5004,6 +5004,48 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-step-scaling-policy-scale-out-scale-in-mirror",
+      title: "ECS Step Scaling Policy – Multi-Tier Thresholds, and Why Scale-Out Alone Can Only Ever Grow the Fleet",
+      shortDesc: "A scale-out policy is a one-way ratchet — it adds tasks as CPU climbs through each tier but has no mechanism to remove them again, so a separate mirror scale-in policy is mandatory",
+      visuals: [],
+      content: `## What Step Scaling Adds Over Target Tracking
+
+> **Step scaling defines MULTIPLE threshold tiers, each triggering a different-sized scaling action, based on a CloudWatch alarm** — ⚠️ **rather than target tracking's single threshold, step scaling lets scaling response scale in PROPORTION to how far the metric has moved past a boundary.** Example: CPU only slightly above threshold → add 1 task; CPU far above threshold → add 2-3 tasks at once. This makes scaling more precisely matched to actual load severity.
+
+---
+
+## ⚠️ Worked Example: A 4-Tier Scale-Out Policy
+
+> **Baseline: minimum 2 tasks, maximum 10 tasks.**
+
+- **CPU 60-70%**: add 2 tasks → total = **4**.
+- **CPU 70-80%**: add 2 more tasks → total = **6**.
+- **CPU 80%+**: add 4 more tasks → total = **10** (the configured maximum).
+
+⚠️ **Each tier is a distinct rule with its own task-count increment — the response genuinely scales with how severe the load spike is, not a flat "add one task" regardless of how high CPU actually climbed.**
+
+---
+
+## ⚠️ The Critical Limitation: Scale-Out Policies Can ONLY Add Tasks, Never Remove Them
+
+> **A scale-out policy is strictly one-directional — it can only INCREASE the task count, never decrease it.** ⚠️ **Worked scenario proving this**: CPU climbs through all three tiers, reaching 10 tasks (maximum). Traffic then drops back down to the 60-70% range. ⚠️ **The task count STAYS AT 10 — a scale-OUT-only policy has no mechanism to bring it back down, even though CPU has genuinely dropped.**
+
+**The fix**: ⚠️ **a separate, MIRROR scale-in policy must be configured**, with its own tiered thresholds working in reverse — e.g. CPU 80-90% → remove 4 tasks (back to 6); CPU 70-80% → remove 2 tasks (back to 4); CPU below 60% → remove 2 tasks (back to 2, the minimum). ⚠️ **Scale-out and scale-in are two entirely separate, independently configured policies — never a single bidirectional rule.**
+
+---
+
+## ⚠️ The Console Limitation: Only ONE Policy Can Be Attached During Service Creation
+
+> **When creating a new ECS service through the console, only ONE step scaling policy can be attached at that time — either scale-out OR scale-in, never both simultaneously.** ⚠️ **The workaround**: configure the scale-out policy during initial service creation, then go BACK into the already-created service's settings afterward to add the scale-in policy separately.** This two-step process is required specifically because the service-creation console flow doesn't support attaching both policies in one pass.
+
+---
+
+## Exam Framing
+
+> "A step-scaling scale-out policy successfully grows a service to its maximum task count during a traffic spike, but the task count never shrinks back down once traffic subsides" → **expected behavior — a scale-out policy can ONLY add tasks; a separate, independently configured scale-in policy is required to ever remove them.** "Why does setting up complete step scaling for a new ECS service require two separate configuration passes?" → **the service-creation console only allows attaching ONE policy (scale-out or scale-in) at creation time — the other must be added afterward through the existing service's settings.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
