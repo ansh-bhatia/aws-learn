@@ -3813,6 +3813,108 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-task-definition-intro",
+      title: "ECS Project Step 5 (Part 1) – What a Task Definition Actually Is",
+      shortDesc: "The one document ECS reads to know which image to run, how much CPU/memory to give it, which ports to open, and what environment to set up — with full version history built in",
+      visuals: [],
+      content: `## The Prerequisite for Any Task or Service
+
+> **A task definition is the detailed set of instructions telling ECS how to prepare and run a container-based application.** ⚠️ **A task definition must exist BEFORE any task or service can be launched** — it's the single required starting point for everything that follows.
+
+**What it captures**: which image to use (the one already pushed to ECR in prior steps), how much CPU/memory to allocate, which ports the application needs open, what environment variables to inject, which IAM role to attach, and more — essentially every configuration decision needed to actually run the containerized application.
+
+---
+
+## ⚠️ Two Foundational Behaviors Worth Knowing Up Front
+
+**1. Every edit creates a new revision, never an overwrite.** ⚠️ **Modifying a task definition's configuration always produces a NEW version rather than overwriting the existing one** — meaning rollback to an earlier configuration is always straightforward, since nothing is ever destroyed by an edit.
+
+**2. A single task definition can bundle multiple containers.** Directly connecting back to the earlier "ECS Task" concept topic — a task definition is exactly where multiple containers (e.g. frontend + backend) get defined together as one coordinated unit.
+
+---
+
+## Settings Are Launch-Type-Dependent
+
+> ⚠️ **Some task definition settings apply only to Fargate, others only to EC2** — a concrete example: selecting Fargate as the launch type locks the network mode to a single option (covered in depth in a later topic), while EC2 unlocks several additional network mode choices. This is exactly why the launch type is one of the very first decisions made when creating a task definition — it determines which subsequent options are even available.
+
+---
+
+## Exam Framing
+
+> "What must exist before an ECS task or service can be launched?" → **a task definition**, defining the image, resource allocation, networking, environment, and IAM role the task will use. Remember: **task definitions are versioned via revisions, never overwritten in place** — this built-in history is what makes safe rollback possible without any extra tooling.
+`,
+    },
+    {
+      id: "ecs-project-step5-family-launch-type",
+      title: "ECS Project Step 5 (Part 2) – Task Definition Family and Launch Type",
+      shortDesc: "'Family' is AWS's word for a version-controlled group of task definition revisions — and launch type is a plan you're filing now, not an action you're taking yet",
+      visuals: [],
+      content: `## ⚠️ Why It's Called "Family," Not "Name"
+
+> **A task definition's "family" is a name that groups every revision of that task definition together** — updating the application later means creating a new revision under the SAME family, rather than creating a brand-new, unrelated task definition each time.
+
+**Worked example**: a task definition family named "cloudfox-web-app" starts at revision 1. The application is later updated (say, CPU allocation increases) — this produces revision 2, **still under the same family name.** ⚠️ **Launching a task can target either the latest revision (the default if unspecified) or a specific older revision explicitly** — giving a built-in, always-available rollback mechanism with zero extra tooling.
+
+---
+
+## Launch Type: A Declaration of Intent, Not an Action
+
+> **Launch type specifies where and how a task is designed to run — Fargate, EC2, or both.** ⚠️ **Selecting a launch type here does NOT actually launch anything** — it's purely informational, telling ECS what kind of infrastructure this task definition is built for, so ECS can surface only the relevant subsequent configuration options.
+
+**Direct consequence**: choosing Fargate locks the network mode field to a single supported option; choosing EC2 unlocks multiple network mode choices (covered in the next topics).
+
+---
+
+## ⚠️ A Grayed-Out EC2 Option Means the Cluster Itself Needs Fixing First
+
+> **If the EC2 launch type option appears grayed out while creating a task definition, the underlying ECS cluster was created with only Fargate infrastructure** — EC2 was never added to that cluster in the first place. ⚠️ **The fix is at the cluster level, not the task definition level**: the cluster needs EC2 infrastructure added (as covered in the earlier "adding EC2" topics) before EC2 becomes selectable here.
+
+---
+
+## Exam Framing
+
+> "How does ECS track multiple versions of the same task definition over time?" → **the "family" groups every revision together**, with the latest used by default unless an older revision is explicitly specified — providing built-in rollback without any separate versioning system. Remember launch type at the task-definition stage is purely declarative — the actual launch decision and infrastructure matching happens later, when the task is actually run.
+`,
+    },
+    {
+      id: "ecs-project-step5-os-architecture",
+      title: "ECS Project Step 5 (Part 3) – Task Definition Operating System and CPU Architecture",
+      shortDesc: "Declaring Linux+ARM64 doesn't create an ARM64 host for you — it just means the task fails to launch until a genuinely matching host already exists in the cluster",
+      visuals: [],
+      content: `## Two Independent Choices: OS and CPU Architecture
+
+> **A task definition requires declaring both an operating system (Linux or Windows) and a CPU architecture (x86-64 or ARM64).** ⚠️ **This is purely a compatibility declaration — it does NOT provision, select, or configure any actual EC2 instance or hardware.** It tells ECS: "only run this task on a host matching this exact OS/architecture combination."
+
+---
+
+## ⚠️ The Common Misunderstanding, Directly Addressed
+
+> **Selecting an OS/architecture here is NOT the same as choosing an EC2 instance's OS or hardware type.** The task definition is simply stating a *requirement*; whether a host actually satisfying that requirement exists in the cluster is a completely separate question, determined entirely by what infrastructure was added when the cluster itself was built.
+
+---
+
+## ⚠️ Mismatch = Task Failure, Not Automatic Infrastructure Creation
+
+> **If a task definition declares Linux + ARM64, but the ECS cluster's EC2 infrastructure is actually Linux + x86-64, the task will FAIL to launch.** ⚠️ **ECS does NOT create a new, matching EC2 instance to satisfy the mismatch** — it simply refuses to schedule the task anywhere, since no compatible host exists. This produces no error at the task-definition-creation step itself — the failure only surfaces later, when the task is actually run.
+
+**The fix**: register a genuinely compatible EC2 instance (e.g. an AWS Graviton/ARM64-based instance) into the cluster — using the exact same "add EC2 after cluster creation" process covered in earlier topics — before attempting to launch a task requiring that architecture.
+
+---
+
+## What Each Combination Actually Supports
+
+- **Linux + x86-64**: runs on either a matching EC2 instance OR Fargate — ⚠️ **Fargate supports both x86-64 and ARM64.**
+- **Linux + ARM64**: runs on a Graviton/ARM64 EC2 instance OR Fargate (again, both architectures supported by Fargate).
+- **Windows + x86-64**: ⚠️ **requires a Windows-based EC2 instance — Windows is NOT supported by Fargate at all.**
+
+---
+
+## Exam Framing
+
+> "A task definition specifies an OS/architecture combination that has no matching infrastructure in the cluster — what happens?" → **the task fails to start; ECS does not create matching infrastructure automatically.** The fix is registering a compatible EC2 instance into the cluster (or, if the requirement is Linux-based, potentially switching to Fargate, which supports both x86-64 and ARM64 for Linux — but never Windows).
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
