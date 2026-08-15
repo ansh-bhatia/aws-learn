@@ -6,6 +6,62 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "eventbridge-hands-on-lab-ec2-rule-sns",
+      title: "EventBridge Hands-On Lab – From 'Every EC2 Event' to One Precisely Filtered Notification",
+      shortDesc: "The first rule (all EC2 events, no filter) fires an email for every single state transition — running→stopping→stopped→pending→running — before narrowing to a specific instance ID and state cuts that down to exactly one",
+      visuals: [],
+      content: `## Setup: SNS Topic as the Target, Before Any Rule Exists
+
+> Create a Standard SNS topic, subscribe an email address, and confirm the subscription — this becomes the rule's target. ⚠️ **Two running EC2 instances already exist and are already sending state-change events to the default Event Bus automatically — but nothing happens yet, because no rule has been configured.** This directly proves the mega-topic's core fact: no rule means no action, regardless of how many events flow through the bus.
+
+---
+
+## ⚠️ Attempt 1: An Unfiltered Rule Fires on EVERY State Change
+
+> Create a rule on the default bus, source = AWS services → EC2, event type = "All Events." ⚠️ **Result: stopping ONE instance produces multiple separate emails — one for running→stopping, another for stopping→stopped — and the SAME flood happens again on restart (→pending→running).** With two instances in play, every state transition on EITHER one triggers its own notification, quickly becoming noisy and impractical.
+
+---
+
+## Attempt 2: Narrowing to a Specific Instance ID and State
+
+> Edit the rule: switch the event type from "All Events" to **EC2 Instance State-change Notification**, then add two conditions — the specific **state** (e.g. "stopped" only, not "stopping" or "pending") AND a specific **instance ID** (not "any EC2 instance"). ⚠️ **Result: stopping the targeted instance now produces exactly ONE email, only for that instance, only for the stop state — starting it back up, or stopping the OTHER (unfiltered) instance, produces zero notifications at all.**
+
+---
+
+## Exam Framing
+
+> "EventBridge notifications are firing far more often than expected, for every minor state change" → **the rule's event pattern is too broad (e.g. "All Events" instead of a specific detail-type + state + resource ID)** — narrow the JSON event pattern to the exact state and resource that should trigger the target. ⚠️ **This lab is the concrete proof behind the abstract "simple vs. detailed filtering" distinction: simple filtering (source only) fires on every event from that source; detailed filtering (source + detail-type + specific field values like state/instance-id) is what actually achieves precise, low-noise triggering.**
+`,
+    },
+    {
+      id: "eventbridge-scheduler-hands-on-lab-custom-trust-policy",
+      title: "EventBridge Scheduler Hands-On Lab – The IAM Custom Trust Policy Gotcha",
+      shortDesc: "The standard 'create role → choose AWS service' wizard doesn't even list EventBridge Scheduler as an option — it has to be created with a manually-written custom trust policy naming scheduler.amazonaws.com",
+      visuals: [],
+      content: `## ⚠️ The Setup Gotcha: EventBridge Scheduler Isn't in the Standard IAM Service List
+
+> **Without an IAM role, EventBridge Scheduler cannot perform its target action (e.g. stopping an EC2 instance) at all.** ⚠️ **The normal IAM role-creation flow — "Create Role" → "AWS service" → pick from the dropdown — does NOT list EventBridge Scheduler as an option; only "EventBridge (API destinations)" appears, which is a different feature entirely.** The fix: choose **Custom Trust Policy** instead, and manually supply JSON naming \`scheduler.amazonaws.com\` as the trusted principal (sourced directly from AWS documentation). Attach a permission policy scoped to the target action (e.g. EC2 full access for the demo, ideally scoped tighter in production).
+
+---
+
+## Building the Schedule
+
+> Choose **One-time** or **Recurring** — for recurring, pick **Cron-based** (specific times, same expression syntax as Linux cron) or **Rate-based** (fixed interval, e.g. "every 2 minutes"). ⚠️ **A Flexible Time Window can be configured so that if the exact trigger moment is missed, the task still runs within a grace window (e.g. 5 minutes) instead of being skipped entirely.**
+
+### Target Configuration
+
+> Target = "All APIs" → EC2 → the specific API action (e.g. **StopInstances**) → the specific instance ID. ⚠️ **The IAM role created earlier must be attached here — this is what actually authorizes the Scheduler to call StopInstances on your behalf.** Optional: a DLQ for failed schedule invocations, and an "action after completion" setting (e.g. none, or auto-delete the schedule once done).
+
+> **Verified live in the lab**: with a 2-minute rate schedule targeting a running EC2 instance's stop action, the instance genuinely transitions to Stopped within that window — proof the role, target, and schedule were all wired correctly.
+
+---
+
+## Exam Framing
+
+> "A scheduled task must run an AWS API action (like stopping an EC2 instance) at a fixed time or interval" → **EventBridge Scheduler**, NOT the legacy EventBridge Schedule Rule (which lacks one-time execution and has more limited retry behavior). ⚠️ **The practical trap worth remembering from this lab: EventBridge Scheduler's IAM role must be created via Custom Trust Policy naming scheduler.amazonaws.com — it will not appear as a selectable AWS service in the standard role-creation wizard.**
+`,
+    },
+    {
       id: "sns-hands-on-lab-topic-subscriber-publisher-chain",
       title: "SNS Hands-On Lab – Building the Full Publisher → Topic → Subscriber Chain",
       shortDesc: "A new email subscriber sits in Pending until the confirmation link is clicked — then S3 itself becomes the publisher, proving a real AWS service (not just a manual test click) can trigger the whole broadcast chain end to end",
