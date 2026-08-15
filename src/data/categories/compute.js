@@ -4655,6 +4655,57 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-deployment-rolling-update",
+      title: "ECS Service Deployment Option 1 – Rolling Update: Min/Max Running Percentage Explained With a Worked Example",
+      shortDesc: "Min percent guarantees the floor never drops during an update; max percent sets the temporary ceiling for how many extra tasks can run while old and new versions overlap",
+      visuals: [],
+      content: `## What a Deployment Controller Decides
+
+> **When updating a service's application version (e.g. version 1 → version 2), the deployment controller decides HOW ECS replaces old tasks with new ones.** ⚠️ **Two strategies exist: Rolling Update (the DEFAULT — used automatically if untouched) and Blue/Green** (covered in the next topic).
+
+---
+
+## Rolling Update: The Core Mechanism
+
+> **ECS updates tasks one at a time (or in controlled batches): start a new task, wait until it's healthy, THEN stop an old task.** ⚠️ **No separate environment is created — the update happens within the same running environment**, unlike blue/green, which uses two distinct environments (blue and green).
+
+**Best fit**: simple, works well for development or testing. ⚠️ **Setting minimum/maximum running percentage too low can cause a short interruption**, since ECS might stop old tasks before new ones are confirmed ready.
+
+---
+
+## ⚠️ Minimum Running Task Percentage
+
+> **Defines how many of the desired tasks must stay running DURING the update itself.** Example: desired task count = 4, minimum = 100% → ⚠️ **all 4 tasks must remain running throughout the entire update, with zero drop in capacity.** Lowering this (e.g. to 50%) means only 2 tasks are guaranteed during the update — ⚠️ **riskier, since incoming load has fewer tasks to be served by during that window.**
+
+---
+
+## ⚠️ Maximum Running Task Percentage
+
+> **Defines the TEMPORARY ceiling on how many tasks are allowed to run simultaneously during the update — expressed as a percentage of the desired count.** Example: desired = 4, maximum = 200% → ⚠️ **up to 8 tasks (4 old + 4 new) can run at the same time temporarily while the update is in progress**, before old tasks get terminated.
+
+---
+
+## ⚠️ Worked Example: 4 Desired Tasks, Min 100%, Max 200%
+
+1. **Starting state**: 4 tasks running version 1. New tasks started = 0. Total = 4.
+2. **Update triggered**: ECS starts 4 NEW tasks (version 2) — ⚠️ **allowed because max=200% permits up to 8 total (4 old + 4 new).** Total running temporarily = 8.
+3. **New tasks reach healthy status**: once all 4 version-2 tasks are confirmed healthy, ECS stops all 4 OLD version-1 tasks.
+4. **End state**: 4 tasks running version 2, zero downtime throughout — ⚠️ **min=100% guaranteed the old tasks never dropped below 4 until the new ones were ready to take over, and max=200% is what gave ECS room to run new and old simultaneously rather than tearing down first.**
+
+---
+
+## ⚠️ Load Balancer: Optional for Rolling Update, Mandatory for Blue/Green
+
+> **Rolling update can work WITHOUT a load balancer** — though if one exists, ECS automatically switches traffic as tasks are replaced. ⚠️ **This is explicitly a point of contrast with blue/green deployment, which absolutely REQUIRES a load balancer to function at all** — covered in the next topic.
+
+---
+
+## Exam Framing
+
+> "A service update needs zero-downtime deployment without spinning up a separate environment, and a load balancer is optional" → **Rolling Update**, the default deployment strategy. "4 desired tasks, minimum running percentage set too low (e.g. 25%), causing a capacity drop during an update" → **increase the minimum running percentage** — a low minimum genuinely risks an availability gap during deployment, it's not just a configuration nicety. Remember the 100%/200% combination from the worked example: **min 100% = old tasks never drop below the desired count; max 200% = room for new and old tasks to briefly coexist** before the old ones are torn down.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
