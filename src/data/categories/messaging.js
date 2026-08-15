@@ -6,6 +6,68 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-dead-letter-queue-dlq-deep-dive",
+      title: "SQS Dead-Letter Queue (DLQ) – Breaking the Infinite Retry Loop",
+      shortDesc: "Without a DLQ, one poison message loops forever between the main queue and its consumer — visibility timeout expires, message reappears, fails again, repeat, wasting the consumer's time indefinitely",
+      visuals: [],
+      content: `## The Problem: A Poison Message Without a DLQ
+
+> **Normal flow**: producer pushes → consumer pulls → SQS returns the message → consumer processes it → consumer deletes it. ⚠️ **The failure flow, step by step**: consumer pulls a bad message (bad data, downstream DB is down, whatever) → SQS makes it invisible for the visibility timeout → consumer tries to process it → processing FAILS → consumer never deletes it → **SQS just waits out the visibility timeout, then makes the message visible again** → consumer pulls it again → fails again → repeat, forever. ⚠️ **This is a genuine infinite loop: no retry limit, no separation of bad messages from good ones, the consumer just keeps wasting cycles on a message it can never successfully process.**
+
+---
+
+## The Fix: A Separate Queue for Failed Messages
+
+> **A DLQ is a separate, ordinary SQS queue where failed messages get moved after repeated failed attempts** — think of it as a side parking area for bad messages, keeping the main queue clean. ⚠️ **DLQ setup is entirely optional and can be added at any time** — enabled at queue creation, or bolted onto an existing queue afterward via Edit.
+
+### The Rule That Makes It Work: Max Receive Count
+
+> **A rule is configured on the MAIN queue: max receive count (e.g., 3).** ⚠️ **Meaning: if the same message has been received 3 times and still hasn't been deleted, SQS automatically moves it to the DLQ on the next failed attempt instead of making it visible again** — the message is removed from the main queue entirely, the main queue stays clean, and the consumer can get back to processing the good messages uninterrupted.
+
+---
+
+## What a DLQ Is Actually Good For
+
+> Once a bad message lands in the DLQ, you can **inspect it, figure out what went wrong, fix the underlying issue, and manually resend it to the main queue if appropriate** — or just leave it there for analysis. ⚠️ **A DLQ filling up with messages is itself a signal**: it means something is systematically wrong with how the consumer is processing messages, making the DLQ a genuinely useful debugging/monitoring signal, not just a trash bin.
+
+---
+
+## Exam Framing
+
+> "A single problematic message keeps reappearing in the queue and being retried endlessly" → **this is exactly the failure mode a DLQ exists to solve.** ⚠️ **Configure a max receive count on the main queue (e.g., 3) and point it at a separate DLQ** — after that many failed attempts, SQS moves the message out automatically, protecting the main queue's throughput and giving you a dedicated place to debug what's actually failing.
+`,
+    },
+    {
+      id: "sqs-redrive-allow-policy",
+      title: "SQS Redrive Allow Policy – Locking a DLQ to Its Rightful Main Queue",
+      shortDesc: "One DLQ, left unrestricted, can quietly become the dumping ground for every failing queue in the account — Redrive Allow Policy is the explicit allow-list that stops that",
+      visuals: [],
+      content: `## The Problem: An Unrestricted DLQ Is Anyone's DLQ
+
+> **By default, a DLQ has NO restriction on which source queues may send it failed messages — any queue in the account can be configured to use it.** ⚠️ **This is genuinely a problem: with no restriction, an order-queue's DLQ could silently start receiving failed messages from an entirely unrelated payment queue too, making the DLQ messy and confusing to debug — not recommended for production.**
+
+---
+
+## The Fix: An Explicit Allow-List, Set on the DLQ Itself
+
+> ⚠️ **Redrive Allow Policy is configured on the DLQ — not the main queue** — and it's a safety rule that decides exactly which source queues are allowed to redrive failed messages into it. **Three modes**: (1) disabled/allow-all (default — any queue may use it), (2) deny all, (3) **by specific queue(s)** — explicitly naming which main queue(s) are permitted.
+
+> **Concrete example**: an order queue should be allowed to use "order DLQ"; a payment queue should NOT. ⚠️ **Set Redrive Allow Policy on the DLQ to "by specific queue" and name only the order queue — any other queue attempting to attach that same DLQ (e.g., in its own DLQ setting) will be rejected outright, proven directly in the console: attaching the DLQ to an unauthorized queue and hitting Save simply fails.**
+
+---
+
+## How the Two Policies Work Together
+
+> **Main queue** has its own redrive policy: max receive count = 3. **DLQ** has its Redrive Allow Policy: only the main queue is allowed. ⚠️ **Result: after 3 failed attempts, the message moves ONLY to the specifically-allowed DLQ — a clean, controlled, one-to-one (or deliberately-scoped) relationship instead of an open dumping ground.**
+
+---
+
+## Exam Framing
+
+> "Multiple SQS queues exist in the account, and a DLQ must only accept failed messages from ONE specific queue" → **Redrive Allow Policy, configured on the DLQ, set to allow only that specific source queue** — this is distinct from the main queue's own redrive policy (which sets the max receive count); Redrive Allow Policy is the DLQ-side control over WHO is allowed to redrive into it.
+`,
+    },
+    {
       id: "sqs-hands-on-lab-producer-consumer-ec2",
       title: "SQS Hands-On Lab – Producer and Consumer EC2 Apps, Proving the Pull-Based Flow End to End",
       shortDesc: "One IAM role attached to BOTH EC2 instances, since neither can push or pull from the queue without explicit permission — then watching the message count genuinely rise and fall as it's sent, pulled, and deleted",
