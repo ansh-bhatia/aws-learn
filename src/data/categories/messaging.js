@@ -6,6 +6,40 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-api-key-usage-plan-lab-403-429",
+      title: "API Keys and Usage Plans Lab – Two Exam-Critical Error Codes: 403 vs 429",
+      shortDesc: "A missing key gets a 403; a valid key that's simply used too much gets a 429 — same overall goal of blocking the request, completely different reason, completely different code",
+      visuals: [],
+      content: `## The Five-Step Setup Process
+
+1. **Create the API key** (auto-generated string, or a custom one requiring at least 20 characters).
+2. **Create a usage plan** (initially with throttling/quota disabled, to test the key alone first).
+3. **Associate the usage plan with the REST API's stage.**
+4. **Associate the API key with the usage plan.**
+5. **Enable "API key required" at the METHOD level — not globally across the whole API.**
+
+⚠️ **Critical: enabling API key requirement is done PER METHOD, not per API.** In this lab, only the POST method has the key requirement enabled — the GET and DELETE methods on the same API continue working without any key at all. ⚠️ **Whenever any method setting changes, the API must be RE-DEPLOYED to the stage** — the change has no effect on live traffic until deployment happens again.
+
+---
+
+## ⚠️ Error 1: 403 Forbidden — No API Key Provided
+
+> **Sending a request to a key-required method WITHOUT supplying the key returns a 403 Forbidden error.** ⚠️ **The fix: the API key must be sent as an HTTP HEADER — specifically the header named** \`x-api-key\` **, with the actual key string as its value.** ⚠️ **Both the exact header name (x-api-key) and the 403 error code for a missing/invalid key are called out as genuine exam-question material.**
+
+---
+
+## ⚠️ Error 2: 429 Too Many Requests — Quota or Throttle Exceeded
+
+> **Once a valid API key is supplied and working, testing the usage plan's QUOTA** (e.g. setting it to 1 request per day, deliberately already exhausted) **produces a completely different error: 429 Too Many Requests, with a "limit exceeded" message.** ⚠️ **This is the SAME 429 code covered in the earlier theory topic for both throttling (rate/burst) and quota violations** — now confirmed hands-on. ⚠️ **The key distinction from 403: 403 means the request was never properly authenticated/authorized at all (missing or wrong key); 429 means the request WAS properly authenticated, but the client has simply used up its allowed usage.**
+
+---
+
+## Exam Framing
+
+> "A request to an API-key-protected method fails with a 403 Forbidden error" → **the API key was missing or invalid — check that the request includes the** \`x-api-key\` **HTTP header with the correct key value.** "A request using a genuinely valid API key still gets rejected" → **check the usage plan's throttling (rate/burst) or quota settings — a 429 Too Many Requests error means the key is valid but the client has exceeded its allowed usage, a completely different failure mode from a 403.** Remember: **API key requirement is toggled per METHOD, not per API — and any method-level change requires redeploying the API to take effect.**
+`,
+    },
+    {
       id: "api-gateway-security-layers-api-keys-usage-plans",
       title: "API Gateway's Four Security Layers, and Why an API Key Alone Does Absolutely Nothing",
       shortDesc: "An API key is just a password string with no concept of a username — it never proves WHO is calling, only that they happen to know a string, and it literally can't function without a usage plan attached",
