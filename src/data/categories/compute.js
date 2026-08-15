@@ -5403,6 +5403,53 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-capstone2-step9-verification-troubleshooting-teardown",
+      title: "ECS Capstone Project – Step 9: Final Verification, the Troubleshooting Decision Tree, and Proper Teardown Order",
+      shortDesc: "A 502 error, unhealthy targets, and a task stuck pending each point to a different one of three components — ALB security group, task security group, or the NAT Gateway — never all three at once",
+      visuals: [],
+      content: `## Four-Point Final Verification
+
+> **A fully working deployment is confirmed by checking four things together**: (1) the application is reachable via the ALB's DNS name, (2) ECS tasks show RUNNING and healthy, (3) the target group shows the tasks registered and HEALTHY, and (4) uploading a file through the app actually lands in the configured S3 bucket. ⚠️ **All four need to be true simultaneously — a working page load alone doesn't confirm the backend health check or the S3 permission chain are also correct.**
+
+---
+
+## ⚠️ The Troubleshooting Decision Tree: Three Symptoms, Three Different Root Causes
+
+**Symptom 1: Loading the ALB's DNS URL returns a 502 Bad Gateway error.**
+> ⚠️ **Check the ALB's OWN security group first** — verify it has the dedicated ALB security group attached (not the default), and that HTTP traffic is genuinely allowed from anywhere (0.0.0.0/0). A 502 at this stage points to the load balancer itself failing to reach anything, not a deeper application issue yet.
+
+**Symptom 2: The target group shows targets as UNHEALTHY (not missing — registered, just unhealthy).**
+> ⚠️ **Check the TASK's security group** — verify it allows inbound traffic on the application's port (e.g. 80) with the source explicitly set to the ALB's security group. An unhealthy-but-registered target is a strong signal the task simply isn't accepting the ALB's health-check traffic, which is almost always a task security group misconfiguration.
+
+**Symptom 3: A different kind of error appears once the page DOES load (not a 502).**
+> ⚠️ **Check the S3 bucket name and region values in the environment variables** — a page that loads but then fails on upload usually traces back to a wrong bucket name or region being passed to the application, not networking at all.
+
+**Symptom 4: A task never reaches RUNNING status — stuck pending indefinitely.**
+> ⚠️ **Check the NAT Gateway** — the task needs outbound internet access specifically to pull its image from ECR; if the NAT Gateway is missing, misconfigured, or the private route table isn't correctly routing 0.0.0.0/0 to it, the task can never actually download its image and stays pending. ⚠️ **Verify: the NAT Gateway itself is in a PUBLIC subnet, and the PRIVATE route table has both private subnets associated with a route pointing to that NAT Gateway.**
+
+⚠️ **The key diagnostic discipline: each symptom maps to exactly ONE of these three components (ALB SG, task SG, or NAT Gateway) — resist checking all three blindly; the specific symptom tells you which one to check first.**
+
+---
+
+## ⚠️ Teardown Order: Reverse of Creation, With One Auto-Scaling-Specific Step First
+
+> **Deleting resources out of order can leave orphaned, still-billing infrastructure behind (especially the NAT Gateway and its Elastic IP).** ⚠️ **The correct teardown sequence**:
+
+1. **Delete any scheduled scaling actions** (or disable auto scaling entirely) — done BEFORE touching the service itself.
+2. **Delete the ECS service** (with force-delete enabled, since it likely still has running tasks).
+3. **Delete the ECS cluster.**
+4. **Delete the NAT Gateway** — ⚠️ **this is the step most likely to be forgotten, and it's the one that keeps incurring charges if skipped.**
+5. **Delete the VPC** (which cascades to subnets, route tables, IGW).
+6. **Release the associated Elastic IP** — ⚠️ **a separate, final step; the NAT Gateway's Elastic IP doesn't automatically get released just because the NAT Gateway itself was deleted, and an unreleased Elastic IP can continue to incur a small charge.**
+
+---
+
+## Exam Framing
+
+> "The ALB's DNS URL returns a 502 error" → **check the ALB's OWN security group first** (not the task's). "Targets show registered but unhealthy in the target group" → **check the TASK's security group**, specifically that it allows traffic from the ALB's security group as the source. "A task never leaves PENDING state" → **check the NAT Gateway and the private route table's route to it** — the task can't pull its image from ECR without outbound internet access. Each symptom has one specific, correct place to look — treat the decision tree as a lookup, not a checklist to exhaustively repeat.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
