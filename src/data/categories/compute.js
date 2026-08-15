@@ -4751,6 +4751,47 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-deployment-failure-detection",
+      title: "ECS Service Deployment Failure Detection – Circuit Breaker vs CloudWatch Alarm",
+      shortDesc: "Circuit breaker only sees whether the health check probe replies — it's blind to an application that's technically running but silently returning wrong answers, which is exactly what CloudWatch alarm catches",
+      visuals: [],
+      content: `## ⚠️ The Problem: What Happens if New Tasks Never Become Healthy?
+
+> **Normally, a deployment launches new tasks and removes old ones once the new tasks are confirmed healthy.** ⚠️ **But if the new tasks get stuck and NEVER become healthy, and deployment failure detection is NOT enabled, ECS just keeps waiting indefinitely — the deployment gets stuck, and it must be fixed manually.** ECS doesn't even detect this as a failure on its own without this option turned on.
+
+---
+
+## Circuit Breaker: Detection Only, By Itself
+
+> **Circuit breaker watches a deployment and detects when new tasks are crashing, failing health checks, or otherwise not becoming healthy.** ⚠️ **Enabled by itself (without the rollback sub-option), circuit breaker ONLY detects and reports the failure — it takes no automatic action at all.** The failing deployment must still be fixed manually.
+
+---
+
+## ⚠️ Rollback on Failure: The Sub-Option That Adds Automatic Action
+
+> **Rollback on failure is a sub-option under circuit breaker — it tells ECS to actually DO something once circuit breaker detects a failure: automatically revert to the last known-working version.** ⚠️ **Without this sub-option enabled, ECS simply stops the deployment and leaves it to be fixed or rolled back manually.** ⚠️ **Enabling rollback is generally recommended** — it turns detection into genuine self-healing rather than just an alert.
+
+---
+
+## ⚠️ CloudWatch Alarm: Catching Failures Circuit Breaker Can't See
+
+> **Circuit breaker relies entirely on ECS's own health check (a probe packet, e.g. on a TCP port) — if the probe gets a reply, circuit breaker considers the task healthy, full stop.** ⚠️ **This means circuit breaker is blind to an application that's technically responding to the probe but is logically broken** — e.g. a new version deploys cleanly, the health check passes, but the application's actual business logic has a bug.
+
+**Two concrete scenarios where CloudWatch alarm is needed instead**:
+
+1. **App is healthy at the container/probe level, but users are hitting real errors** — the deployment "succeeded" by health-check standards, but the new code has a logic bug circuit breaker can't detect.
+2. **Business KPIs degrade after deployment** — e.g. order success rate drops from 90% to 50% after an update, because response time regressed (e.g. from 900ms to something far slower), causing timeouts and order failures. ⚠️ **The application is running and healthy in the infrastructure sense — the problem is purely a business-metric regression that only a custom CloudWatch metric (not a simple health probe) can catch.**
+
+> **CloudWatch alarm lets a deployment's success/failure be judged against ANY custom metric** — e.g. CPU usage exceeding a threshold, or a specific application/business metric — rather than only the binary pass/fail of a health check probe. ⚠️ **CloudWatch alarm also supports the same "rollback on failure" sub-option as circuit breaker.**
+
+---
+
+## Exam Framing
+
+> "A new deployment passes all health checks, but users start reporting broken functionality or a spike in failed transactions" → **circuit breaker alone cannot catch this — it only watches health check pass/fail. Use a CloudWatch alarm tied to a custom business or application metric instead.** "New tasks never become healthy after a deployment, and the update needs to auto-revert without manual intervention" → **enable circuit breaker WITH the rollback-on-failure sub-option** — circuit breaker alone only detects and reports; rollback is what actually takes automatic corrective action.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
