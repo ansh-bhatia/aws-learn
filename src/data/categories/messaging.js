@@ -6,6 +6,44 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-lab-part3-http-api-routes",
+      title: "API Gateway Lab – Part 3: One HTTP API, Three Routes, Each Mapped to Its Own Lambda Function",
+      shortDesc: "Lambda has no public HTTP endpoint at all — it literally cannot be invoked from outside AWS without something in front of it, which is the whole reason API Gateway exists in this flow",
+      visuals: [],
+      content: `## ⚠️ Why a Mobile App Can't Just Call Lambda Directly
+
+> **A Lambda function has NO public HTTP endpoint of its own — it structurally cannot be triggered directly from the internet, and doing so wouldn't be secure even if it were technically possible.** ⚠️ **API Gateway acts as the "front desk"**: it accepts requests from the outside world (the mobile/web app) and forwards them to the correct Lambda function based on the request's path and method.
+
+**API Gateway's responsibilities here**: accept the HTTP request from the client, route it to the correct Lambda function (based on URL path + HTTP method), and send the Lambda function's response back to the caller. ⚠️ **Note: input validation, throttling, and WAF-style security are NOT part of this specific lab, since HTTP API is being used — these ARE available on REST API**, covered in the follow-up REST API version of this same lab.
+
+---
+
+## ⚠️ One Single HTTP API, Three Separate Routes
+
+> **Only ONE HTTP API needs to be created — "user-API"** (IPv4, default stage — stages like dev/production are a separate concept for later, not needed for this simple lab). ⚠️ **All three CRUD operations are handled by THIS SAME API, differentiated purely by route (path + method), not by creating three separate APIs.**
+
+**The three routes, each attached to its own Lambda integration**:
+
+1. **POST /user** → attach integration → **create user function.** Triggered whenever the frontend sends a POST request to the /user path.
+2. **GET /user/{userId}** → attach integration → **get user function.** ⚠️ **Note the path pattern includes a user ID placeholder** — this route reads a SPECIFIC user's record based on the ID in the URL.
+3. **DELETE /user/{userId}** → attach integration → **delete user function.** ⚠️ **Same path pattern as GET** (/user/{userId}), but a different HTTP method, routed to a different Lambda function entirely.
+
+⚠️ **This demonstrates a key API Gateway capability: the SAME path (/user/{userId}) can support multiple HTTP methods, each independently routed to a completely different backend integration** — the method itself, not just the path, is part of what determines which Lambda function actually gets triggered.
+
+---
+
+## What Exists After This Step
+
+> **Once all three routes are created and integrated, API Gateway provides a "trigger URL"** — the actual public endpoint the frontend will call. ⚠️ **The lab can be fully tested even WITHOUT building a real frontend** — the next lab step demonstrates testing this trigger URL directly, without needing an actual mobile or web app built first.
+
+---
+
+## Exam Framing
+
+> "Why can't a mobile app invoke a Lambda function directly, without any intermediary service?" → **Lambda has no public HTTP endpoint at all — it structurally cannot be triggered from outside AWS on its own, which is exactly the gap API Gateway fills.** "How does a single API Gateway route both a POST /user request and a GET /user/{userId} request to two completely different Lambda functions?" → **each route is defined by the COMBINATION of path AND HTTP method** — the same path can support multiple methods, each independently mapped to its own backend integration, which is exactly how this lab's three CRUD routes coexist on one API.
+`,
+    },
+    {
       id: "api-gateway-lab-part2-lambda-functions",
       title: "API Gateway Lab – Part 2: Testing Each Lambda Function Directly, Before API Gateway Even Enters the Picture",
       shortDesc: "Every Lambda function gets triggered and verified straight from the Lambda console's own Test feature first — proving each function works standalone before wiring API Gateway on top of it",
