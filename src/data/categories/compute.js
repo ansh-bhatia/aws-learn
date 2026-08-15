@@ -4918,6 +4918,42 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-autoscaling-config-scale-in-out",
+      title: "Configuring ECS Service Auto Scaling – It's for Elasticity, Not High Availability",
+      shortDesc: "Desired task count already guarantees high availability on its own — service auto scaling exists purely to make that count adapt to traffic, and it's entirely optional",
+      visuals: [],
+      content: `## ⚠️ Service Auto Scaling Is Optional — And Solves a Different Problem Than HA
+
+> **A common misconception: service auto scaling is NOT what provides high availability in ECS.** ⚠️ **The DESIRED TASK COUNT alone already provides high availability** — if the desired count is set to 4, ECS keeps exactly 4 tasks running at all times regardless of auto scaling, automatically replacing any that fail. ⚠️ **Service auto scaling exists purely to make that desired count DYNAMIC based on real traffic**, rather than fixed — it's about right-sizing and cost/performance elasticity, not failure recovery.
+
+**The core problem it solves**: a fixed desired count (e.g. always 4 tasks) either wastes money during low traffic or under-serves users during high traffic. ⚠️ **Enabling service auto scaling lets ECS adjust the desired count up during high demand and down during low demand automatically.**
+
+---
+
+## Scale Out and Scale In
+
+> **Scale OUT**: increasing the number of running tasks in response to rising demand. **Scale IN**: decreasing the number of running tasks in response to falling demand. ⚠️ **These are the standard terms used throughout ECS (and EC2) auto scaling discussions** — worth knowing precisely, since exam questions use this exact terminology.
+
+---
+
+## ⚠️ Minimum and Maximum Boundaries Are Still Required
+
+> **Even with auto scaling enabled, a minimum and maximum task count must be set.** **Minimum**: guarantees a floor — e.g. minimum=2 means at least 2 tasks always run, even during zero traffic, so the application never scales to nothing. **Maximum**: guarantees a ceiling — e.g. maximum=20 means no matter how much traffic spikes, ECS will never run more than 20 tasks, directly capping the maximum possible bill from runaway scaling.
+
+---
+
+## ⚠️ Available Scaling Policies: Two at Creation, Two More Afterward
+
+> **While CREATING a service, only two scaling policy types are available: Target Tracking and Step Scaling.** ⚠️ **Predictive Scaling and Scheduled Scaling both exist for ECS services too, but are only configurable AFTER the service has already been created** — not during the initial service-creation flow. This directly mirrors the equivalent EC2 Auto Scaling Group policy types covered earlier.
+
+---
+
+## Exam Framing
+
+> "Does an ECS service need auto scaling enabled to survive a task crashing?" → **No — the desired task count alone (independent of auto scaling) already guarantees a fixed number of tasks stay running, with automatic replacement on failure. Auto scaling is about ADAPTING that count to traffic, not about basic availability.** "Which scaling policy types can be configured while a service is first being created?" → **only Target Tracking and Step Scaling — Predictive Scaling and Scheduled Scaling both require the service to already exist first.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
