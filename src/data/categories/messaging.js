@@ -6,6 +6,45 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-vs-http-api-part1",
+      title: "REST API vs HTTP API (Part 1) – Older + Feature-Rich vs Newer + 70% Cheaper",
+      shortDesc: "REST API natively supports API keys and WAF but not modern JWT/OAuth login; HTTP API is the reverse — no API keys, but native JWT support since it was built for the modern auth landscape",
+      visuals: [],
+      content: `## Four API Gateway Types, Two Worth Comparing Directly
+
+> **API Gateway supports four types: REST API, REST API Private, HTTP API, and WebSocket API.** ⚠️ **REST API Private is functionally the same as REST API, just restricted to VPC-only access instead of the public internet** — the two can be treated as one bucket for feature comparison purposes. ⚠️ **WebSocket API is fundamentally different — it keeps a connection open for real-time, bidirectional communication (like a live chat), unlike REST/HTTP API's request-response-then-close model** — so it's covered separately and can't be meaningfully compared feature-by-feature against REST/HTTP API.
+
+**⚠️ The real decision that matters: REST API vs HTTP API** — both use the same request-response model, same HTTP protocol, same overall design style. ⚠️ **REST API offers the fuller, more advanced feature set; HTTP API offers faster, cheaper performance with a more limited feature set — specifically ~70% cheaper than REST API.**
+
+---
+
+## ⚠️ Authentication/Authorization Feature Comparison
+
+| Auth Method | REST API | HTTP API |
+|---|---|---|
+| **API keys** (specific customers get a key to call paid/restricted APIs) | ✅ Yes | ❌ No |
+| **IAM (SigV4)** — AWS resources call the API using their IAM role/permissions | ✅ Yes | ❌ No |
+| **Cognito** — users log in via Cognito to get a token | ✅ Yes | ✅ Yes |
+| **JWT / OAuth 2.0** (Google/Okta-style social sign-in) | ⚠️ **NOT natively supported** — REST API predates JWT/OAuth's widespread adoption; can only be added via custom Lambda logic | ✅ **Yes, natively** — HTTP API is the newer type, built with modern auth in mind |
+
+⚠️ **The clean pattern to remember: REST API supports API keys and IAM but NOT native JWT/OAuth; HTTP API is the exact reverse — native JWT/OAuth but no API keys and no IAM SigV4.** Cognito is the one method both support.
+
+---
+
+## Security and Traffic Control Comparison
+
+- **Throttling / rate limiting** (protecting the backend from traffic spikes): ⚠️ **REST API offers FULL advanced support; HTTP API supports it too, but only at a BASIC level.**
+- **AWS WAF integration** (blocking SQL injection, bots, malicious requests): ⚠️ **REST API integrates with WAF DIRECTLY; HTTP API does NOT integrate directly — it can only get WAF protection indirectly, by putting CloudFront in front of it.**
+- **Resource policy** (restricting access by IP, VPC, or AWS account): ✅ **supported by BOTH REST API and HTTP API equally** — no difference here.
+
+---
+
+## Exam Framing
+
+> "An API needs to authenticate callers using API keys, distributed only to specific paying customers" → **REST API** — API keys are not supported by HTTP API at all. "An API needs to authenticate users via a modern JWT/OAuth flow (e.g. Google sign-in) natively, without custom Lambda authorizer logic" → **HTTP API** — REST API has no native JWT/OAuth support, only HTTP API does. "An API needs direct AWS WAF integration to block malicious traffic" → **REST API** — HTTP API only gets WAF protection indirectly via CloudFront in front of it, not a direct integration.
+`,
+    },
+    {
       id: "api-gateway-introduction",
       title: "API Gateway – The Single Entry Point Standing Between Every Client and Every Backend API",
       shortDesc: "Clients never talk to backend APIs directly — every request hits the gateway first, which decides who gets through, how much traffic is allowed, and where the request actually goes",
