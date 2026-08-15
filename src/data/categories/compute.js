@@ -4396,6 +4396,63 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-storage-ec2",
+      title: "ECS Project Step 5 (Part 10.2) – Storage Options on EC2: Instance Storage, Bind Mount, Docker Volume, EFS/FSx — and No Ephemeral Storage At All",
+      shortDesc: "EC2 gives a real, persistent EBS-backed filesystem containers are isolated from by default — bind mount and Docker volume both punch through that isolation, just via different mechanisms",
+      visuals: [],
+      content: `## The Foundation: EC2 Instance Storage
+
+> **The EC2 launch type's container host already has an EBS volume attached (e.g. 20GB), used both for the host's own operating system AND as the backing storage for any container's writable layer.** ⚠️ **Containers are isolated from the host's filesystem by default** — even though a container's writable layer technically lives on that same EBS volume, it cannot directly access files or folders belonging to the host OS itself (e.g. an "app data" folder sitting in the host's filesystem, outside any container).
+
+---
+
+## Bind Mount: Two Concrete Use Cases
+
+> **Bind mount attaches a specific directory or file from the EC2 instance's storage directly into a container**, punching through the default isolation. ⚠️ **Two distinct use cases**: (1) letting a container access data that already lives on the container host's filesystem (e.g. that "app data" folder); (2) mounting the SAME host directory into multiple containers within the same task, turning it into shared storage between them.
+
+- **Persistent?** ⚠️ **Yes — as long as the EC2 instance itself keeps running** (data lives on the host's real filesystem, not something ephemeral).
+- **Shared between containers in the same task?** Yes, if the same directory is mounted into each.
+- **Mount required?** Yes — no automatic sharing; must be explicitly configured with a source path.
+
+---
+
+## Docker Volume: The Newer, Sharing-Focused Alternative
+
+> **Docker natively supports both bind mount (the traditional method) and Docker volume (the newer method) — Docker volume is specifically built for sharing data across multiple containers**, rather than bind mount's dual purpose of both host-filesystem access AND sharing. ⚠️ **Docker-managed volumes live under /var/lib/docker/volumes on the EC2 instance's storage.**
+
+- **Persistent?** Yes, as long as the instance runs (same underlying host-storage mechanism as bind mount).
+- **Shared across tasks?** No — scoped to the one container host, not portable across tasks.
+- **Shared between containers in the same task?** ⚠️ **Yes — this is the entire point of Docker volume.**
+- **Mount required?** Yes, via mount options in the task definition.
+
+---
+
+## Additional EBS Volumes
+
+> **The container host's default EBS volume can simply be resized (AWS allows increasing an existing EBS volume's capacity), or an entirely separate EBS volume can be attached to the instance** — and once attached, that additional volume is accessible from containers using the exact same bind mount / Docker volume mechanisms already covered.
+
+---
+
+## EFS and FSx: The External, Cross-Task Options
+
+> **Both EFS (Elastic File System — Linux) and FSx (specifically FSx for Windows File Server here) are fully external, managed AWS file systems, accessible from MULTIPLE EC2 instances and tasks at once** — unlike everything covered above, which is tied to one specific container host's local storage. ⚠️ **Because they're external, data survives even if the task stops or the EC2 instance is terminated** — genuinely persistent, and genuinely shareable ACROSS tasks, not just across containers within one task.
+
+**The OS-based decision rule**: Linux container host → **EFS**; Windows container host → **FSx for Windows File Server.**
+
+---
+
+## ⚠️ The Critical Final Point: No Ephemeral Storage on EC2
+
+> **Fargate's automatic 20GB-default/200GB-max ephemeral storage configuration simply does not exist on the EC2 launch type at all** — ⚠️ **ephemeral storage is exclusively a Fargate concept.** On EC2, every storage option requires deliberately choosing from instance storage, bind mount, Docker volume, additional EBS, EFS, or FSx — there's no automatic fallback disk the way Fargate provides one by default.
+
+---
+
+## Exam Framing
+
+> "A container on an EC2-launched task needs to read a folder that already exists on the underlying host's filesystem" → **bind mount** — the specific mechanism for reaching into the container host's own filesystem, something Docker volume doesn't do. "Multiple EC2-launched tasks (not just multiple containers within one task) need a shared, persistent storage location" → **EFS (Linux) or FSx for Windows File Server (Windows)** — the only two options here that are genuinely external and cross-task, versus everything else being scoped to a single container host's local storage. Remember: **ephemeral storage is Fargate-only and simply isn't a concept on EC2.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
