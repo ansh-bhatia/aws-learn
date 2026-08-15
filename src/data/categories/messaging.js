@@ -6,6 +6,36 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-introduction",
+      title: "API Gateway – The Single Entry Point Standing Between Every Client and Every Backend API",
+      shortDesc: "Clients never talk to backend APIs directly — every request hits the gateway first, which decides who gets through, how much traffic is allowed, and where the request actually goes",
+      visuals: [],
+      content: `## ⚠️ The Problem: Managing Many APIs Individually Doesn't Scale
+
+> **A real application typically has MANY separate APIs — one per feature — and managing each one individually (security, throttling, logging, versioning) becomes genuinely difficult as the number grows.** ⚠️ **API Gateway solves this by acting as ONE central entry point for ALL of an application's APIs**, rather than exposing each backend API directly to clients.
+
+---
+
+## What API Gateway Actually Is
+
+> **A fully managed AWS service that sits as the single entry point in front of all backend APIs.** ⚠️ **Clients (web apps, mobile apps, other microservices) never connect directly to a backend API — every request must go THROUGH the API Gateway first.** The gateway inspects the request, then forwards it to the correct backend (which can be EC2, Lambda, ECS, or any other compute target).
+
+**⚠️ The "security guard + traffic controller + manager" analogy**: API Gateway decides who's allowed in, how many requests can come through at once, who should be blocked, what gets logged, and how traffic overall is controlled — ⚠️ **all without writing any custom code for these concerns; it's handled entirely by the managed service itself, with zero infrastructure to provision.**
+
+---
+
+## ⚠️ Worked Example: Ola/Uber's Rider and Driver Apps
+
+> **A ride-hailing platform has many distinct backend APIs**: driver location, rider request, fare calculation, payment, trip history, notifications — ⚠️ **all used by both the rider app AND the driver app.** ⚠️ **Rather than exposing each API separately, ONE API Gateway sits in front of all of them**, providing: centralized security for every API, fine-grained control over who can access which specific API, throttling during peak-hour traffic spikes, blocking of suspicious requests, and centralized version management.
+
+---
+
+## Exam Framing
+
+> "An application has 10+ separate backend APIs, each needing its own security, throttling, and logging configured individually" → **API Gateway** — a single managed entry point that centralizes security, traffic control, and logging for every backend API, eliminating the need to build and maintain this logic separately for each one. Remember: **the client never talks to the backend API directly — API Gateway is always the first stop**, deciding whether and how the request reaches its actual destination.
+`,
+    },
+    {
       id: "synchronous-vs-asynchronous-communication",
       title: "Synchronous vs Asynchronous Communication – The Core Split Behind Every AWS Integration Service",
       shortDesc: "Payment MUST be synchronous because the order can't decide what to do next without knowing the result — notification MUST be asynchronous because nothing downstream depends on when the email actually arrives",
