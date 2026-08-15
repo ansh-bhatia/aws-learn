@@ -6,6 +6,86 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "sqs-fifo-throughput-limit-per-queue-vs-per-message-group",
+      title: "FIFO Throughput Limit – Per Queue vs Per Message Group ID",
+      shortDesc: "300 messages/sec applied to the WHOLE queue vs 1 message/sec per group scaling with however many groups your producer creates — neither is 'better', it's purely a question of whether your consumer can actually keep up",
+      visuals: [],
+      content: `## Why FIFO Is Slower Than Standard On Purpose
+
+> **Queue throughput = how many messages a queue can send/receive/process per second** — think of a water tank with an inlet pipe: wide pipe = high throughput, narrow pipe = low throughput. ⚠️ **Standard queues have high throughput; FIFO queues have LOWER throughput than Standard — and this is intentional, not a flaw, because FIFO must maintain strict ordering and exactly-once delivery, which Standard doesn't guarantee.**
+
+---
+
+## The Two FIFO Throughput Modes
+
+### Per Queue (Fixed Numeric Limit)
+
+> ⚠️ **A hard, fixed cap applied at the QUEUE level, regardless of how many message groups exist inside it: 300 messages/sec without batching, 3,000/sec with batching.** ⚠️ **This ceiling cannot be exceeded no matter what — even with 600 message groups, total throughput is still capped at 300/sec.** **Main advantage: predictable control** — you always know exactly what your queue's maximum output is.
+
+### Per Message Group ID (Rule-Based, Scales With Group Count)
+
+> ⚠️ **No fixed number — the limit is simply "one message at a time per group," so total throughput scales directly with however many DIFFERENT group IDs the producer is creating.** **Worked example: 200 simultaneous customers each in their own group → the queue can process 200 messages/sec; 1,000 simultaneous customers/groups → 1,000 messages/sec.** ⚠️ **Throughput here is entirely a function of how many groups the PRODUCER creates — the queue itself doesn't decide this.**
+
+---
+
+## The Real Decision Factor: Can Your Consumer Actually Keep Up?
+
+> ⚠️ **This is NOT a "good vs better" comparison — Per Message Group ID is not inherently superior to Per Queue.** A queue that can scale to 1,000 messages/sec is worthless if the CONSUMER downstream can only process 200-300/sec — the bottleneck just moves. ⚠️ **Choose Per Queue when the backend/consumer has limited, fixed processing capacity. Choose Per Message Group ID only when the ENTIRE pipeline — queue AND backend/consumer — can genuinely scale together** (e.g. handling a sudden sale spike from 300 to 3,000 orders/sec). **No pricing difference between the two options** — this is purely a capacity-planning decision, not a cost one.
+
+---
+
+## High Throughput FIFO Queue: One Switch, Two Settings Locked Together
+
+> ⚠️ **Enabling "High Throughput FIFO Queue" automatically forces BOTH: Deduplication Scope = Message Group, AND FIFO Throughput Limit = Per Message Group ID — both are locked and can no longer be changed independently.** This makes sense because both settings share the same property: checking/limiting per-group (rather than per-queue) is what allows multiple groups to run in genuine parallel for higher overall speed.
+
+---
+
+## Exam Framing
+
+> "A FIFO queue's throughput must never exceed 300 msg/sec (3,000 batched), predictable regardless of message group count" → **Per Queue.** "Throughput must scale automatically as more customers/groups are added, and the backend can handle it" → **Per Message Group ID.** ⚠️ **Remember the real deciding question the exam is testing: is the CONSUMER capable of the higher throughput? If not, Per Queue is the correct, deliberately conservative choice even though Per Message Group ID is technically more scalable.**
+`,
+    },
+    {
+      id: "sqs-fifo-queue-hands-on-lab-console-testing",
+      title: "FIFO Queue Hands-On Lab – Proving Deduplication and Ordering Directly in the Console",
+      shortDesc: "Send the same message body with the same deduplication ID twice — the message count refuses to move, live proof that a FIFO queue genuinely rejects duplicates rather than just claiming to",
+      visuals: [],
+      content: `## Setup: Creating the Queue
+
+> ⚠️ **A FIFO queue's name MUST end in** \`.fifo\` **— this is a hard naming requirement, not a convention.** Default settings used for the lab: content-based deduplication OFF (meaning a message deduplication ID must be manually supplied), deduplication scope = Queue. ⚠️ **All FIFO settings can be changed after queue creation via Edit** — nothing here is locked in at creation time.
+
+---
+
+## ⚠️ Test 1: Deduplication ID Drives Everything When Content-Based Dedup Is OFF
+
+> Send message ("payment done", group ID "1", dedup ID "1") → **accepted, message count → 1.** Send the SAME body but dedup ID "2" → **still accepted, count → 2** — proving the queue is checking ONLY the deduplication ID, not the message body at all. Resend body="payment done", dedup ID="1" again (an exact repeat of the first message) → **REJECTED, count stays unchanged** — this is deduplication working, because the same ID was seen within the 5-minute window.
+
+---
+
+## ⚠️ Test 2: Content-Based Deduplication ON — the Body Itself Becomes the Fingerprint
+
+> After purging the queue and enabling content-based deduplication: the deduplication ID field becomes OPTIONAL, since the message BODY is now the deciding factor. Send ("payment done", group "1") → accepted, count → 1. Resend the identical body, same group → **rejected, count stays at 1.** ⚠️ **Resend the identical body but with a DIFFERENT group ID → STILL rejected — because the queue's Deduplication Scope is set to Queue, which ignores group boundaries entirely and only cares about the message body being unique across the WHOLE queue.**
+
+---
+
+## ⚠️ Test 3: Switching Scope to Message Group Changes the Outcome
+
+> After purging and changing Deduplication Scope from Queue → Message Group: resend the same body in the SAME group → rejected (still a duplicate within that group). ⚠️ **Resend the same body in a DIFFERENT group → NOW ACCEPTED, count → 2** — direct, hands-on proof that Message Group scope only checks for duplicates inside each group individually, exactly as the concept topic describes.
+
+---
+
+## Polling to Confirm What's Actually in the Queue
+
+> The console's "Poll Messages" feature retrieves and displays the queue's current messages directly (default polling duration 10 seconds, configurable) — used throughout the lab to visually confirm which messages the queue actually accepted versus silently rejected.
+
+---
+
+## Exam Framing
+
+> This lab is the practical proof behind two exam-favorite FIFO facts: **(1) when content-based deduplication is OFF, the message body is irrelevant and ONLY the deduplication ID matters; (2) Deduplication Scope (Queue vs Message Group) directly changes whether an identical body in a DIFFERENT group is treated as a duplicate or not** — something that's easy to state abstractly but only really clicks once seen live, message-count-by-message-count, in the console.
+`,
+    },
+    {
       id: "sqs-message-groups-and-deduplication-scope",
       title: "SQS Message Groups & Deduplication Scope – Order Within a Customer, Parallel Across Customers",
       shortDesc: "Message Group ID is how SQS learns 'these 3 messages are the same customer's checkout journey' — deduplication scope then decides whether duplicates are only rejected WITHIN that group, or across the entire queue",
