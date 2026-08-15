@@ -4160,6 +4160,50 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step5-placement-constraint",
+      title: "ECS Project Step 5 (Part 7) – Task Placement Constraint: Member Of vs Distinct Instance",
+      shortDesc: "Fargate is 100 percent serverless, so there's no server to place a task ON in the first place — placement constraints only exist for the EC2 launch type",
+      visuals: [],
+      content: `## What a Placement Constraint Controls
+
+> **A placement constraint controls WHICH container host a task is allowed to run on, inside an ECS cluster.** Two worked scenarios: (1) a cluster has mixed EC2 instance types, and a task must run specifically on T3 instances only; (2) two tasks must each run on a DIFFERENT container host, for high availability.
+
+---
+
+## ⚠️ Fargate: Not Supported At All
+
+> **Placement constraints are not supported on Fargate.** Since Fargate is 100% serverless, there is no actual server to place a task ON in the first place — the entire concept of "run this task on a specific host" doesn't apply. ⚠️ **Placement constraints are exclusively an EC2 launch-type feature.**
+
+---
+
+## ⚠️ A Failed Match Means the Task Stays Pending, Not Failed Outright
+
+> **If a placement constraint is configured (e.g. "must run on a T3 instance") but no matching EC2 instance actually exists in the cluster, the task stays in a PENDING state** — it does not error out immediately. ⚠️ **The instance type (or whatever condition is defined) must genuinely be available among the cluster's registered EC2 instances**, or the task simply waits indefinitely for a match that never comes.
+
+---
+
+## Two Constraint Types: Member Of vs Distinct Instance
+
+### Member Of
+
+> **Purpose: run the task only on an EC2 instance matching a custom query expression, written in Cluster Query Language.** Example: an expression stating the task must launch specifically on a T3 instance — structured as subject, operator, and condition (a SQL-like expression syntax).
+
+**Where to configure**: during task definition creation, ⚠️ **OR it can be skipped there and configured later, when the task or service is actually launched or run** — both configuration points are valid.
+
+### Distinct Instance
+
+> **Purpose: ensure each task runs on a DIFFERENT EC2 instance** — directly solving the high-availability scenario (two tasks, two separate hosts). ⚠️ **No SQL expression is needed at all** — there's no specific instance type or condition being specified, just a requirement that tasks land on separate hosts.
+
+**Where to configure**: ⚠️ **distinct instance is NOT available at the task definition stage — it can only be configured when the task or service is actually launched or run.** This is the key practical difference from member of, which offers both configuration points.
+
+---
+
+## Exam Framing
+
+> "Placement constraints don't seem to be an option for a Fargate-launched task" → **expected — Fargate is fully serverless, so there is no server to constrain placement onto; this feature is EC2-only.** "A task with a placement constraint never launches and just sits in pending" → **check whether an EC2 instance actually matching the constraint's condition exists in the cluster** — no match means indefinite pending, not an immediate failure. Remember the split: **member of = SQL-like expression, configurable at task-definition time or launch time; distinct instance = no expression needed, configurable ONLY at launch/run time.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
