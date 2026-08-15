@@ -4505,6 +4505,96 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-project-step7-run-task-capacity-provider",
+      title: "ECS Project Step 7 (Part 1) – Running a Task: Desired Count and the Capacity Provider Base/Weight Calculation",
+      shortDesc: "Base guarantees a minimum headcount on one provider first — weight only splits whatever's left over, never the whole pool",
+      visuals: [],
+      content: `## Running a Task From a Task Definition
+
+> **A task requires an existing cluster to run inside.** From the cluster's **Tasks** tab → **Run new task**: select the **task definition family and revision** (visible directly on the task definition itself — a fresh task definition starts at revision 1, though re-recording/editing can bump this higher).
+
+---
+
+## ⚠️ Desired Task Count: Not Just "How Many"
+
+> **Desired task defines how many identical task instances get launched at once.** ⚠️ **ECS automatically spreads these tasks across different subnets/AZs** — the real value isn't just running more copies, it's surviving an AZ outage or capacity issue, plus enabling scalability, batch processing throughput, and blue/green deployment patterns.
+
+**Task group**: mainly useful for EC2 launch type (placement strategy) — ⚠️ **for Fargate, it's essentially just a label with no functional placement effect.**
+
+---
+
+## Capacity Provider Strategy: Base and Weight
+
+> **A capacity provider strategy tells ECS WHERE and HOW to run tasks across multiple capacity providers** (e.g. Fargate and Fargate Spot) — a set of rules defining how many tasks go to each, and whether any provider has a guaranteed minimum.
+
+**Two settings per provider**:
+- **Base**: ⚠️ **the minimum, GUARANTEED number of tasks that go to that specific provider FIRST, before anything else is calculated.**
+- **Weight**: ⚠️ **determines how the REMAINING tasks (after all bases are satisfied) get split proportionally across the providers.**
+
+---
+
+## ⚠️ Worked Example (The Exact Calculation to Memorize)
+
+> **10 desired tasks. Fargate: base=2, weight=1. Fargate Spot: base=0, weight=3.**
+
+1. **Apply bases first**: Fargate gets its guaranteed 2 tasks immediately (base=2). Fargate Spot gets 0 guaranteed tasks (base=0) — ⚠️ **no task is EVER guaranteed to land on Fargate Spot in this setup.**
+2. **Remaining tasks after bases**: 10 − 2 = **8 tasks left** to distribute by weight.
+3. **Total weight**: 1 (Fargate) + 3 (Fargate Spot) = **4 parts total.**
+4. **Fargate's share of the remainder**: 1/4 = 25% of 8 = **2 more tasks.**
+5. **Fargate Spot's share of the remainder**: 3/4 = 75% of 8 = **6 tasks.**
+6. **Final totals**: Fargate = 2 (base) + 2 (weight share) = **4 tasks**; Fargate Spot = 0 (base) + 6 (weight share) = **6 tasks.**
+
+⚠️ **The core insight: base is applied ONCE, up front, and only to the total remaining pool does weight apply — weight never operates on the full original count.**
+
+---
+
+## Exam Framing
+
+> "A capacity provider strategy sets Fargate base=2/weight=1 and Fargate Spot base=0/weight=3, with 10 desired tasks — how many land on each?" → **4 on Fargate (2 guaranteed + 2 from the weighted 25% split of the remaining 8), 6 on Fargate Spot (0 guaranteed + 6 from the weighted 75% split)** — remember base is subtracted from the total FIRST, and weight only divides what's left over, never the original full count.
+`,
+    },
+    {
+      id: "ecs-project-step7-test-task-security-group",
+      title: "ECS Project Step 7 (Part 2) – Testing the Running Task: The HTTPS Gotcha and Default Security Group Troubleshooting",
+      shortDesc: "The task's public IP loads a blank or failed page not because anything is broken, but because Chrome silently prepends https to an app that's only listening on http",
+      visuals: [],
+      content: `## Getting the Task's Public IP
+
+> **Once a task reaches RUNNING status (provisioning typically takes under two minutes), its public IP is visible under the task's Networking tab** — available because the task uses awsvpc networking mode with a dedicated ENI (matching the earlier network-mode topic).
+
+---
+
+## ⚠️ The HTTPS Gotcha
+
+> **Opening the public IP directly in a browser can silently fail — because Chrome automatically prepends https:// to a bare IP address, while the application is actually only listening on plain HTTP.** ⚠️ **The fix: manually strip the https:// prefix from the address bar** and load the bare IP (or explicit http:// instead) — the application works fine once the protocol mismatch is corrected. This isn't an application or infrastructure bug at all — purely a browser default behavior catching an HTTP-only app off guard.
+
+**End-to-end verification**: with the correct protocol, the application loads, a file upload succeeds ("image uploaded successfully"), and the file appears in the configured S3 bucket — confirming the task role, environment variables, and container are all working together correctly.
+
+---
+
+## ⚠️ Default VPC and Default Security Group Troubleshooting
+
+> **Running a task without specifying otherwise uses the account's default VPC and default security group.** ⚠️ **The default security group generally allows all traffic, but application access can still intermittently fail** — if this happens, the fix is checking the task's Networking tab, then the security group's inbound rules, and verifying:
+
+1. **All traffic is allowed** (not restricted to specific ports).
+2. **Source is set to allow any IPv4 address** (0.0.0.0/0), rather than a narrower range.
+
+**If the existing inbound rule doesn't match**: delete it, add a new rule allowing all traffic from any IPv4 source, and save — this typically resolves an otherwise-unexplained inability to reach a running task's application.
+
+---
+
+## What's Missing So Far: High Availability
+
+> **A single running task has no automatic replacement if it fails, and no load balancer distributing traffic across multiple copies.** ⚠️ **Attaching a load balancer and providing genuine high availability requires using Services instead of a standalone task** — covered in depth in the next topic.
+
+---
+
+## Exam Framing
+
+> "A newly launched Fargate task's public IP won't load in the browser at all" → **first check whether the browser silently added https:// to a plain-HTTP application** — strip the protocol prefix and retry before assuming an infrastructure problem. "The task is confirmed running but the application still isn't reachable" → **check the default security group's inbound rules for all-traffic-from-0.0.0.0/0** — a narrower or missing rule is a common, easily-fixed cause even when 'default' security groups are generally permissive.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
