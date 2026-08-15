@@ -6,6 +6,49 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-tls-security-policy",
+      title: "REST API TLS Security Policy – Options Are Endpoint-Type-Dependent, and Scoped Only to the Default Invoke URL",
+      shortDesc: "The available TLS policy options change based on which endpoint type was already selected — and whatever's chosen here only governs AWS's default invoke URL, never a custom domain, which gets its own separate policy",
+      visuals: [],
+      content: `## What TLS Actually Does
+
+> **TLS (Transport Layer Security) encrypts the connection between the client and API Gateway** — preventing attackers from reading the data in transit, blocking man-in-the-middle attacks, and confirming the client is genuinely talking to the real API Gateway. ⚠️ **Think of it as a secure tunnel between client and API** — it's the mechanism behind the difference between an HTTP site and an HTTPS site.
+
+---
+
+## ⚠️ Available Security Policies Depend on the Endpoint Type Already Chosen
+
+> **The TLS security policy options shown are directly tied to whichever endpoint type (regional, edge-optimized, private) was already selected earlier** — ⚠️ **choosing regional highlights ONLY the policies applicable to regional endpoints; choosing edge-optimized highlights only ITS applicable policies; the other endpoint types' policies stay grayed out** — the two settings aren't independent choices.
+
+---
+
+## What the Security Policy Controls
+
+> **Minimum TLS version, allowed cipher suites, and whether FIPS mode is required.**
+
+**TLS version options**: ⚠️ **TLS 1.2 (introduced 2008, strong encryption, broadly supported by modern browsers/apps) vs TLS 1.3 (released 2018, faster handshake, better performance, more secure than 1.2 — becoming the modern standard)** — the general guidance: **prefer TLS 1.3 whenever the client/application supports it.**
+
+**Additional modifiers**:
+- **FIPS** (Federal Information Processing Standard): ⚠️ **government-approved cipher requirements — specifically needed for US government, Department of Defense, banking, and health-sector compliance use cases.**
+- **PFS** (Perfect Forward Secrecy): ⚠️ **the encryption key changes for every new connection** — even if a key is later stolen, only that one connection's data is compromised, not all past traffic.
+- **PQC** (Post-Quantum Cryptography): encryption specifically designed to remain unbreakable even by future quantum computers, which are expected to eventually break traditional encryption methods.
+
+---
+
+## ⚠️ Critical Scoping Rule: This Policy Applies ONLY to the Default AWS Invoke URL
+
+> **The security policy chosen here governs ONLY the AWS-provided default invoke URL** (the auto-generated URL used for testing, e.g. via Postman) — ⚠️ **it does NOT apply to a custom domain, if one is later configured.** ⚠️ **A custom domain gets its OWN, separately-configured security policy** — meaning a REST API can genuinely have two different TLS policies active simultaneously: one for the default invoke URL, another for the custom domain.
+
+**⚠️ Custom domains also unlock additional security features the default invoke URL doesn't offer**: custom SSL/TLS certificates, mutual TLS (mTLS) authentication, and hostname validation — covered in a later dedicated custom-domain topic.
+
+---
+
+## Exam Framing
+
+> "A REST API needs the strongest, most modern TLS protection available, assuming the client fully supports it" → **TLS 1.3** — faster handshake, better performance, and more secure than TLS 1.2, the recommended default whenever client support allows it. "Does configuring a TLS security policy for a REST API automatically apply that same policy to a later-configured custom domain?" → **no — the security policy chosen during REST API creation applies ONLY to the default AWS invoke URL; a custom domain requires its own separately configured security policy.**
+`,
+    },
+    {
       id: "rest-api-endpoint-types",
       title: "REST API Endpoint Types – Regional, Edge-Optimized, Private, and the One-Endpoint-Per-API Rule",
       shortDesc: "One REST API gets exactly ONE endpoint type — needing both public and VPC-only access means creating two separate APIs, never one API switching between modes",
