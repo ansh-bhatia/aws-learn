@@ -5610,6 +5610,52 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-classic-mode-node-groups",
+      title: "EKS Classic Mode – Node Groups: EC2 vs Fargate Nodes, Managed vs Self-Managed",
+      shortDesc: "A managed node group and Auto Mode both feel automated, but a managed node group is a visible thing you deliberately created and still chose the instance type for — Auto Mode has no node group at all, visible or otherwise",
+      visuals: [],
+      content: `## ⚠️ Node Groups Only Exist in Classic Mode
+
+> **A node group is a set of worker nodes sharing the same configuration, all connected to the same EKS cluster** — each running the kubelet agent to stay registered and synced with the control plane. ⚠️ **Node groups are ONLY a Classic Mode concept — in Auto Mode, there's no node group to create or manage at all**, since AWS handles worker node provisioning entirely behind the scenes.
+
+---
+
+## Two Node Types: EC2 vs Fargate
+
+> **EC2 nodes**: run on actual EC2 instances — ⚠️ **full control over instance type, size, and OS**, with the tradeoff of being directly responsible for scaling, updating, and replacing them. Best suited for workloads needing custom configuration — GPU, high memory, local storage.
+
+> **Fargate nodes**: serverless — no EC2 instances to create, AWS automatically provisions resources per pod. Best for small, lightweight, event-driven workloads where server management isn't wanted at all. ⚠️ **Fargate nodes are exclusively a Classic Mode option — Auto Mode doesn't offer Fargate as a node type, since Auto Mode's own managed compute layer already replaces the need to choose between EC2 and Fargate.**
+
+---
+
+## Two Node Group Types: Managed vs Self-Managed
+
+| Aspect | Managed Node Group | Self-Managed Node Group |
+|---|---|---|
+| EC2 instance management | AWS creates/updates/replaces | You create and manage manually |
+| Updates & scaling | Automatic | Manual |
+| Node registration with control plane | Automatic | ⚠️ Manual — run a script to join nodes |
+| Control | Less (AWS-driven) | Full |
+| Recommended for | Most users | Custom OS/config/networking needs |
+
+⚠️ **Even in a MANAGED node group, you still explicitly choose the instance type, size, and scaling settings — AWS just handles the lifecycle mechanics (creation, updates, replacement) once those choices are made.**
+
+---
+
+## ⚠️ The Critical Distinction: Managed Node Group ≠ Auto Mode
+
+> **These two can feel deceptively similar since both involve AWS "managing" EC2 instances — but they are fundamentally different concepts.** ⚠️ **A managed node group is a VISIBLE, deliberately-created resource — you still pick the instance type, size, and scaling configuration; AWS just automates the operational lifecycle around your choices.** ⚠️ **Auto Mode has NO node group at all, visible or otherwise — its own built-in managed compute system replaces the entire concept of a node group, and there's nothing named or configured that resembles one.**
+
+**The clean rule**: ⚠️ **Auto Mode = a higher level of automation where AWS manages everything automatically, with node groups entirely invisible; Managed Node Group = still a Classic Mode concept, offering AWS-automated EC2 lifecycle management while the instance-level choices remain yours.**
+
+---
+
+## Exam Framing
+
+> "Is choosing a 'managed node group' the same thing as enabling EKS Auto Mode?" → **no — a managed node group still requires explicitly picking the EC2 instance type/size/scaling and only exists in Classic Mode; Auto Mode has no node group concept at all, visible or configurable, since its built-in compute system replaces that entire layer.** "Which EKS worker node option (EC2 vs Fargate) is exclusive to Classic Mode?" → **both are Classic-Mode-only in the sense that node types are a Classic Mode concept — but specifically Fargate as a node TYPE choice only appears in Classic Mode, since Auto Mode's managed compute doesn't expose an EC2-vs-Fargate choice at all.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
@@ -5623,21 +5669,6 @@ Container orchestrators manage containers in bulk. Options: **Docker Swarm** (si
 **EKS = Kubernetes as a managed AWS service** — you get all of Kubernetes; AWS handles the hard setup, patching & control plane.
 
 > 🔑 Main reason to choose EKS: **hybrid cloud**. Run Kubernetes on-prem AND in AWS with the **same** tooling/skills, instead of juggling Kubernetes on-prem and ECS in the cloud.
-
----
-
-## Node Groups & Nodes (Classic Mode)
-
-A **node group** = a set of worker nodes sharing config (each runs the kubelet). Node types: **EC2** (full control — GPU/memory/storage) or **Fargate** (serverless, **classic-mode only**).
-
-| Aspect | Managed Node Group | Self-Managed |
-|---|---|---|
-| EC2 management | AWS | You |
-| Updates & scaling | Automatic | Manual |
-| Node registration | Automatic | Manual (script) |
-| Control | Less | Full |
-
-> ⚠️ **Managed node group ≠ Auto Mode.** Managed node groups (classic mode) still let you pick type/size/scaling. In **Auto Mode** node groups are invisible — AWS manages everything via a built-in node pool.
 
 ---
 
