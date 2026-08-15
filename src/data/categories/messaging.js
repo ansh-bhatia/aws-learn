@@ -6,6 +6,50 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-method-request-settings",
+      title: "REST API Method Request Settings – The Security Gate That Runs BEFORE the Backend Is Ever Called",
+      shortDesc: "Method request settings check the request and reject it right at the gate, before it ever reaches Lambda — a request that fails validation here never triggers the backend at all",
+      visuals: [],
+      content: `## ⚠️ The Security-Gate Analogy
+
+> **Method request settings define rules a client's request must satisfy BEFORE the backend is ever called.** ⚠️ **Think of it as a security gate at an office entrance — checking ID, entry permission, and purpose before letting anyone in.** ⚠️ **In the request flow, method request checks happen BEFORE the integration request (i.e. before the backend is triggered at all)** — a request failing here is rejected outright, and the backend never even sees it.
+
+---
+
+## Setting 1: Authorization — Who Is Allowed to Call This Method
+
+**Four authorization options**:
+1. **None** — no authorization at all; anyone can call the API. Appropriate for a genuinely public API.
+2. **AWS IAM** — only AWS users/roles with proper IAM permission can call the API (e.g. a request originating from an EC2 instance's attached role).
+3. **Cognito User Pool** — ⚠️ **requires a Cognito User Pool to already exist in the account** (this option is unavailable/hidden until one is created) — only logged-in users, authenticated via a JWT token from Cognito, can call the API.
+4. **Lambda Authorizer** — fully custom authorization logic, written and hosted in a separate Lambda function, for any bespoke authentication requirement not covered by the other three.
+
+**Worked example**: a POST /create-order endpoint requiring authorization — a non-logged-in user gets a 401 Unauthorized error; a logged-in, properly authenticated user's request is allowed through.
+
+---
+
+## Setting 2: Request Validator — Checking Required Data Is Present
+
+> **Request validator checks whether required data actually exists in the incoming request** — not authentication, just structural completeness. ⚠️ **Four options: None, Validate Body, Validate Query String Parameters and Headers, and Validate Body + Query String Parameters + Headers.**
+
+### Validate Body
+
+> **Checks only that the request body is present and matches an expected structure.** ⚠️ **Commonly used for POST, PUT, and PATCH methods**, since these are the ones that typically carry a meaningful body. Worked example: a POST /create-user request must include a body with userID, username, and email — request validator confirms this structure exists before the request ever reaches the Lambda function that would actually create the record.
+
+### Validate Query String Parameters and Headers
+
+> **HTTP headers**: extra information sent alongside the request, NOT part of the URL and NOT part of the request body. ⚠️ **Headers are optional by default** — only relevant when the API needs authentication tokens, usage tracking, or metadata (e.g. requiring an API key to be present in a specific header). ⚠️ **A required-header check verifies the named header is present** — a missing required header causes rejection right at the gate.
+
+> **Query string parameters**: key-value pairs appended to the URL after a "?" — ⚠️ **most commonly used with GET requests.** Worked example: GET /user?id=101 — the query string parameter id=101 tells the backend which specific user record to fetch. ⚠️ **Best practice: mark id as a required query parameter** so a GET request missing it is rejected before ever reaching the backend, rather than the backend having to handle a missing-parameter case itself.
+
+---
+
+## Exam Framing
+
+> "An API needs to reject a request missing a required query string parameter BEFORE the Lambda function is even invoked" → **configure a request validator set to validate query string parameters and headers, marking the specific parameter as required** — this check happens entirely at the method-request stage, ahead of the integration request, so an invalid request never triggers (or bills for) the backend at all. "An API should only be callable by AWS resources with proper IAM permissions, not the general public" → **set the method's Authorization setting to AWS IAM** — distinct from Cognito User Pool (end-user login via JWT) and Lambda Authorizer (fully custom logic).
+`,
+    },
+    {
       id: "rest-api-proxy-integration",
       title: "REST API Proxy Integration – The Courier Boy Who Never Opens the Parcel",
       shortDesc: "Proxy mode forwards the request completely untouched, letting a powerful backend handle everything itself — turn it off specifically when a legacy backend needs API Gateway to reshape the request first",
