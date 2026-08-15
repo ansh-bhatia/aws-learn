@@ -4706,6 +4706,51 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-service-deployment-blue-green",
+      title: "ECS Service Deployment Option 2 – Blue/Green: Two Full Environments, a Bake Time Window, and a Mandatory Load Balancer",
+      shortDesc: "Blue and green both run in full, side by side, for the entire bake-time window — the switch is just the load balancer's target changing, and cancelling it is a click, not a redeploy",
+      visuals: [],
+      content: `## The Core Idea: Two Full Environments, Not an In-Place Update
+
+> **Unlike rolling update, blue/green creates an entirely SEPARATE new environment for the new version** — ⚠️ **the current, already-running version is called BLUE; the new, updated version is called GREEN.** Both run in full, side by side, giving a genuine window to test the new version before any real traffic reaches it.
+
+---
+
+## ⚠️ Bake Time: The Testing Window Before the Switch
+
+> **Bake time is a configurable waiting period (0 to 1,440 minutes / 24 hours) — a window after the green version becomes healthy but BEFORE traffic is actually switched to it.** ⚠️ **During bake time, BOTH blue and green run simultaneously, and the load balancer is still sending all traffic to blue** — green is live and healthy, but not yet receiving real users.
+
+**Why this matters**: ⚠️ **rollback during bake time is trivial — just cancel the switch and keep sending traffic to blue, no redeployment needed.** ⚠️ **Once bake time expires and traffic actually switches to green, rollback becomes harder: all blue tasks are stopped, and reverting requires a fresh manual deployment** rather than a simple cancel.
+
+---
+
+## ⚠️ Worked Example: 4 Tasks, 60-Minute Bake Time
+
+1. **Before deployment**: blue environment has 4 tasks running version 1. The load balancer's target is blue — 100% of traffic goes there.
+2. **Deployment starts**: ECS creates the green environment with 4 NEW tasks running version 2. ⚠️ **Traffic still goes entirely to blue** — green is running but not yet receiving users.
+3. **Bake time window (60 minutes)**: both environments run in parallel — blue serving live traffic, green available for testing. ⚠️ **If a problem is found in green during this window, the switch can simply be cancelled — blue keeps serving traffic, and green is torn down with zero user impact.**
+4. **After bake time elapses (if not cancelled)**: the load balancer's target switches from blue to green — ⚠️ **ALL traffic now goes to green, and the old blue tasks are stopped.** Green effectively becomes the new "blue" going forward.
+
+---
+
+## ⚠️ Load Balancer: Mandatory, Not Optional
+
+> **Blue/green deployment absolutely REQUIRES a load balancer — ECS needs it to actually switch traffic from the old environment to the new one.** ⚠️ **This is the direct, explicit contrast with rolling update, where a load balancer is optional.** Blue/green also requires **AWS CodeDeploy** to orchestrate the environment switch — additional setup complexity that rolling update doesn't need.
+
+---
+
+## Advantages and Trade-offs
+
+> **Advantages**: ⚠️ **genuine zero-downtime deployment, and considered the SAFER, production-grade choice** — the ability to fully test a new version against real infrastructure before it ever receives traffic is a meaningfully stronger safety net than rolling update's in-place replacement. **Trade-off**: more setup complexity — mandatory load balancer, mandatory CodeDeploy integration, versus rolling update's simpler, load-balancer-optional model.
+
+---
+
+## Exam Framing
+
+> "A deployment strategy needs to let a new version be fully tested against real running infrastructure BEFORE it receives any live traffic, with an easy one-click rollback if issues are found" → **Blue/Green**, using the bake-time window — cancel during bake time is trivial, but rolling update offers no equivalent pre-traffic testing window. "A service update fails with blue/green, but bake time already expired and traffic already switched" → **rollback now requires a fresh manual deployment, not a simple cancel** — this is exactly why testing thoroughly during the bake-time window matters. Remember: **blue/green mandates a load balancer + CodeDeploy; rolling update needs neither.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
