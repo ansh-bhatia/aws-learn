@@ -4894,6 +4894,43 @@ Two use cases:
 > 📌 DataSync = transfer tool. You must already have a storage system; DataSync moves data to/from/between them.`,
     },
     {
+      id: "file-gateway-hands-on-lab-and-features",
+      title: "File Gateway Hands-On Lab – Multiple Servers Mapping the Same Network Drive to S3",
+      shortDesc: "Two separate Windows servers (application + database) each map a network drive to the SAME File Gateway share — creating a genuinely centralized storage pool with zero coordination between the servers themselves",
+      visuals: [],
+      content: `## ⚠️ Why File Gateway, Not Just DataSync
+
+> **The scenario: multiple servers (e.g. an application server and a database server) generate data but have NO shared central storage — buying dedicated storage hardware is expensive.** ⚠️ **DataSync assumes storage already exists and just transfers it; File Gateway IS the storage — it aggregates data from multiple on-prem servers into local cache, then durably forwards it to S3.** File Gateway can be deployed as a real on-prem VM (VMware ESXi/Hyper-V/KVM) or, for practice/simulation, as an EC2 instance — the mechanics are identical either way.
+
+---
+
+## Building the Lab
+
+> Setup: two servers (application + database) needing shared storage, plus the File Gateway VM itself with a dedicated cache disk attached (AWS recommends ≥150GB in production; a smaller disk works fine for learning). ⚠️ **The gateway and its cache disk must be activated from the AWS console by IP address** — same "reachability" requirement as the DataSync agent. Once active, choose **File Gateway** as the type and create a **File Share** backed by a specific S3 bucket.
+
+### ⚠️ The SMB Guest-Access Gotcha (No Active Directory)
+
+> **Without Active Directory, the file share needs Guest Access explicitly enabled with a password, PLUS visibility and (for write access) read-write permission — all configured via the gateway's SMB settings before the share will actually work.** With Active Directory already in place in a real environment, this step is skipped entirely.
+
+### Mounting the Share From Multiple Servers
+
+> ⚠️ **Both the application server and the database server independently run a** \`net use\` **command mapping a network drive letter (e.g. Z:) to the SAME gateway share, using the gateway's IP and the SMB guest credentials.** ⚠️ **The result: files created from EITHER server appear instantly in the other server's mapped drive — genuine shared centralized storage — and everything written to that drive is durably forwarded to the S3 bucket in the background**, verified directly in the S3 console.
+
+---
+
+## Features and Benefits (Exam-Relevant)
+
+> **Six core features**: NFS/SMB protocol support (mount as a normal shared directory); files stored durably in S3 while a local cache makes access feel instant; Windows ACL support (permissions carried as S3 object metadata); S3 Object Lock support; bandwidth-optimized sync (only changes are forwarded, not full files every time). **Three core benefits**: reduces on-premises storage needs for backup; integrates easily with existing enterprise software (SAP, SQL Server, Oracle) since it just looks like an ordinary shared folder to them; supports restoring backups either on-premises or directly to cloud compute (EC2/RDS).
+
+---
+
+## Exam Framing
+
+> "Multiple on-premises servers need centralized, shared storage backed by S3, without buying dedicated storage hardware" → **Storage Gateway, File Gateway type** — deployed as a VM (real on-prem hypervisor or EC2 for testing), exposed as an ordinary NFS/SMB share, with S3 as the durable backing store and local disk as cache. ⚠️ **Remember the File-Gateway-vs-DataSync distinction from this lab directly: File Gateway acts AS the storage for servers with none; DataSync transfers data that's already sitting in existing storage.**
+`,
+    },
+
+    {
       id: "storage-gateway",
       title: "Storage Gateway",
       shortDesc: "Hybrid cloud storage integration",
