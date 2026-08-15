@@ -5046,6 +5046,64 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-step-scaling-scale-out-lab",
+      title: "ECS Step Scaling – Configuring the Scale-Out Policy (Console Walkthrough)",
+      shortDesc: "Period times evaluation periods is the real trigger window — a 1-minute period with evaluation-periods=3 means CPU must stay above threshold for three consecutive checks, not just once",
+      visuals: [],
+      content: `## ⚠️ During Service Creation, the CloudWatch Alarm Must Be Created Fresh — Not Selected From Existing
+
+> **When attaching a step scaling policy DURING ECS service creation, the console forces creating a brand-new CloudWatch alarm — an existing alarm cannot be selected at this stage.** ⚠️ **After the service already exists, a scale-in (or any additional) policy CAN reference an existing pre-created alarm instead** — this asymmetry is exactly why scale-out gets configured during creation and scale-in afterward.
+
+---
+
+## Step 1: Metric and Statistic
+
+> **Metric choices are CPU utilization or memory utilization** (task-level). ⚠️ **Statistic choices — average, maximum, minimum, sum, sample count — determine HOW the metric across multiple tasks gets summarized before being compared to the threshold.** Worked example: 4 tasks at 30%, 50%, 70%, 90% CPU → **average = 60%** (typically the standard choice); **maximum = 90%** (just the single highest task); **minimum = 30%.** ⚠️ **Average is used in most real scaling policies** — it reflects overall service load rather than being skewed by one outlier task.
+
+---
+
+## ⚠️ Step 2: Alarm Condition, Threshold, Period, and Evaluation Period — the Exact Trigger Mechanics
+
+> **Four settings together define exactly when the alarm fires**: alarm condition (above/below threshold), threshold value, period (how often CloudWatch checks the metric), and evaluation periods (how many CONSECUTIVE checks must fail before the alarm actually triggers).
+
+**⚠️ For scale-out, the condition is always "greater than / greater-or-equal"** — scale-out responds to RISING load. (Scale-in, covered in the next topic, always uses "less than / less-or-equal" instead.)
+
+**⚠️ Worked example: period = 1 minute, evaluation periods = 3, threshold = 60%.** Meaning: ⚠️ **CloudWatch checks CPU utilization every 1 minute, and the alarm only actually TRIGGERS once CPU has been above 60% for THREE CONSECUTIVE 1-minute checks in a row (i.e. a genuine 3-minute sustained spike)** — a single brief spike that drops back down before the third check does NOT trigger the alarm. ⚠️ **This built-in requirement for sustained breach (not just a momentary blip) is exactly what prevents the policy from reacting to noise.**
+
+---
+
+## Step 3: Adjustments — How Many Tasks to Add, and By What Method
+
+> **Three action types**: ⚠️ **Add** (increase the task count by a specified amount), **Remove** (decrease by a specified amount), and **Set to** (jump directly to an absolute task count, regardless of the current count). ⚠️ **Scale-out policies use "Add."**
+
+**Two ways to express the amount**: ⚠️ **Tasks** (an absolute number, e.g. "add 2 tasks" regardless of the current count) or **Percentage** (a relative change, e.g. "add 50% of the current task count" — 6 running tasks × 50% = add 3 more).
+
+---
+
+## ⚠️ The Full 3-Tier Configuration (Matches the Earlier Step-Scaling Concept Topic)
+
+| CPU Range (lower–upper bound) | Action |
+|---|---|
+| 60% – 70% | Add 2 tasks |
+| 70% – 80% | Add 2 more tasks |
+| 80% – infinity | Add 4 more tasks |
+
+⚠️ **Each row is added as a SEPARATE adjustment entry** — the console requires configuring these one at a time, and it's genuinely easy to mismatch a lower/upper bound pair, so the end result should always be double-checked against the intended tiers.
+
+---
+
+## Cooldown, and a Propagation Delay Worth Expecting
+
+> **The scale-out policy also requires its own cooldown period** (e.g. 300 seconds) — the same cooldown mechanism covered in the earlier target tracking topic. ⚠️ **After a service is created with a scaling policy attached, the policy may not appear immediately in the service's auto scaling settings — it can genuinely take 2–5 minutes to become visible while AWS finishes provisioning it in the background.** This is expected, not a sign of misconfiguration.
+
+---
+
+## Exam Framing
+
+> "A CloudWatch alarm is set with period=1 minute and evaluation periods=3 — what does this actually require before triggering?" → **the metric must breach the threshold on THREE CONSECUTIVE 1-minute checks (a sustained 3-minute condition), not just a single momentary spike** — this combination is exactly what prevents a scaling policy from overreacting to brief noise. "Which alarm condition direction is always used for a scale-out policy?" → **greater than / greater-or-equal** — scale-out exists to respond to rising load; scale-in (covered next) always uses the opposite, less-than direction.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
