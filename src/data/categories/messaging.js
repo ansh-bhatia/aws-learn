@@ -6,6 +6,38 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-lab-part3-methods-and-stage-deployment",
+      title: "REST API Lab – Part 3: No Invoke URL Exists Until You Deploy to a Stage — Manually",
+      shortDesc: "HTTP API silently gives you a default stage for free; REST API forces you to create one explicitly and deploy to it before an invoke URL exists at all",
+      visuals: [],
+      content: `## ⚠️ Method, Not Route: One HTTP Method Per Lambda, Created Inside a Resource
+
+> **Where HTTP API used flat "routes" mapped directly to integrations, REST API uses methods (matching the earlier resources-and-methods topic) — each HTTP method (GET, POST, DELETE) must be created SEPARATELY and mapped to its own Lambda function.** ⚠️ **Three Lambda functions → three separate methods, each created inside the correct resource**: POST inside /user (→ create-user function), GET inside /user/{userId} (→ get-user function), DELETE inside /user/{userId} (→ delete-user function). ⚠️ **Lambda proxy integration is enabled for all three**, matching the earlier proxy-integration topic's "let the powerful backend handle everything" pattern.
+
+---
+
+## ⚠️ The Critical New Step: Deploying to a Stage (Mandatory, Unlike HTTP API)
+
+> **In HTTP API, a default stage is created automatically — no manual stage step was ever needed.** ⚠️ **REST API is different: a stage must be EXPLICITLY created, and the API must be deployed to it, before an invoke URL exists at all.** ⚠️ **Without this deployment step, there is simply no way to actually call the API** — all the resources and methods can be perfectly configured, but nothing is reachable until deployment happens.
+
+**The deployment process**: click Deploy API → choose (or create) a stage name (e.g. "dev") → deploy → ⚠️ **API Gateway then generates the invoke URL, in the form of the base URL plus the stage name appended** (e.g. .../dev).
+
+**⚠️ A practical quirk to expect**: the "Deploy API" button can appear grayed out while the API is still processing recent changes — it becomes clickable again once that background update finishes, not immediately after creating the last method.
+
+---
+
+## What Deployment Actually Activates
+
+> **Once deployed, all three methods (POST, GET, DELETE) become genuinely active and callable** — this is the point where the API transitions from "fully configured" to "actually usable," ready for testing via Postman, a browser, or a real frontend.
+
+---
+
+## Exam Framing
+
+> "A REST API's resources and methods are all fully configured, but attempting to call it returns no working URL at all" → **the API was never deployed to a stage** — unlike HTTP API's automatic default stage, REST API requires explicitly creating a stage and deploying the API to it before any invoke URL exists. "Why does HTTP API not require this manual stage-deployment step, while REST API does?" → **HTTP API automatically creates a default stage as part of its simpler, faster setup model; REST API's more explicit, feature-rich configuration model requires deployment to a stage as a deliberate, separate action.**
+`,
+    },
+    {
       id: "rest-api-lab-part2-create-api-resources",
       title: "REST API Lab – Part 2: One Unique URL Path = One Resource, No Exceptions",
       shortDesc: "Needing both /user and /user/{userId} means creating TWO resources, not one — REST API's structure is deliberately one resource per distinct URL path, with no shortcuts",
