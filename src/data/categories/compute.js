@@ -5566,6 +5566,50 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-custom-configuration-auto-mode",
+      title: "EKS Cluster Creation – Custom Configuration + Auto Mode: What Quick Config Hides, Now Editable",
+      shortDesc: "Auto Mode compute still exists here — but instead of AWS silently picking the compute class, Custom Configuration lets you choose general-purpose or system, and disabling Auto Mode here disables Auto Mode compute too",
+      visuals: [],
+      content: `## ⚠️ The Core Idea: Same Auto Mode, But Now Editable
+
+> **Custom Configuration + Auto Mode enabled keeps every benefit of Auto Mode (AWS-managed compute, scaling, patching) — but exposes settings that Quick Configuration hides and locks to AWS's defaults.** ⚠️ **Quick Configuration = fixed Auto Mode settings, zero customization; Custom Configuration + Auto Mode = the same managed automation, but selectively adjustable.**
+
+---
+
+## ⚠️ Auto Mode Compute Class: General Purpose vs System
+
+> **Auto Mode Compute is what provisions, scales, replaces, and patches EC2 instances automatically — available whenever Auto Mode is enabled, in both Quick and Custom Configuration.** ⚠️ **The difference: Quick Configuration always uses Auto Mode Compute but gives NO choice over which compute class it uses (AWS decides); Custom Configuration lets you explicitly choose between "general purpose" (regular application workloads) and "system" (system-critical or control-plane-related workloads).**
+
+**⚠️ Auto Mode Compute cannot exist without Auto Mode itself** — disabling Auto Mode in Custom Configuration automatically disables Auto Mode Compute too; the two are tightly coupled, not independent toggles.
+
+---
+
+## Additional Settings Only Available in Custom Configuration
+
+- **Upgrade policy**: choose between **Standard** or **Extended Support** — not selectable in Quick Configuration.
+- **Cluster access method**: choose how the cluster can be managed — via ⚠️ **EKS API only (directly through console/CLI using access entries), or the traditional API + ConfigMap method.** Also controls whether the cluster CREATOR automatically gets bootstrap administrator access.
+- **Envelope encryption key**: ⚠️ **Quick Configuration always uses envelope encryption via an AWS-managed KMS key; Custom Configuration allows specifying a CUSTOMER-managed KMS key instead**, for organizations needing direct control over the encryption key itself.
+- **Zonal shift (via Application Recovery Controller)**: ⚠️ **lets application traffic be deliberately moved away from a problematic or unhealthy Availability Zone, keeping the application running smoothly — NOT available in Quick Configuration at all.**
+- **Deletion protection**: ⚠️ **when enabled, the cluster cannot be deleted directly — deletion protection must be explicitly disabled FIRST**, preventing accidental cluster deletion.
+- **VPC, subnet, security group, and IP version (IPv4/IPv6) selection**: full control, versus these being auto-decided in Quick Configuration.
+- **Endpoint access**: choose public, private, or both — controlling whether the cluster's API server is reachable over the internet, only from within the VPC, or either.
+- **Observability/monitoring**: ⚠️ **Quick Configuration always defaults to CloudWatch only; Custom Configuration allows selecting third-party monitoring tools as an alternative or addition.**
+- **Add-ons**: ⚠️ **Quick Configuration has AWS auto-select and auto-configure all add-ons; Custom Configuration allows choosing and configuring add-ons explicitly.**
+
+---
+
+## ⚠️ Disabling Auto Mode Entirely: This Becomes "Classic Mode"
+
+> **Custom Configuration with Auto Mode explicitly turned OFF is what's referred to as "Classic Mode"** — the fully manual, traditional EKS setup where worker nodes (EC2 or Fargate) must be created and managed entirely by hand, with no Auto Mode compute assistance at all. ⚠️ **Classic Mode is covered in depth in the next topic.**
+
+---
+
+## Exam Framing
+
+> "A team wants Auto Mode's automated compute management, but needs to pick a specific compute class (general purpose vs system) rather than accept AWS's default choice" → **Custom Configuration with Auto Mode enabled** — Quick Configuration also uses Auto Mode Compute, but offers zero choice over its compute class. "A cluster needs to survive an accidental delete-cluster command" → **enable Deletion Protection**, available only through Custom Configuration — deletion then requires explicitly disabling protection first, adding a deliberate extra step against accidental loss.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
