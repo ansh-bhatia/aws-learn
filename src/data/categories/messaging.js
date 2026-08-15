@@ -6,6 +6,70 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-custom-domain-public-private-dns",
+      title: "API Gateway Custom Domain (Part 1) – Public vs Private, and Route 53 Alias vs External CNAME",
+      shortDesc: "Route 53 needs an alias record for a custom domain; every other registrar (GoDaddy, Namecheap, Cloudflare) needs a plain CNAME instead — the DNS record type genuinely differs by provider",
+      visuals: [],
+      content: `## ⚠️ Why Custom Domains Exist
+
+> **API Gateway's default invoke URL is a long, AWS-generated string — not something a real production API would expose to users.** ⚠️ **Custom domains let an API use a real, branded domain instead** (e.g. api.company.com) — better for branding, easier to remember, and considered a best practice for production-ready APIs.
+
+---
+
+## Public vs Private Custom Domains
+
+> **Public**: the domain is accessible over the public internet — used with regional or edge-optimized API endpoints. ⚠️ **A public domain MUST be a genuinely registered domain name.** **Private**: resolves only within a local/internal DNS context — ⚠️ **used specifically with private REST API endpoints, and does NOT require domain registration at all**, since it's never resolved publicly.
+
+---
+
+## ⚠️ DNS Record Type Depends on the Registrar
+
+> **If the domain is registered with Route 53 (AWS's own DNS service), an ALIAS record must be created** pointing to the API Gateway custom domain. ⚠️ **If the domain is registered with an external registrar (GoDaddy, Namecheap, Cloudflare, etc.), a CNAME record is used instead** — ⚠️ **this is a genuine, real difference, not interchangeable terminology: Route 53 → alias record; any external registrar → CNAME record.**
+
+---
+
+## Endpoint Type: Regional vs Edge-Optimized (For the Custom Domain Itself)
+
+> **The custom domain's own endpoint type choice directly mirrors the REST API's underlying endpoint type** (from the earlier endpoint-types topic) — regional or edge-optimized. ⚠️ **Choosing regional exposes an mTLS (mutual TLS) configuration option; choosing edge-optimized makes mTLS disappear entirely** — because with edge-optimized, CloudFront sits in front and handles that layer itself, so API Gateway's own mTLS setting becomes irrelevant.
+
+**IP address type**: IPv4-only (supports REST, HTTP, and WebSocket for a public domain) or dual-stack (IPv4 + IPv6, supported across all domain types).
+
+---
+
+## Exam Framing
+
+> "A custom domain is being set up for an API registered with GoDaddy, not Route 53" → **create a CNAME record** — Route 53 specifically requires an ALIAS record instead; the two are not interchangeable, and the correct record type depends entirely on which registrar hosts the domain. "A REST API needs to be reachable only within an internal network, never the public internet, with a custom domain name" → **a private custom domain** — no domain registration required, resolved only through local DNS, paired with a private REST API endpoint.
+`,
+    },
+    {
+      id: "api-gateway-custom-domain-mtls-acm-certificate",
+      title: "API Gateway Custom Domain (Part 2) – mTLS Only on Custom Domains, and ACM Certificate Region Rules",
+      shortDesc: "A regional endpoint's certificate must be issued in that SAME region — but an edge-optimized endpoint's certificate must ALWAYS come from us-east-1, regardless of where the API itself actually lives",
+      visuals: [],
+      content: `## ⚠️ Mutual TLS (mTLS): Custom-Domain-Only, and What It Actually Adds
+
+> **mTLS is NOT available on the default invoke URL at all — it only becomes an option once a custom domain is configured.** ⚠️ **Default invoke URL behavior: only the SERVER's certificate is checked — the client (requester) needs no certificate of its own** — this is ordinary HTTPS, not mutual authentication; anyone with the URL can attempt to connect. ⚠️ **With mTLS enabled on a custom domain: BOTH the server's certificate AND the client's certificate are checked — only a client presenting a genuinely valid certificate can access the API at all.** This is a meaningfully higher security bar, reserved for high-security requirements.
+
+**Security policy and endpoint access mode** (basic/strict) can both be configured SEPARATELY for the custom domain, distinct from whatever was set for the default invoke URL — directly matching the earlier TLS security policy topic's "default invoke URL vs custom domain get separate policies" rule.
+
+---
+
+## ⚠️ ACM Certificate: Mandatory, and Region-Dependent
+
+> **API Gateway only supports HTTPS for custom domains — TLS encryption is enforced by default, and the certificate MUST be issued by AWS Certificate Manager (ACM).** ⚠️ **API Gateway does NOT support importing a certificate directly from an external Certificate Authority** — it must come from ACM specifically. ⚠️ **The certificate's domain name must match the custom domain exactly** (e.g. api.company.com needs a certificate for api.company.com, or a wildcard certificate like *.company.com).
+
+**⚠️ The critical regional rule, genuinely easy to get wrong**:
+- **Regional endpoint**: the ACM certificate must be issued in the SAME AWS region as the API Gateway itself.
+- **⚠️ Edge-optimized endpoint**: the ACM certificate MUST be issued in us-east-1 (N. Virginia) — REGARDLESS of which region the actual API lives in.** ⚠️ **This is because edge-optimized endpoints are fronted by CloudFront, and CloudFront specifically requires its certificates to come from us-east-1, no exceptions.**
+
+---
+
+## Exam Framing
+
+> "A REST API needs the strongest possible client-identity verification, beyond standard HTTPS" → **mTLS, configured on a custom domain** — the default invoke URL never supports mTLS at all; only a custom domain unlocks it, checking both server AND client certificates. "An edge-optimized API's custom domain needs an ACM certificate, but the API itself is hosted in ap-south-1" → **the certificate must still be issued in us-east-1, regardless of the API's actual region** — this is specifically because edge-optimized endpoints route through CloudFront, which mandates us-east-1 certificates. A regional endpoint's certificate, by contrast, must match the API's own region exactly.
+`,
+    },
+    {
       id: "api-gateway-canary-deployment",
       title: "API Gateway Canary Deployment – REST API Only, and It Works With Lambda ALIASES, Never Versions",
       shortDesc: "Canary routes a small percentage of live traffic to a new Lambda alias while most users stay on the stable one — but this entire mechanism is unavailable on HTTP or WebSocket API, REST API only",
