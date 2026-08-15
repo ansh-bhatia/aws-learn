@@ -6,6 +6,52 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-resource-policy",
+      title: "API Gateway Resource Policy – The First Gate a Request Passes Through, and Why It's Not Authentication",
+      shortDesc: "An API key alone can never restrict WHERE a request comes from — resource policy is the layer that finally can, and it's evaluated before WAF, before the usage plan, before any authorizer",
+      visuals: [],
+      content: `## What Resource Policy Actually Controls
+
+> **A resource policy controls WHO is allowed to reach an API Gateway at all, and specifically FROM WHERE — a capability API keys structurally cannot provide** (per the earlier API key topic: keys never restrict location). ⚠️ **Resource policy operates at the API Gateway level, evaluated BEFORE the request ever reaches Lambda or any backend service.**
+
+**Concrete controls it enables**: allow/deny specific IP addresses (e.g. only an office's IP range), restrict access to a specific VPC, or restrict access to a specific AWS account (or all accounts within an organization).
+
+---
+
+## ⚠️ The Real Evaluation Order of All Security Layers
+
+> **When a client sends a request, it passes through the security layers in this exact sequence: Resource Policy FIRST → then WAF → then the usage plan (API key/throttling/quota) → then the authorizer (IAM/Cognito/Lambda).** ⚠️ **If resource policy denies the request, it is rejected immediately — none of the later layers (WAF, usage plan, authorizer) are ever even evaluated.** ⚠️ **Resource policy sits at the very top of the entire security stack.**
+
+---
+
+## ⚠️ Resource Policy Is NOT Authentication
+
+> **A common misunderstanding worth explicitly correcting: resource policy does NOT identify a user, and it is NOT a form of authentication.** ⚠️ **It controls FROM WHOM (which IP, VPC, or AWS account) a request can originate — never WHO the specific individual caller is.** Authentication (username/password, tokens, identity) is a fundamentally different concern, handled by the authorizer layer instead.
+
+**Structure**: written in JSON, following the same policy-document format as IAM policies, S3 bucket policies, and KMS key policies — a familiar pattern if those have already been worked with.
+
+---
+
+## ⚠️ Building the API's ARN for the Policy
+
+> **The resource policy references the API's own ARN, which must be manually constructed — it's not directly visible anywhere in the console as a copyable field.** ⚠️ **Format: the fixed prefix "arn:aws:execute-api:" + region (e.g. ap-south-1) + account ID + the API's own ID** — all three variable segments must be filled in correctly for the policy to reference the right API.
+
+---
+
+## ⚠️ Worked Test: IP-Restricted Policy → 403 → Removing It → Success Again
+
+> **Setting a resource policy allowing access only from one specific (deliberately mismatched) IP, then deploying the API**, causes subsequent requests from the actual testing machine to fail with: ⚠️ **"User: anonymous is not authorized" — 403 Forbidden.** ⚠️ **This is the SAME 403 code seen earlier for a missing API key — but here the underlying cause is completely different (IP mismatch at the resource-policy layer, evaluated before the API key was ever even checked).** Removing the policy and redeploying restores normal access.
+
+**⚠️ Mandatory step reinforced again**: any resource policy change requires redeploying the API to the stage before it takes effect — the same pattern already established for method-level changes.
+
+---
+
+## Exam Framing
+
+> "An API needs to be reachable only from a company's specific office IP range, regardless of whether callers have a valid API key" → **resource policy** — this is the ONLY layer that can restrict access by origin (IP/VPC/account); API keys cannot do this at all. "A request is rejected with a 403 error, but the API key being sent is definitely valid" → **check the resource policy** — a 403 can originate from either a missing/invalid API key OR a resource-policy denial (e.g. wrong source IP), and resource policy is evaluated FIRST, before the API key/usage plan layer is ever reached.
+`,
+    },
+    {
       id: "api-gateway-api-key-usage-plan-lab-403-429",
       title: "API Keys and Usage Plans Lab – Two Exam-Critical Error Codes: 403 vs 429",
       shortDesc: "A missing key gets a 403; a valid key that's simply used too much gets a 429 — same overall goal of blocking the request, completely different reason, completely different code",
