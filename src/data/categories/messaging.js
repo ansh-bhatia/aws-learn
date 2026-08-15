@@ -6,6 +6,48 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "websocket-api",
+      title: "WebSocket API – The Connection That Never Closes After One Exchange",
+      shortDesc: "Three exam keywords give it away instantly: two-way communication, real-time data, long-lived connection — and caching isn't just unsupported, it structurally makes no sense for live data",
+      visuals: [],
+      content: `## ⚠️ The One Structural Difference From REST/HTTP API
+
+> **REST API and HTTP API both follow the same pattern: one request → one response → connection CLOSED.** ⚠️ **WebSocket API keeps the connection OPEN — messages can flow in EITHER direction, at ANY time, without a new connection being established for each exchange.** ⚠️ **This single structural difference — real-time, two-way, persistent connection — is what makes WebSocket fundamentally different from REST/HTTP API, not just a feature variation of the same model.**
+
+---
+
+## ⚠️ The Three Exam Keywords
+
+> **Two-way communication, real-time data, long-lived connection — if a question contains any of these three phrases, WebSocket API is almost certainly the answer.**
+
+**Concrete use cases**: live chat, live notifications, live dashboards, collaboration tools (Zoom, shared whiteboards, Google Docs-style live editing), real-time location tracking (e.g. delivery tracking in Swiggy/Zomato-style apps). ⚠️ **The unifying thread: anywhere "live" genuinely belongs in the description, WebSocket API is the fit.**
+
+---
+
+## Feature Support Summary
+
+| Feature | Supported? |
+|---|---|
+| Two-way communication | ✅ Yes (its core purpose) |
+| Real-time data / long-lived connection | ✅ Yes |
+| Lambda integration | ✅ Yes |
+| ALB integration | ❌ No |
+| JWT authentication | ✅ Yes |
+| Cognito authentication | ✅ Yes |
+| API keys | ❌ No — API-keys-specific to REST API only |
+| WAF | ❌ No |
+| ⚠️ Caching | ❌ **No — and not even a meaningful gap, since caching doesn't apply to real-time, constantly-changing live data in the first place** |
+| Mapping templates | ✅ Basic support |
+| Routing | ✅ Yes |
+
+---
+
+## Exam Framing
+
+> "An application needs live, bidirectional updates — e.g. a chat feature or a real-time delivery-tracking map — without repeatedly opening new HTTP connections for each update" → **WebSocket API** — the only API Gateway type built for a persistent, two-way connection rather than the request-response-close pattern REST/HTTP API both use. "Why doesn't WebSocket API support response caching, unlike REST API?" → **caching structurally doesn't fit real-time data** — the whole point of a WebSocket connection is delivering fresh, live updates continuously, which a cached response would directly contradict.
+`,
+    },
+    {
       id: "rest-api-vs-http-api-part2",
       title: "REST API vs HTTP API (Part 2) – The Real Decision Maker: Request/Response Transformation",
       shortDesc: "HTTP API is fast precisely because it never touches the request — REST API's ability to modify, validate, and reshape data before it reaches the backend is what actually decides which type to pick",
