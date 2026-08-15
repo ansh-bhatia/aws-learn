@@ -6,6 +6,70 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-custom-domain-routing-modes-api-mapping-vs-rules",
+      title: "Custom Domain Routing Modes (Part 1) – API Mapping Only vs Routing Rules Only",
+      shortDesc: "API mapping only ever looks at the URL path — routing rules can additionally check an HTTP header, but that extra power comes at the cost of REST-API-only support",
+      visuals: [],
+      content: `## ⚠️ What Routing Mode Decides
+
+> **When a request hits a custom domain, routing mode decides WHICH underlying API (and stage) actually handles it** — genuinely important with many APIs (or many stages of the same API) sitting behind one shared custom domain. ⚠️ **Three routing modes exist: API Mapping Only, Routing Rules Only, and Routing Rules then API Mapping** (a hybrid, covered separately).
+
+---
+
+## API Mapping Only: Simple, Path-Based Routing
+
+> **Maps a URL path directly to a specific API + stage — no conditions, no rules, just a direct path-to-API lookup.** ⚠️ **Supported by REST API, HTTP API, AND WebSocket API — all three types.**
+
+**Worked example**: the SAME "user REST API" is deployed to two stages, dev and prod. ⚠️ **api.company.com/user (path = "user") maps to the dev stage; api.company.com/prod (path = "prod") maps to the same API's prod stage.** ⚠️ **The mapping configuration itself is only accessible AFTER the custom domain already exists** — clicking directly into the domain reveals the mapping options, rather than being available at domain-creation time.
+
+---
+
+## ⚠️ Routing Rules Only: Conditional Routing With Path AND Header
+
+> **Routing rules provide genuine CONDITIONAL routing — unlike API mapping's simple path-only lookup, routing rules can evaluate BOTH the URL path AND an HTTP header together.** ⚠️ **Routing rules are RECOMMENDED for REST API specifically because they allow finer control** — ⚠️ **and routing rules support ONLY REST API, not HTTP API or WebSocket API.**
+
+**Worked example**: a request to /user carrying header x-env: dev routes to the REST API's dev stage; the SAME path /user carrying header x-env: prod instead routes to the prod stage — ⚠️ **the routing decision now depends on path AND header together, something API Mapping Only structurally cannot express.**
+
+---
+
+## ⚠️ Priority: Resolving Conflicts Between Overlapping Rules
+
+> **Multiple routing rules CAN match the same incoming request simultaneously — priority is what determines which rule actually wins.** ⚠️ **Lower priority NUMBER = HIGHER priority — rule "10" is evaluated before rule "20".**
+
+**⚠️ The critical, easy-to-miss nuance: a rule with NO header condition specified still MATCHES requests that DO carry a header** — "no header condition" means "don't care whether a header is present or not," NOT "only match requests with no header at all." ⚠️ **This is exactly what creates conflicts**: a specific rule (path=users AND header=dev) and a general rule (path=users, no header condition) can BOTH legitimately match the same request carrying a dev header.
+
+**⚠️ Worked conflict scenario**: incoming request has path=/user and header x-env:dev. Rule 1 (specific: path=users AND header=dev, priority 10) matches. Rule 2 (general: path=users, no header condition, priority 20) ALSO matches. ⚠️ **Because rule 1 has the LOWER priority number, it wins** — the more specific rule is deliberately given priority over the general catch-all. ⚠️ **If the SAME request arrives with NO header at all, rule 1 (which requires a specific header value) simply cannot match at all — rule 2 (the general one) is used automatically, with no priority conflict to resolve**, since only one rule is even eligible.
+
+---
+
+## Exam Framing
+
+> "A custom domain needs to route requests to different API stages based on BOTH the URL path and a custom HTTP header" → **Routing Rules Only — API Mapping Only can evaluate the path alone, never a header; routing rules are also REST-API-exclusive, unlike API Mapping's support for REST/HTTP/WebSocket.** "Two routing rules both technically match the same incoming request — how is the conflict resolved?" → **the rule with the LOWER priority NUMBER wins (lower number = higher priority)** — remembering that a rule with no header condition specified still matches requests that DO carry headers, which is exactly the scenario that creates this kind of overlap in the first place.
+`,
+    },
+    {
+      id: "api-gateway-custom-domain-hybrid-routing-mode",
+      title: "Custom Domain Routing Modes (Part 2) – The Hybrid Mode That Lets You Add Rules Without Breaking Existing Mappings",
+      shortDesc: "Rules are checked first; only when nothing matches does it fall back to the existing path-based mapping — meaning an already-working API mapping setup never has to be torn down to introduce conditional routing",
+      visuals: [],
+      content: `## The Third Mode: Routing Rules THEN API Mapping
+
+> **A hybrid mode combining both prior approaches: API Gateway checks the configured ROUTING RULES first — if none match, it falls back to the existing API MAPPING configuration.** ⚠️ **Evaluation order: rules first, mapping as the fallback — never the reverse.**
+
+---
+
+## ⚠️ Why This Mode Exists: Adding Conditions Without Breaking What Already Works
+
+> **The real-world scenario this solves**: an API domain already has 10 existing APIs configured entirely through API Mapping Only — a working, stable setup. ⚠️ **Business now wants conditional routing for a handful of NEW APIs, without disturbing the existing 10 mappings at all.** ⚠️ **Switching to "Routing Rules Only" would force ALL 15 APIs (old and new) onto rule-based routing, breaking the simple setup that already worked fine.** ⚠️ **The hybrid mode solves this precisely: existing mappings keep working exactly as before, and new conditional rules can be layered on top incrementally, without disrupting anything already in production.**
+
+---
+
+## Exam Framing
+
+> "An existing custom domain already routes 10 APIs successfully via simple path-based API mapping — a new requirement needs conditional (header-based) routing for a few new APIs, without touching the existing 10" → **switch the routing mode to "Routing Rules then API Mapping"** — routing rules are checked first (covering the new conditional requirements), and anything not matched by a rule automatically falls through to the pre-existing API mapping configuration, leaving it fully intact. This hybrid mode exists specifically to let conditional routing be introduced incrementally, without a disruptive full migration off API Mapping Only.
+`,
+    },
+    {
       id: "api-gateway-custom-domain-public-private-dns",
       title: "API Gateway Custom Domain (Part 1) – Public vs Private, and Route 53 Alias vs External CNAME",
       shortDesc: "Route 53 needs an alias record for a custom domain; every other registrar (GoDaddy, Namecheap, Cloudflare) needs a plain CNAME instead — the DNS record type genuinely differs by provider",
