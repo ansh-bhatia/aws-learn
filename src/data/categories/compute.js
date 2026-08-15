@@ -4114,6 +4114,52 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "ecs-task-role-vs-task-execution-role",
+      title: "ECS Project Step 5 (Part 6) – Task Role vs Task Execution Role: Two IAM Roles, Two Different Users",
+      shortDesc: "Task role is permission FOR the application code inside the container; task execution role is permission for the ECS agent to even get the task running in the first place",
+      visuals: [],
+      content: `## ⚠️ The Core Distinction: Who Actually Uses the Permission
+
+> **Both are IAM roles attached to a task definition, but they're used by two completely different actors**: ⚠️ **task role is used by the APPLICATION CODE running inside the container; task execution role is used by the ECS AGENT** (running on the container host, managing the task's lifecycle) — not the application at all.
+
+---
+
+## Task Role: Permission for the App's Own AWS Calls
+
+> **Purpose: gives the application code inside the container permission to access AWS services at runtime.** Concrete example: the demo PHP application uploads a file to an S3 bucket — ⚠️ **without a task role granting S3 permissions, the application itself cannot store that file in S3, regardless of any other configuration being correct.**
+
+**When it's used**: during actual runtime, whenever the containerized app makes an AWS API call — e.g. the moment a user clicks "upload" and the app calls S3's PutObject.
+
+**Typical permissions granted**: S3 GetObject/PutObject, DynamoDB read/write, SQS SendMessage, Secrets Manager GetSecretValue — i.e. whatever AWS services the *application's own logic* actually calls.
+
+**Credential mechanism**: ⚠️ **temporary credentials injected directly INSIDE the container**, available to the application code itself.
+
+---
+
+## Task Execution Role: Permission for ECS to Even Start the Task
+
+> **Purpose: gives the ECS agent permission to pull the container image, push logs, and fetch secrets during task STARTUP** — ⚠️ **entirely before the application's own code ever runs.** Concrete example: the task's image lives in a private ECR repository — the ECS agent needs its own permission to authenticate to ECR and pull that image; the application itself has no role in this step at all.
+
+**Typical permissions granted**: ECR GetAuthorizationToken + image pull, CloudWatch Logs (for streaming container logs), and Secrets Manager (if secrets are injected as environment variables) — i.e. infrastructure-level operations needed to get the task running and observable, not application logic.
+
+**Credential mechanism**: ⚠️ **temporary credentials used by the ECS agent OUTSIDE the container** — the application code never sees or uses these credentials directly.
+
+---
+
+## ⚠️ Task Execution Role Is Conditional — Task Role Usually Isn't
+
+> **If the application doesn't call any AWS service at all** (e.g. a simple static webpage with zero AWS integration), **the task role can be set to "none" entirely** — there's nothing for it to grant permission to.
+
+> **If the container image is pulled from a PUBLIC Docker Hub repository (not a private ECR repo) and the task doesn't need CloudWatch logs or secrets, the task execution role can also be skipped** — anyone can pull a public image with no authentication required, so there's nothing for the agent to need permission for. ⚠️ **For this project specifically, the image is stored in private ECR, so a task execution role is required.**
+
+---
+
+## Exam Framing
+
+> "A containerized application successfully starts, pulls its image, and logs to CloudWatch — but fails specifically when trying to write to an S3 bucket" → **the task role is missing S3 permissions** (the agent already succeeded at startup, meaning the execution role was fine — this is an application-runtime permission gap). "A task fails to even launch because ECS can't pull the image from a private ECR repository" → **the task execution role is missing ECR permissions** — this happens before the application ever runs, so it's never a task-role problem. Remember the clean split: **task role = the app's own AWS calls; task execution role = ECS's infrastructure operations to get the task running.**
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
