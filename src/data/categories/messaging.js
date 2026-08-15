@@ -6,6 +6,28 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "rest-api-lab-part4-testing-and-keep-resources",
+      title: "REST API Lab – Part 4: Testing Complete, and Why Nothing Gets Deleted This Time",
+      shortDesc: "Unlike the HTTP API lab where the gateway got deleted afterward, this REST API stays alive — the upcoming API key and usage plan labs are built directly on top of it",
+      visuals: [],
+      content: `## Testing Follows the Same Postman Pattern as the HTTP API Lab
+
+> **The verification process mirrors the earlier HTTP API lab exactly**: POST to add a record (verified via DynamoDB refresh, response "user created successfully"), GET with a specific user ID to fetch it (record returned correctly), DELETE to remove it (verified via DynamoDB refresh showing the record gone). ⚠️ **The one structural difference: the invoke URL now includes the STAGE name** (e.g. .../dev/user) — a direct consequence of REST API's mandatory stage-deployment step from the earlier topic, which HTTP API's automatic default stage never required naming explicitly in the URL construction the same way.
+
+---
+
+## ⚠️ Critical Instruction: Do NOT Delete Anything This Time
+
+> **Unlike the earlier HTTP API lab (where the API Gateway itself was deliberately deleted afterward, keeping only DynamoDB and Lambda), THIS REST API, its DynamoDB table, and its Lambda functions must ALL be kept.** ⚠️ **Upcoming labs — specifically API keys and usage plans — are built directly on top of THIS SAME REST API**, not a freshly created one. ⚠️ **None of these resources incur cost while idle** (Lambda bills only on invocation; an empty DynamoDB table has negligible RCU/WCU cost) — so keeping everything running between lab sessions is genuinely free.
+
+---
+
+## Exam Framing
+
+> This lecture is primarily lab verification — the one concrete, non-repeated detail worth remembering is the ⚠️ **REST API invoke URL structure explicitly includes the stage name as part of the path** (base URL + stage + resource path, e.g. .../dev/user/101) — directly following from the mandatory stage-deployment requirement established in the previous lab part. Practically: whenever a REST API's resources are correctly configured but requests seem to fail, double-check the invoke URL actually includes the correct stage segment.
+`,
+    },
+    {
       id: "rest-api-lab-part3-methods-and-stage-deployment",
       title: "REST API Lab – Part 3: No Invoke URL Exists Until You Deploy to a Stage — Manually",
       shortDesc: "HTTP API silently gives you a default stage for free; REST API forces you to create one explicitly and deploy to it before an invoke URL exists at all",
