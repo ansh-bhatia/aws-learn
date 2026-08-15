@@ -5500,6 +5500,42 @@ The same pattern with Python's **emoji** library (used to render text codes like
 `,
     },
     {
+      id: "eks-architecture-networking-lb-security-monitoring",
+      title: "Kubernetes Architecture (Part 2) – Networking, Load Balancing, Security/IAM, and Monitoring: On-Premises vs EKS",
+      shortDesc: "The VPC CNI plugin gives every pod a real VPC IP address, which is what lets security groups and NACLs work on pods the same way they already work on any other AWS resource",
+      visuals: [],
+      content: `## Networking: Two Fundamental Requirements
+
+> **Kubernetes networking exists to solve two problems**: (1) how pods running on DIFFERENT worker nodes communicate with each other, and (2) how the outside world reaches an application running inside a pod. ⚠️ **On-premises, both require manually designing networking rules, and genuinely complex setup involving physical switches or virtual network configuration** to make pods reachable across nodes.
+
+**⚠️ EKS solves this with the VPC CNI plugin** — ⚠️ **each pod gets a real IP address directly from the VPC itself**, working natively with security groups and NACLs, exactly like any other AWS resource would. This is conceptually the same relationship as ECS's awsvpc networking mode giving each task its own ENI — ⚠️ **VPC CNI is effectively EKS's equivalent of that same "dedicated VPC-native networking per unit" pattern.**
+
+---
+
+## Load Balancing: Manual Ingress Controllers vs Automatic ALB/NLB Creation
+
+> **On-premises**: ingress controllers must be installed and load balancing configured manually. **EKS**: ⚠️ **creating a Kubernetes "LoadBalancer" service type automatically provisions a real AWS load balancer (ALB or NLB) and hands back a public endpoint — no manual load balancer setup at all.**
+
+---
+
+## Security and IAM: Manual RBAC/TLS vs Native IAM Integration
+
+> **On-premises**: role-based access control, TLS certificates, and an identity provider must all be set up and maintained manually to control cluster/pod access. **EKS**: ⚠️ **IAM integrates directly, including IAM Roles for Service Accounts (IRSA) — letting a POD itself assume an IAM role.** Concrete example: an application running in a pod needs to write to S3 — assigning that pod an IAM role via IRSA grants exactly that permission, the same conceptual mechanism as an ECS task role. ⚠️ **KMS integrates for encryption at rest, out of the box** — no separate encryption infrastructure to stand up.
+
+---
+
+## Monitoring and Logging: Third-Party Tools vs Built-In AWS Integration
+
+> **On-premises**: monitoring and logging typically require third-party tooling (e.g. Grafana) to be installed and integrated manually. **EKS**: ⚠️ **built-in integration with CloudWatch Logs, Container Insights, and X-Ray** — cluster health monitoring and application/system event logging available natively, without adding any separate tool to the stack.
+
+---
+
+## Exam Framing
+
+> "How does a pod running in EKS get a real, VPC-native IP address that works natively with security groups?" → **the VPC CNI plugin** — each pod receives an actual IP from the VPC's address space, unlike a typical on-premises Kubernetes networking setup requiring manual, complex cross-node networking configuration. "How can a pod in EKS be granted permission to access another AWS service like S3, without embedding credentials in the application?" → **IAM Roles for Service Accounts (IRSA)** — the same underlying pattern as an ECS task role, just adapted to Kubernetes' pod/service-account model. Across all four areas covered here (networking, load balancing, IAM, monitoring), the consistent theme is: **EKS replaces manual on-premises setup with native, built-in AWS service integration** — this is the concrete substance behind "less operational overhead" as an EKS selling point.
+`,
+    },
+    {
       id: "eks",
       title: "EKS – Elastic Kubernetes Service",
       shortDesc: "Managed Kubernetes on AWS",
