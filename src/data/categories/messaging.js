@@ -6,6 +6,38 @@ export default {
   color: "#FF4F8B",
   topics: [
     {
+      id: "api-gateway-lab-part4-postman-testing-and-cleanup",
+      title: "API Gateway Lab – Part 4: Testing From Outside AWS With Postman, and What to Delete (and Not Delete) Afterward",
+      shortDesc: "Postman stands in for a real frontend entirely — the earlier Lambda console tests only proved the backend logic worked, this is the first time the request genuinely originates from OUTSIDE AWS",
+      visuals: [],
+      content: `## ⚠️ Postman Replaces the Need to Build a Real Frontend
+
+> **Postman is a free tool for sending HTTP requests manually, without writing any actual frontend application code.** ⚠️ **This step is meaningfully different from the earlier Lambda console testing (Part 2)** — those tests proved the Lambda logic worked correctly in isolation, but the request still originated from INSIDE the AWS console. ⚠️ **Testing via Postman means the request genuinely comes from outside AWS entirely** — proving the full public-facing chain (Postman → API Gateway's invoke URL → Lambda → DynamoDB) actually works end to end, exactly as a real mobile or web app would experience it.
+
+---
+
+## Testing All Three Routes
+
+> **Every test uses the API's "invoke URL"** (found on the API Gateway console) as the base, with the specific route path and HTTP method set in Postman.
+
+1. **Create (POST /user)**: Postman method = POST, URL = invoke URL + /user, body = JSON payload with the new user's data → send → response confirms "user created successfully" → ⚠️ **verified independently by refreshing the DynamoDB table and seeing the new record actually appear.**
+2. **Get (GET /user/{userId})**: Postman method = GET, URL includes the specific user ID in the path → send → the exact record (email, name, etc.) is returned in the response.
+3. **Delete (DELETE /user/{userId})**: same URL pattern as GET, method changed to DELETE → send → confirms deletion → ⚠️ **verified two ways: refreshing DynamoDB shows the record is gone, AND re-sending the same GET request now returns "user not found"** — proving the delete genuinely took effect, not just that the delete call itself succeeded.
+
+---
+
+## ⚠️ Cleanup: What Gets Deleted vs What Stays
+
+> **Only the API Gateway itself gets deleted after this lab** — ⚠️ **the DynamoDB table and all three Lambda functions are deliberately KEPT**, because the upcoming follow-up lab reuses them, swapping ONLY the API Gateway from HTTP API to REST API to directly compare the two hands-on. ⚠️ **Keeping the Lambda functions and DynamoDB table costs nothing extra**: Lambda only bills when actually triggered, and an empty DynamoDB table (no records) incurs no meaningful RCU/WCU charges — so leaving them in place between labs is genuinely free.
+
+---
+
+## Exam Framing
+
+> "Why test an API through a tool like Postman rather than only testing the underlying Lambda functions directly from the Lambda console?" → **Postman genuinely originates the request from OUTSIDE AWS, proving the full public-facing chain (API Gateway's invoke URL → routing → Lambda → DynamoDB) actually works — Lambda-console testing only verifies the backend logic in isolation, not the complete integration.** "A lab is about to be repeated with a different API Gateway type (REST instead of HTTP) — what should be deleted between the two lab runs?" → **only the API Gateway itself — the underlying Lambda functions and DynamoDB table should be kept and reused**, since they cost nothing when idle and swapping just the gateway type is the entire point of the comparison exercise.
+`,
+    },
+    {
       id: "api-gateway-lab-part3-http-api-routes",
       title: "API Gateway Lab – Part 3: One HTTP API, Three Routes, Each Mapped to Its Own Lambda Function",
       shortDesc: "Lambda has no public HTTP endpoint at all — it literally cannot be invoked from outside AWS without something in front of it, which is the whole reason API Gateway exists in this flow",
