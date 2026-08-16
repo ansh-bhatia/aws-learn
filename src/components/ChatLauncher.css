@@ -1,0 +1,28 @@
+.chat-launcher-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--grad);
+  color: #14100a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(255, 153, 0, 0.35);
+  transition: transform 0.18s var(--ease);
+  text-decoration: none;
+}
+
+.chat-launcher-fab:hover {
+  transform: scale(1.06);
+}
+
+@media (max-width: 480px) {
+  .chat-launcher-fab {
+    right: 16px;
+    bottom: 16px;
+  }
+}

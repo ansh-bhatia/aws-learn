@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import ContentArea from "./components/ContentArea";
-import ChatBot from "./components/ChatBot";
+import ChatLauncher from "./components/ChatLauncher";
 import "./App.css";
 
 const isMobile = () => typeof window !== "undefined" && window.innerWidth <= 820;
@@ -110,7 +110,7 @@ export default function App() {
         <ContentArea selectedId={selectedId} onSelect={handleSelect} />
       </main>
 
-      <ChatBot />
+      <ChatLauncher />
     </div>
   );
 }
