@@ -41,7 +41,13 @@ export default async function handler(req) {
     },
     body: JSON.stringify({
       model: "claude-sonnet-5",
-      max_tokens: 1536,
+      // Sonnet 5 runs adaptive thinking by default, and thinking tokens count
+      // against max_tokens — a multi-search answer can burn 3-4k tokens on
+      // thinking alone before writing any visible text. Keep effort at medium
+      // (this is a doc-lookup chatbot, not a hard reasoning task) and give the
+      // budget enough headroom that thinking never crowds out the answer.
+      max_tokens: 4096,
+      output_config: { effort: "medium" },
       system: SYSTEM_PROMPT,
       messages: trimmed,
       stream: true,

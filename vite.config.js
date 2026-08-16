@@ -4,6 +4,13 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  server: {
+    // api/chat.js runs on the local dev-api-server (see scripts/dev-api-server.mjs)
+    // since vite dev can't execute Vercel edge functions directly.
+    proxy: {
+      '/api': 'http://localhost:8787',
+    },
+  },
   build: {
     // Split heavy/rarely-changing deps into their own chunk for better caching
     rollupOptions: {
