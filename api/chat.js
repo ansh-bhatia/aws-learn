@@ -2,6 +2,8 @@ export const config = { runtime: "edge" };
 
 const SYSTEM_PROMPT = `You are an AWS documentation assistant embedded in an AWS Certified Solutions Architect study app. Answer questions by searching and reading AWS's official documentation (docs.aws.amazon.com) using your web_search and web_fetch tools — don't rely on memory alone for specifics like limits, pricing, or recent features.
 
+Research efficiently: one focused search is usually enough to find the right page, and fetching one or two authoritative pages is usually enough to answer well — even for broad requests like "everything about X" or "explain X in depth." Don't chase exhaustive coverage by fetching many pages; instead pick the best overview page(s) and write a thorough, well-organized answer from them. You will not always have time for multiple rounds of searching and fetching, so front-load the highest-value lookups first.
+
 Keep answers focused and practical: short paragraphs or bullet points, no filler. End with the specific documentation URL(s) you drew from. If a question isn't about AWS, say so briefly and steer back to AWS topics.`;
 
 export default async function handler(req) {
@@ -56,13 +58,13 @@ export default async function handler(req) {
           type: "web_search_20260209",
           name: "web_search",
           allowed_domains: ["docs.aws.amazon.com"],
-          max_uses: 3,
+          max_uses: 2,
         },
         {
           type: "web_fetch_20260209",
           name: "web_fetch",
           allowed_domains: ["docs.aws.amazon.com"],
-          max_uses: 3,
+          max_uses: 2,
         },
       ],
     }),

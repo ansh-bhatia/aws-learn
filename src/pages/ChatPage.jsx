@@ -14,7 +14,7 @@ const TOOL_LABELS = {
   web_fetch: "Reading AWS documentation…",
 };
 
-const REQUEST_TIMEOUT_MS = 100000;
+const REQUEST_TIMEOUT_MS = 130000;
 
 export default function ChatPage() {
   const { conversations, create, remove, setMessages } = useConversations();
@@ -149,13 +149,23 @@ export default function ChatPage() {
       }
     } catch (err) {
       const timedOut = err.name === "AbortError";
-      setError(
-        timedOut
-          ? "This is taking longer than expected. Try a shorter or more specific question."
-          : err.message || "Something went wrong."
-      );
-      // keep the user's message visible even though the assistant reply failed
-      setMessages(convId, [...priorMessages, { role: "user", content: text }]);
+      if (acc) {
+        // Keep whatever was already streamed rather than throwing it away —
+        // a partial, well-sourced answer is more useful than nothing.
+        updateLast({
+          content: acc + "\n\n*(Response cut off — this was taking longer than expected.)*",
+          status: undefined,
+        });
+        fetchSuggestions([...nextMessages, { role: "assistant", content: acc }]);
+      } else {
+        setError(
+          timedOut
+            ? "This is taking longer than expected. Try a shorter or more specific question."
+            : err.message || "Something went wrong."
+        );
+        // keep the user's message visible even though the assistant reply failed
+        setMessages(convId, [...priorMessages, { role: "user", content: text }]);
+      }
     } finally {
       clearTimeout(timeout);
       setLoading(false);
