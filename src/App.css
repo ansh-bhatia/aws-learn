@@ -815,7 +815,12 @@ button:focus-visible,
   .app-shell { grid-template-columns: 1fr; }
   .app-shell.sidebar-collapsed { grid-template-columns: 1fr; }
 
-  .sidebar {
+  /* .app-shell prefix beats the later unconditional ".sidebar { position:
+     relative }" rule (added for the scroll-reactive background) that would
+     otherwise win on source order alone despite equal specificity, leaving
+     the sidebar as a real grid item and pushing .main-content into a second
+     row below the viewport on mobile. */
+  .app-shell .sidebar {
     position: fixed;
     top: 0;
     left: 0;
