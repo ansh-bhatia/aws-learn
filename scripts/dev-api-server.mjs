@@ -47,7 +47,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`[dev-api] listening on http://localhost:${PORT} (${Object.keys(routes).join(", ")})`);
-  if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn("[dev-api] WARNING: ANTHROPIC_API_KEY is not set — requests will fail.");
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("[dev-api] WARNING: OPENAI_API_KEY is not set — requests will fail.");
   }
 });

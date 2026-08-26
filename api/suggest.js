@@ -7,7 +7,7 @@ export default async function handler(req) {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return new Response(JSON.stringify({ questions: [] }), {
       status: 200,
@@ -35,30 +35,28 @@ export default async function handler(req) {
     .map((m) => ({ role: m.role, content: m.content }));
 
   try {
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5",
+        model: "gpt-4o-mini",
         max_tokens: 200,
-        system: SYSTEM_PROMPT,
-        messages: trimmed,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...trimmed],
       }),
     });
 
-    if (!anthropicRes.ok) {
+    if (!openaiRes.ok) {
       return new Response(JSON.stringify({ questions: [] }), {
         status: 200,
         headers: { "content-type": "application/json" },
       });
     }
 
-    const data = await anthropicRes.json();
-    const text = data.content?.find((b) => b.type === "text")?.text || "";
+    const data = await openaiRes.json();
+    const text = data.choices?.[0]?.message?.content || "";
     const questions = text
       .split("\n")
       .map((line) => line.replace(/^[-*\d.)\s]+/, "").trim())
