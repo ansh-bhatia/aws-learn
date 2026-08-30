@@ -250,7 +250,6 @@
   border-radius: var(--radius);
   font-size: 14.5px;
   line-height: 1.6;
-  white-space: pre-wrap;
   word-break: break-word;
 }
 
@@ -265,6 +264,11 @@
   background: var(--grad);
   color: #14100a;
   font-weight: 500;
+  /* User text is plain, so keep the newlines they typed. Assistant messages
+     must NOT inherit this — they're rendered HTML, and pre-wrap would turn
+     the whitespace between tags into real line breaks (bullet on one line,
+     its text on the next) and blow out the spacing between list items. */
+  white-space: pre-wrap;
 }
 
 .chatpage-msg-pending {
@@ -358,6 +362,19 @@
   padding-left: 22px;
 }
 .chatpage-markdown li {
+  margin: 4px 0;
+  padding-left: 2px;
+}
+/* Markdown wraps loose-list item content in <p>; its default margin would
+   stack with the <li> margin and make lists look double-spaced. */
+.chatpage-markdown li > p {
+  margin: 0;
+}
+.chatpage-markdown li > p + p {
+  margin-top: 6px;
+}
+.chatpage-markdown li > ul,
+.chatpage-markdown li > ol {
   margin: 4px 0;
 }
 .chatpage-markdown a {
