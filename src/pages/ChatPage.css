@@ -289,35 +289,240 @@
   background: none;
   padding: 0;
 }
+/* Wide comparison tables scroll themselves rather than stretching the
+   message column or squishing text on mobile. */
+.md-table-wrap {
+  overflow-x: auto;
+  margin: 12px 0;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  -webkit-overflow-scrolling: touch;
+}
 .chatpage-markdown table {
   border-collapse: collapse;
-  margin: 10px 0;
   font-size: 13px;
   width: 100%;
+  min-width: max-content;
 }
 .chatpage-markdown th,
 .chatpage-markdown td {
-  border: 1px solid var(--border2);
-  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 9px 12px;
   text-align: left;
+  vertical-align: top;
+}
+.chatpage-markdown th:last-child,
+.chatpage-markdown td:last-child {
+  border-right: none;
+}
+.chatpage-markdown tbody tr:last-child td {
+  border-bottom: none;
 }
 .chatpage-markdown th {
-  background: rgba(255, 255, 255, 0.05);
+  position: sticky;
+  top: 0;
+  background: var(--surface3);
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 1;
+}
+.chatpage-markdown tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.025);
 }
 .chatpage-markdown strong {
   font-weight: 600;
   color: var(--text);
 }
+/* AWS docs lean on Note/Important/Warning callouts — mirror that language. */
 .chatpage-markdown blockquote {
   border-left: 3px solid var(--aws-orange);
-  padding-left: 12px;
-  margin: 8px 0;
+  background: rgba(255, 153, 0, 0.06);
+  padding: 10px 14px;
+  margin: 12px 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   color: var(--text-muted);
+}
+.chatpage-markdown blockquote p {
+  margin: 4px 0;
+}
+.chatpage-markdown blockquote strong:first-child {
+  color: var(--aws-orange-2);
 }
 .chatpage-markdown hr {
   border: none;
   border-top: 1px solid var(--border);
   margin: 14px 0;
+}
+
+/* ── Code blocks: copy button + syntax highlighting ──── */
+.md-codeblock {
+  position: relative;
+  margin: 12px 0;
+}
+.md-codeblock pre {
+  margin: 0;
+}
+.md-copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  font-size: 11.5px;
+  font-family: var(--font-sans);
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.md-codeblock:hover .md-copy-btn,
+.md-copy-btn:focus-visible {
+  opacity: 1;
+}
+.md-copy-btn:hover {
+  color: var(--text);
+  border-color: var(--aws-orange);
+}
+/* Touch devices have no hover — keep it permanently visible there. */
+@media (hover: none) {
+  .md-copy-btn {
+    opacity: 1;
+  }
+}
+
+/* highlight.js token colours, tuned to the app's dark palette instead of
+   pulling in a full third-party theme stylesheet. */
+.chatpage-markdown .hljs-comment,
+.chatpage-markdown .hljs-quote {
+  color: #6e7784;
+  font-style: italic;
+}
+.chatpage-markdown .hljs-keyword,
+.chatpage-markdown .hljs-selector-tag,
+.chatpage-markdown .hljs-literal,
+.chatpage-markdown .hljs-section,
+.chatpage-markdown .hljs-doctag,
+.chatpage-markdown .hljs-type,
+.chatpage-markdown .hljs-name,
+.chatpage-markdown .hljs-strong {
+  color: #ff9cc4;
+}
+.chatpage-markdown .hljs-string,
+.chatpage-markdown .hljs-title,
+.chatpage-markdown .hljs-attr,
+.chatpage-markdown .hljs-attribute,
+.chatpage-markdown .hljs-symbol,
+.chatpage-markdown .hljs-bullet,
+.chatpage-markdown .hljs-addition {
+  color: #a5e075;
+}
+.chatpage-markdown .hljs-number,
+.chatpage-markdown .hljs-variable,
+.chatpage-markdown .hljs-template-variable,
+.chatpage-markdown .hljs-selector-attr,
+.chatpage-markdown .hljs-selector-pseudo,
+.chatpage-markdown .hljs-meta {
+  color: #ffb454;
+}
+.chatpage-markdown .hljs-built_in,
+.chatpage-markdown .hljs-function,
+.chatpage-markdown .hljs-class,
+.chatpage-markdown .hljs-params {
+  color: #7cc7ff;
+}
+.chatpage-markdown .hljs-deletion {
+  color: #ff7a7a;
+}
+.chatpage-markdown .hljs-emphasis {
+  font-style: italic;
+}
+
+/* ── Sources strip ───────────────────────────────────── */
+.sources-strip {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  animation: sources-fade-in 0.28s var(--ease);
+}
+@keyframes sources-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.sources-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+.sources-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 6px 11px 6px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  text-decoration: none;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.source-chip:hover {
+  border-color: var(--aws-orange);
+  color: var(--text);
+  background: var(--surface3);
+}
+.source-num {
+  flex-shrink: 0;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 153, 0, 0.15);
+  color: var(--aws-orange-2);
+  font-size: 10.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.source-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.source-chip.external {
+  border-style: dashed;
+}
+.source-external {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  font-size: 10.5px;
+  color: var(--aws-orange-2);
+  border-left: 1px solid var(--border2);
+  padding-left: 7px;
 }
 
 /* ── Suggestions ─────────────────────────────────────── */

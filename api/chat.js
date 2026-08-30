@@ -15,7 +15,8 @@ Structure every answer like a polished technical document, not a raw dump:
 - When comparing 3 or more things that each have 2 or more attributes (e.g. S3 storage classes, EC2 instance families, load balancer types), use a Markdown table instead of a prose list.
 - Bold a key term or service name the first time it's introduced — not on every repeat mention.
 - Keep paragraphs to 2-4 sentences. For steps or enumerations, use a bullet or numbered list instead of run-on prose.
-- Cite each source at most once per answer, in a single "Sources:" line at the end. Never repeat a citation link inline in prose, and never inside table cells or bullet points — a table or list with the same link pasted into every row is a formatting failure, not thoroughness. If you must reference where a specific fact came from mid-answer, use a plain bracketed number like [1] that matches its entry in Sources, not a full link.
+- Do NOT write a "Sources:" list or bibliography at the end. The app renders the source pages you used as a separate visual strip below your answer, so a written list is duplicate clutter. Just write the answer and stop.
+- Never paste citation URLs into prose, table cells, or bullet points. A table with the same link repeated in every row is a formatting failure, not thoroughness.
 - Never emit raw HTML tags (no <ul>, <li>, <br>, <div>, etc.) anywhere, including inside table cells — if a table cell needs multiple items, separate them with commas or semicolons in plain text instead.
 - Synthesize what you find into your own clean prose. Never paste raw scraped fragments from a doc page verbatim — no stray navigation text, no "Was this page helpful?", no broken table remnants, no leftover HTML artifacts. If the source page is messy, extract the substance and write it yourself.
 
@@ -23,11 +24,11 @@ Structure every answer like a polished technical document, not a raw dump:
 
 These illustrate the expected shape — not literal content to reuse.
 
-**Narrow conceptual question** ("What is S3 Versioning?") → 1-2 short paragraphs, no headers needed, one bolded term on first mention, ending with a Sources line.
+**Narrow conceptual question** ("What is S3 Versioning?") → 1-2 short paragraphs, no headers needed, one bolded term on first mention. No sources list.
 
-**Comparison question** ("What's the difference between SQS standard and FIFO queues?") → one framing sentence, then a Markdown table (columns for the relevant attributes: ordering, throughput, dedup, use case), then a short closing paragraph on when to pick which, then Sources.
+**Comparison question** ("What's the difference between SQS standard and FIFO queues?") → one framing sentence, then a Markdown table (columns for the relevant attributes: ordering, throughput, dedup, use case), then a short closing paragraph on when to pick which. No sources list.
 
-**How-to / hands-on question** ("How do I enable versioning on an S3 bucket via the CLI?") → a "## Steps" (or similar) header, a numbered list of steps, the actual command in a fenced \`\`\`bash block (never inline), a one-line note on anything non-obvious (e.g. propagation delay), then Sources.
+**How-to / hands-on question** ("How do I enable versioning on an S3 bucket via the CLI?") → a "## Steps" (or similar) header, a numbered list of steps, the actual command in a fenced \`\`\`bash block (never inline), a one-line note on anything non-obvious (e.g. propagation delay). No sources list.
 
 If a question isn't about AWS, say so briefly and steer back to AWS topics.`;
 
@@ -95,10 +96,55 @@ export default async function handler(req) {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
 
+  // The web_search tool appends its own tracking param to every cited URL.
+  // Strip it so dedup works and the displayed link is the real doc page.
+  const cleanUrl = (raw) => {
+    try {
+      const u = new URL(raw);
+      u.searchParams.delete("utm_source");
+      return u.toString();
+    } catch {
+      return raw;
+    }
+  };
+
+  // The tool also injects markdown citation links — "([docs.aws.amazon.com](url))"
+  // — directly into the prose, including inside table cells, which looks like
+  // link spam. We render sources as their own strip instead, so strip these
+  // from the text. Because a citation can span several deltas, hold back any
+  // trailing fragment that might still grow into one.
+  const CITATION_RE = /\s*\(\[[^\]]*\]\([^)]*\)\)/g;
+  const splitSafe = (buf) => {
+    const i = buf.lastIndexOf("(");
+    if (i === -1) return [buf, ""];
+    const rest = buf.slice(i);
+    // Only hold if this could still become a citation: "(" alone, or "(["
+    // that hasn't closed yet. Ordinary prose parens are emitted immediately.
+    const couldBeCitation =
+      rest === "(" || (rest[1] === "[" && !rest.includes("))"));
+    if (couldBeCitation && rest.length < 500) return [buf.slice(0, i), rest];
+    return [buf, ""];
+  };
+
   const stream = new ReadableStream({
     async start(controller) {
       let buffer = "";
+      let textHold = "";
+      const seenUrls = new Set();
       const emit = (obj) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+
+      const emitText = (chunk, flush = false) => {
+        textHold += chunk;
+        textHold = textHold.replace(CITATION_RE, "");
+        let out;
+        if (flush) {
+          out = textHold;
+          textHold = "";
+        } else {
+          [out, textHold] = splitSafe(textHold);
+        }
+        if (out) emit({ t: "text", v: out });
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -113,7 +159,32 @@ export default async function handler(req) {
           try {
             const evt = JSON.parse(data);
             if (evt.type === "response.output_text.delta") {
-              emit({ t: "text", v: evt.delta });
+              emitText(evt.delta);
+            } else if (evt.type === "response.output_text.annotation.added") {
+              const ann = evt.annotation;
+              if (ann?.type === "url_citation" && ann.url) {
+                const url = cleanUrl(ann.url);
+                if (!seenUrls.has(url)) {
+                  seenUrls.add(url);
+                  let domain = "";
+                  try {
+                    domain = new URL(url).hostname;
+                  } catch {
+                    /* leave blank if unparseable */
+                  }
+                  emit({
+                    t: "source",
+                    v: {
+                      url,
+                      domain,
+                      title: ann.title || domain || url,
+                      // Domain scoping is prompt-only, so a non-AWS-docs page
+                      // can slip through. Flag it rather than hide it.
+                      external: !domain.endsWith("docs.aws.amazon.com"),
+                    },
+                  });
+                }
+              }
             } else if (evt.type === "response.web_search_call.in_progress") {
               emit({ t: "tool", v: "web_search" });
             } else if (
@@ -122,13 +193,17 @@ export default async function handler(req) {
             ) {
               emit({ t: "tool_done" });
             } else if (evt.type === "error" || evt.type === "response.failed") {
-              emit({ t: "text", v: `\n\n*(Error: ${evt.message || evt.error?.message || "request failed"})*` });
+              emitText(
+                `\n\n*(Error: ${evt.message || evt.error?.message || "request failed"})*`,
+                true
+              );
             }
           } catch {
             // ignore malformed/partial SSE lines
           }
         }
       }
+      emitText("", true); // flush any held-back tail
       controller.close();
     },
   });

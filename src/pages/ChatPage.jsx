@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ArrowLeft, MessageSquarePlus, Send, Trash2, Loader2 } from "lucide-react";
 import useConversations from "../hooks/useConversations";
+import MarkdownMessage from "../components/MarkdownMessage";
+import SourceList from "../components/SourceList";
 import "./ChatPage.css";
 
 const WELCOME =
@@ -99,6 +99,7 @@ export default function ChatPage() {
     };
 
     let acc = "";
+    const sources = [];
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -132,6 +133,9 @@ export default function ChatPage() {
           if (evt.t === "text") {
             acc += evt.v;
             updateLast({ content: acc, status: undefined });
+          } else if (evt.t === "source") {
+            sources.push(evt.v);
+            updateLast({ sources: [...sources] });
           } else if (evt.t === "tool") {
             updateLast({ status: TOOL_LABELS[evt.v] || "Searching AWS docs…" });
           } else if (evt.t === "tool_done") {
@@ -267,9 +271,10 @@ export default function ChatPage() {
             return (
               <div key={i} className={`chatpage-msg chatpage-msg-${m.role}`}>
                 {m.role === "assistant" ? (
-                  <div className="chatpage-markdown">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.content}</ReactMarkdown>
-                  </div>
+                  <>
+                    <MarkdownMessage content={m.content} />
+                    {m.sources?.length > 0 && <SourceList sources={m.sources} />}
+                  </>
                 ) : (
                   m.content
                 )}
