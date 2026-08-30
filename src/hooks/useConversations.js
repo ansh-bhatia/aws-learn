@@ -21,11 +21,13 @@ function saveAll(conversations) {
   }
 }
 
+// Immediate placeholder so the sidebar never sits on "New chat" while the
+// generated title is in flight. Replaced by /api/title when that returns.
 function titleFromMessages(messages) {
   const firstUser = messages.find((m) => m.role === "user");
   if (!firstUser) return "New chat";
   const text = firstUser.content.trim();
-  return text.length > 48 ? text.slice(0, 48) + "…" : text;
+  return text.length > 42 ? text.slice(0, 42) + "…" : text;
 }
 
 export default function useConversations() {
@@ -57,5 +59,13 @@ export default function useConversations() {
     );
   }, []);
 
-  return { conversations, create, remove, setMessages };
+  // Set once from /api/title; `titled` stops a later turn from overwriting it.
+  const rename = useCallback((id, title) => {
+    if (!title) return;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, title, titled: true } : c))
+    );
+  }, []);
+
+  return { conversations, create, remove, setMessages, rename };
 }

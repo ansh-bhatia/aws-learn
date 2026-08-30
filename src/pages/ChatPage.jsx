@@ -27,8 +27,37 @@ const STATUS_WRITING = "Writing answer…";
 
 const REQUEST_TIMEOUT_MS = 130000;
 
+// Below this the list is short enough to scan; headers would be noise.
+const GROUPING_THRESHOLD = 10;
+
+// Buckets by calendar day, not elapsed hours — something from 11pm last night
+// belongs in "Yesterday", not "Today", regardless of how recent it is.
+function groupByRecency(conversations) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const dayMs = 86400000;
+  const startOfYesterday = startOfToday.getTime() - dayMs;
+  const startOfWeek = startOfToday.getTime() - 7 * dayMs;
+
+  const buckets = [
+    { label: "Today", items: [] },
+    { label: "Yesterday", items: [] },
+    { label: "Previous 7 days", items: [] },
+    { label: "Older", items: [] },
+  ];
+
+  for (const c of conversations) {
+    const t = c.updatedAt ?? c.createdAt ?? 0;
+    if (t >= startOfToday.getTime()) buckets[0].items.push(c);
+    else if (t >= startOfYesterday) buckets[1].items.push(c);
+    else if (t >= startOfWeek) buckets[2].items.push(c);
+    else buckets[3].items.push(c);
+  }
+  return buckets.filter((b) => b.items.length > 0);
+}
+
 export default function ChatPage() {
-  const { conversations, create, remove, setMessages } = useConversations();
+  const { conversations, create, remove, setMessages, rename } = useConversations();
   const [activeId, setActiveId] = useState(null);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -81,6 +110,25 @@ export default function ChatPage() {
     const id = create();
     setActiveId(id);
     setSuggestions([]);
+  };
+
+  // Replace the truncated first-message placeholder with a real title, once,
+  // after the opening exchange. Silent on failure — the placeholder stands.
+  const maybeGenerateTitle = async (convId, finalMessages) => {
+    const conv = conversations.find((c) => c.id === convId);
+    if (conv?.titled || finalMessages.length > 2) return;
+    try {
+      const res = await fetch("/api/title", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ messages: finalMessages }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.title) rename(convId, data.title);
+    } catch {
+      /* keep the placeholder */
+    }
   };
 
   const fetchSuggestions = async (finalMessages) => {
@@ -185,7 +233,9 @@ export default function ChatPage() {
           status: undefined,
         });
       } else {
-        fetchSuggestions([...turns, { role: "assistant", content: acc }]);
+        const full = [...turns, { role: "assistant", content: acc }];
+        fetchSuggestions(full);
+        maybeGenerateTitle(convId, full);
       }
     } catch (err) {
       const aborted = err.name === "AbortError";
@@ -286,6 +336,38 @@ export default function ChatPage() {
     }
   };
 
+  const grouped = conversations.length > GROUPING_THRESHOLD;
+
+  const renderHistoryItem = (c) => (
+    <div
+      key={c.id}
+      className={`chatpage-history-item ${c.id === activeId ? "active" : ""}`}
+      onClick={() => setActiveId(c.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setActiveId(c.id);
+        }
+      }}
+    >
+      <span className="chatpage-history-title">{c.title}</span>
+      <button
+        className="chatpage-history-delete"
+        onClick={(e) => {
+          e.stopPropagation();
+          remove(c.id);
+          if (c.id === activeId) setActiveId(null);
+        }}
+        aria-label="Delete conversation"
+        title="Delete conversation"
+      >
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+
   return (
     <div className="chatpage-shell">
       <aside className="chatpage-sidebar">
@@ -303,35 +385,14 @@ export default function ChatPage() {
           {conversations.length === 0 && (
             <div className="chatpage-history-empty">No conversations yet</div>
           )}
-          {conversations.map((c) => (
-            <div
-              key={c.id}
-              className={`chatpage-history-item ${c.id === activeId ? "active" : ""}`}
-              onClick={() => setActiveId(c.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setActiveId(c.id);
-                }
-              }}
-            >
-              <span className="chatpage-history-title">{c.title}</span>
-              <button
-                className="chatpage-history-delete"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  remove(c.id);
-                  if (c.id === activeId) setActiveId(null);
-                }}
-                aria-label="Delete conversation"
-                title="Delete conversation"
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))}
+          {grouped
+            ? groupByRecency(conversations).map((group) => (
+                <div key={group.label} className="chatpage-history-group">
+                  <div className="chatpage-history-group-label">{group.label}</div>
+                  {group.items.map(renderHistoryItem)}
+                </div>
+              ))
+            : conversations.map(renderHistoryItem)}
         </div>
       </aside>
 

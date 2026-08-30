@@ -4,12 +4,14 @@
 import http from "node:http";
 import chatHandler from "../api/chat.js";
 import suggestHandler from "../api/suggest.js";
+import titleHandler from "../api/title.js";
 
 const PORT = 8787;
 
 const routes = {
   "/api/chat": chatHandler,
   "/api/suggest": suggestHandler,
+  "/api/title": titleHandler,
 };
 
 const server = http.createServer(async (req, res) => {
