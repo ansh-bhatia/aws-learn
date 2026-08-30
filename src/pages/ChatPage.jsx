@@ -8,7 +8,15 @@ import SourceList from "../components/SourceList";
 import "./ChatPage.css";
 
 const WELCOME =
-  "Hi! Ask me anything about AWS — I'll search AWS's official documentation to answer.";
+  "Ask anything about AWS — answers are drawn from the official documentation.";
+
+// Exam-relevant openers, so a blank page isn't the first thing you meet.
+const STARTER_QUESTIONS = [
+  "What's the difference between S3 storage classes?",
+  "When should I use an ALB vs an NLB?",
+  "Explain VPC subnets, route tables, and gateways",
+  "SQS vs SNS vs EventBridge — which do I pick?",
+];
 
 // Stages the request passes through, so the wait shows real progress instead
 // of one static caption. "Thinking" rather than "Searching" up front because
@@ -184,11 +192,14 @@ export default function ChatPage() {
       const stoppedByUser = aborted && stoppedRef.current;
       if (acc) {
         // Keep whatever was already streamed rather than throwing it away —
-        // a partial, well-sourced answer is more useful than nothing.
-        const note = stoppedByUser
-          ? "\n\n*(Stopped.)*"
-          : "\n\n*(Response cut off — this was taking longer than expected.)*";
-        updateLast({ content: acc + note, status: undefined });
+        // a partial, well-sourced answer is more useful than nothing. Record
+        // *why* it ended as state, not as text appended to the answer, so the
+        // UI can offer Continue/Retry instead of a dead parenthetical.
+        updateLast({
+          content: acc,
+          status: undefined,
+          truncated: stoppedByUser ? "stopped" : "timeout",
+        });
         fetchSuggestions([...turns, { role: "assistant", content: acc }]);
       } else if (stoppedByUser) {
         // Nothing had streamed yet — drop the empty assistant bubble.
@@ -232,6 +243,16 @@ export default function ChatPage() {
     const lastUserAt = messages.map((m) => m.role).lastIndexOf("user");
     if (lastUserAt === -1) return;
     await runCompletion(activeId, messages.slice(0, lastUserAt + 1));
+  };
+
+  // Pick up a cut-off answer. The nudge is sent as a real user turn rather
+  // than hidden plumbing, so the transcript explains why the model resumed.
+  const continueAnswer = async () => {
+    if (loading || !activeId) return;
+    await runCompletion(activeId, [
+      ...messages.map((m) => ({ ...m, truncated: undefined })),
+      { role: "user", content: "Continue from where you left off." },
+    ]);
   };
 
   const setFeedback = (msgIndex, value) => {
@@ -323,7 +344,15 @@ export default function ChatPage() {
         <div className="chatpage-messages" ref={listRef}>
           {messages.length === 0 && (
             <div className="chatpage-welcome">
-              <p>{WELCOME}</p>
+              <h2 className="chatpage-welcome-title">AWS Assistant</h2>
+              <p className="chatpage-welcome-sub">{WELCOME}</p>
+              <div className="chatpage-starters">
+                {STARTER_QUESTIONS.map((q) => (
+                  <button key={q} className="chatpage-starter" onClick={() => send(q)}>
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           {messages.map((m, i) => {
@@ -347,6 +376,21 @@ export default function ChatPage() {
                   <>
                     <MarkdownMessage content={m.content} />
                     {m.sources?.length > 0 && <SourceList sources={m.sources} />}
+                    {m.truncated && !loading && (
+                      <div className="chatpage-truncated">
+                        <span className="chatpage-truncated-text">
+                          {m.truncated === "stopped"
+                            ? "You stopped this response."
+                            : "Response was cut off — it was taking longer than expected."}
+                        </span>
+                        <button className="chatpage-inline-btn" onClick={continueAnswer}>
+                          Continue
+                        </button>
+                        <button className="chatpage-inline-btn" onClick={regenerate}>
+                          Retry
+                        </button>
+                      </div>
+                    )}
                     {/* Actions only once the answer is settled — mid-stream
                         copy or regenerate would act on partial text. */}
                     {!loading && m.content && (
@@ -375,15 +419,25 @@ export default function ChatPage() {
               </div>
             );
           })}
-          {error && <div className="chatpage-error">{error}</div>}
+          {error && (
+            <div className="chatpage-error">
+              <span>{error}</span>
+              <button className="chatpage-inline-btn" onClick={regenerate}>
+                Retry
+              </button>
+            </div>
+          )}
 
           {!loading && suggestions.length > 0 && (
             <div className="chatpage-suggestions">
-              {suggestions.map((q, i) => (
-                <button key={i} className="chatpage-suggestion-chip" onClick={() => send(q)}>
-                  {q}
-                </button>
-              ))}
+              <div className="chatpage-suggestions-label">Suggested follow-ups</div>
+              <div className="chatpage-suggestions-row">
+                {suggestions.map((q, i) => (
+                  <button key={i} className="chatpage-suggestion-chip" onClick={() => send(q)}>
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

@@ -150,11 +150,86 @@
   margin: 0 auto;
 }
 
+/* ── Empty state ─────────────────────────────────────── */
 .chatpage-welcome {
-  color: var(--text-muted);
-  font-size: 15px;
-  padding: 40px 0;
+  padding: 56px 0 24px;
   text-align: center;
+}
+.chatpage-welcome-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  background: var(--grad-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.chatpage-welcome-sub {
+  color: var(--text-muted);
+  font-size: 14.5px;
+  margin-bottom: 26px;
+}
+.chatpage-starters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+.chatpage-starter {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 13.5px;
+  text-align: left;
+  line-height: 1.45;
+  transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.15s var(--ease);
+}
+.chatpage-starter:hover {
+  border-color: var(--aws-orange);
+  color: var(--text);
+  background: var(--surface3);
+  transform: translateY(-1px);
+}
+@media (max-width: 640px) {
+  .chatpage-starters {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Cut-off / stopped notice ────────────────────────── */
+.chatpage-truncated {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+.chatpage-truncated-text {
+  flex: 1;
+  min-width: 180px;
+}
+.chatpage-inline-btn {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.chatpage-inline-btn:hover {
+  color: var(--text);
+  border-color: var(--aws-orange);
+  background: var(--surface3);
 }
 
 .chatpage-msg {
@@ -230,9 +305,16 @@
 
 .chatpage-error {
   align-self: center;
-  color: #ff7a7a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 122, 122, 0.35);
+  background: rgba(255, 122, 122, 0.08);
+  color: #ff9c9c;
   font-size: 13px;
-  text-align: center;
 }
 
 /* ── Markdown rendering ──────────────────────────────── */
@@ -609,10 +691,21 @@
 
 /* ── Suggestions ─────────────────────────────────────── */
 .chatpage-suggestions {
+  padding-top: 6px;
+  animation: sources-fade-in 0.28s var(--ease);
+}
+.chatpage-suggestions-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  font-family: var(--font-mono);
+  margin-bottom: 8px;
+}
+.chatpage-suggestions-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding-top: 4px;
 }
 .chatpage-suggestion-chip {
   padding: 8px 14px;
