@@ -23,25 +23,25 @@ export default function SourceList({ sources }) {
           // "source-undefined".
           const index = s.index ?? i + 1;
           return (
-          <a
-            key={s.url}
-            // Inline [n] markers in the answer link here by this id.
-            id={`source-${index}`}
-            className={`source-chip ${s.external ? "external" : ""}`}
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={s.title ? `${s.title}\n${s.url}` : s.url}
-          >
-            <span className="source-num">{index}</span>
-            {s.external ? <ExternalLink size={12} /> : <FileText size={12} />}
-            <span className="source-title">{shortTitle(s.title) || s.domain}</span>
-            {s.external && (
-              <span className="source-external" title="Not from docs.aws.amazon.com">
-                external
-              </span>
-            )}
-          </a>
+            <a
+              key={s.url}
+              // Inline [n] markers in the answer link here by this id.
+              id={`source-${index}`}
+              className={`source-chip ${s.external ? "external" : ""}`}
+              href={s.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={s.title ? `${s.title}\n${s.url}` : s.url}
+            >
+              <span className="source-num">{index}</span>
+              {s.external ? <ExternalLink size={12} /> : <FileText size={12} />}
+              <span className="source-title">{shortTitle(s.title) || s.domain}</span>
+              {s.external && (
+                <span className="source-external" title="Not from docs.aws.amazon.com">
+                  external
+                </span>
+              )}
+            </a>
           );
         })}
       </div>

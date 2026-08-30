@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, MessageSquarePlus, Send, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, MessageSquarePlus, Send, Square, Trash2, Loader2 } from "lucide-react";
 import useConversations from "../hooks/useConversations";
 import MarkdownMessage from "../components/MarkdownMessage";
 import SourceList from "../components/SourceList";
@@ -9,10 +9,12 @@ import "./ChatPage.css";
 const WELCOME =
   "Hi! Ask me anything about AWS — I'll search AWS's official documentation to answer.";
 
-const TOOL_LABELS = {
-  web_search: "Searching AWS docs…",
-  web_fetch: "Reading AWS documentation…",
-};
+// Stages the request passes through, so the wait shows real progress instead
+// of one static caption. "Thinking" rather than "Searching" up front because
+// the model doesn't always call the search tool.
+const STATUS_THINKING = "Thinking…";
+const STATUS_SEARCHING = "Searching AWS docs…";
+const STATUS_WRITING = "Writing answer…";
 
 const REQUEST_TIMEOUT_MS = 130000;
 
@@ -25,6 +27,12 @@ export default function ChatPage() {
   const [suggestions, setSuggestions] = useState([]);
   const listRef = useRef(null);
   const textareaRef = useRef(null);
+  const abortRef = useRef(null);
+  const stoppedRef = useRef(false);
+  // Only follow the stream while the user is already at the bottom — yanking
+  // them back down while they're reading earlier text is worse than a
+  // slightly stale viewport.
+  const followRef = useRef(true);
 
   const active = conversations.find((c) => c.id === activeId) || null;
   const messages = active?.messages || [];
@@ -36,9 +44,25 @@ export default function ChatPage() {
   }, [activeId, conversations]);
 
   useEffect(() => {
-    if (!listRef.current) return;
+    const el = listRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      followRef.current = distanceFromBottom < 80;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!listRef.current || !followRef.current) return;
     listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, activeId]);
+
+  // Switching conversations should always land at the newest message.
+  useEffect(() => {
+    followRef.current = true;
+  }, [activeId]);
 
   useEffect(() => {
     setSuggestions([]);
@@ -84,10 +108,16 @@ export default function ChatPage() {
 
     const priorMessages = convId === activeId ? messages : [];
     const nextMessages = [...priorMessages, { role: "user", content: text }];
-    setMessages(convId, [...nextMessages, { role: "assistant", content: "", status: "searching" }]);
+    setMessages(convId, [
+      ...nextMessages,
+      { role: "assistant", content: "", status: STATUS_THINKING },
+    ]);
     setLoading(true);
+    followRef.current = true; // a new question should scroll into view
 
     const controller = new AbortController();
+    abortRef.current = controller;
+    stoppedRef.current = false;
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     const updateLast = (patch) => {
@@ -143,9 +173,10 @@ export default function ChatPage() {
             sources.sort((a, b) => a.index - b.index);
             updateLast({ sources: [...sources] });
           } else if (evt.t === "tool") {
-            updateLast({ status: TOOL_LABELS[evt.v] || "Searching AWS docs…" });
+            updateLast({ status: STATUS_SEARCHING });
           } else if (evt.t === "tool_done") {
-            updateLast({ status: undefined });
+            // Search finished but no prose yet — the model is composing.
+            updateLast({ status: STATUS_WRITING });
           }
         }
       }
@@ -158,18 +189,22 @@ export default function ChatPage() {
         fetchSuggestions([...nextMessages, { role: "assistant", content: acc }]);
       }
     } catch (err) {
-      const timedOut = err.name === "AbortError";
+      const aborted = err.name === "AbortError";
+      const stoppedByUser = aborted && stoppedRef.current;
       if (acc) {
         // Keep whatever was already streamed rather than throwing it away —
         // a partial, well-sourced answer is more useful than nothing.
-        updateLast({
-          content: acc + "\n\n*(Response cut off — this was taking longer than expected.)*",
-          status: undefined,
-        });
+        const note = stoppedByUser
+          ? "\n\n*(Stopped.)*"
+          : "\n\n*(Response cut off — this was taking longer than expected.)*";
+        updateLast({ content: acc + note, status: undefined });
         fetchSuggestions([...nextMessages, { role: "assistant", content: acc }]);
+      } else if (stoppedByUser) {
+        // Nothing had streamed yet — drop the empty assistant bubble.
+        setMessages(convId, [...priorMessages, { role: "user", content: text }]);
       } else {
         setError(
-          timedOut
+          aborted
             ? "This is taking longer than expected. Try a shorter or more specific question."
             : err.message || "Something went wrong."
         );
@@ -178,8 +213,14 @@ export default function ChatPage() {
       }
     } finally {
       clearTimeout(timeout);
+      abortRef.current = null;
       setLoading(false);
     }
+  };
+
+  const stopGenerating = () => {
+    stoppedRef.current = true;
+    abortRef.current?.abort();
   };
 
   const onKeyDown = (e) => {
@@ -309,6 +350,15 @@ export default function ChatPage() {
             </div>
           )}
         </div>
+
+        {loading && (
+          <div className="chatpage-stop-row">
+            <button className="chatpage-stop" onClick={stopGenerating}>
+              <Square size={11} fill="currentColor" />
+              Stop generating
+            </button>
+          </div>
+        )}
 
         <div className="chatpage-input-row">
           <textarea

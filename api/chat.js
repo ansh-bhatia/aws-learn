@@ -208,12 +208,14 @@ export default async function handler(req) {
                 // (whose link text is just the bare domain) does not.
                 registerSource(ann.url, ann.title);
               }
-            } else if (evt.type === "response.web_search_call.in_progress") {
-              emit({ t: "tool", v: "web_search" });
             } else if (
-              evt.type === "response.web_search_call.completed" ||
+              evt.type === "response.web_search_call.in_progress" ||
+              // "searching" is a substate of the call still running, not the
+              // end of it — only "completed" means the search finished.
               evt.type === "response.web_search_call.searching"
             ) {
+              emit({ t: "tool", v: "web_search" });
+            } else if (evt.type === "response.web_search_call.completed") {
               emit({ t: "tool_done" });
             } else if (evt.type === "error" || evt.type === "response.failed") {
               emitText(
