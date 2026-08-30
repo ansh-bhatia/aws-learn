@@ -2,6 +2,8 @@
 // Vercel edge functions, so this runs the exact same handlers over plain
 // Node http, proxied from vite via server.proxy in vite.config.js.
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import chatHandler from "../api/chat.js";
 import suggestHandler from "../api/suggest.js";
 import titleHandler from "../api/title.js";
@@ -16,6 +18,26 @@ const routes = {
 
 const server = http.createServer(async (req, res) => {
   const pathname = req.url.split("?")[0];
+
+  // In production the handlers fetch the RAG index from the deployment's own
+  // origin. Locally that origin is this server, not Vite, so serve public/
+  // here too rather than making the handler care which environment it's in.
+  if (pathname.startsWith("/rag/")) {
+    const file = path.join(process.cwd(), "public", decodeURIComponent(pathname));
+    if (!file.startsWith(path.join(process.cwd(), "public"))) {
+      res.writeHead(400).end("bad path");
+      return;
+    }
+    if (!fs.existsSync(file)) {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "not built — run: npm run build:rag" }));
+      return;
+    }
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(fs.readFileSync(file));
+    return;
+  }
+
   const handler = routes[pathname];
   if (!handler) {
     res.writeHead(404, { "content-type": "application/json" });

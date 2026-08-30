@@ -694,6 +694,17 @@
 .source-chip.external {
   border-style: dashed;
 }
+/* Course notes are the user's own material — mark them as first-class rather
+   than letting them read as just another link. */
+.source-chip.topic {
+  border-color: rgba(255, 153, 0, 0.35);
+  background: rgba(255, 153, 0, 0.07);
+  color: var(--text);
+}
+.source-chip.topic:hover {
+  border-color: var(--aws-orange);
+  background: rgba(255, 153, 0, 0.14);
+}
 /* Flashed when its "[n]" marker in the answer is clicked. */
 .source-chip-flash {
   animation: source-flash 1.2s var(--ease);

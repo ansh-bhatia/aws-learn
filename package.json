@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node --env-file-if-exists=.env.local scripts/dev-api-server.mjs",
-    "build": "vite build",
+    "build:rag": "node scripts/build-rag-index.mjs",
+    "build": "node scripts/build-rag-index.mjs && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

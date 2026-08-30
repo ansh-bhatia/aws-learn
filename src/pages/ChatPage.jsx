@@ -22,8 +22,12 @@ const STARTER_QUESTIONS = [
 // of one static caption. "Thinking" rather than "Searching" up front because
 // the model doesn't always call the search tool.
 const STATUS_THINKING = "Thinking…";
-const STATUS_SEARCHING = "Searching AWS docs…";
 const STATUS_WRITING = "Writing answer…";
+const TOOL_STATUS = {
+  corpus: "Searching your course notes…",
+  web_search: "Searching AWS docs…",
+  synthesize: "Combining sources…",
+};
 
 const REQUEST_TIMEOUT_MS = 130000;
 
@@ -220,9 +224,9 @@ export default function ChatPage() {
             sources.sort((a, b) => a.index - b.index);
             updateLast({ sources: [...sources] });
           } else if (evt.t === "tool") {
-            updateLast({ status: STATUS_SEARCHING });
+            updateLast({ status: TOOL_STATUS[evt.v] || STATUS_THINKING });
           } else if (evt.t === "tool_done") {
-            // Search finished but no prose yet — the model is composing.
+            // Retrieval finished but no prose yet — the model is composing.
             updateLast({ status: STATUS_WRITING });
           }
         }

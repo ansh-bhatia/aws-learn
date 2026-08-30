@@ -1,36 +1,41 @@
+import { searchCorpus, fetchTopics } from "./_lib/corpus.js";
+
 export const config = { runtime: "edge" };
 
-const SYSTEM_PROMPT = `You are an AWS documentation assistant embedded in an AWS Certified Solutions Architect study app. Answer questions by searching AWS's official documentation using your web search tool — don't rely on memory alone for specifics like limits, pricing, or recent features.
+// Stage 1b — drafts an answer from live AWS documentation. Its job is factual
+// coverage, not presentation; the synthesizer handles voice and structure.
+const WEB_DRAFT_PROMPT = `You are researching an AWS question against the official AWS documentation (docs.aws.amazon.com) using your web search tool. Include "site:docs.aws.amazon.com" in your searches.
 
-Only cite and draw from pages under docs.aws.amazon.com — when you search, include "site:docs.aws.amazon.com" in the query (or otherwise scope it to that domain), and ignore any search results from other sites (blogs, forums, third-party tutorials, etc.).
+Write a dense, factual briefing for another assistant that will compose the final answer — not a polished reply to a user. Prioritise specifics that change with time or that people get wrong: exact limits, quotas, minimum durations, pricing mechanics, retrieval times, defaults, regional caveats, and recently changed behaviour. State facts plainly. Omit pleasantries, introductions, and closing summaries. If the docs don't cover something, say so rather than guessing.`;
 
-Research efficiently: one focused search is usually enough to find the right page. Even for broad requests like "everything about X" or "explain X in depth," pick the best page(s) and write a thorough, well-organized answer from them rather than chasing exhaustive coverage.
+// Stage 2 — the only model whose output the user sees.
+const SYNTH_PROMPT = `You are the AWS assistant inside an AWS Certified Solutions Architect Associate (SAA-C03) study app. You are given two research inputs and must produce the single best answer to the user's question.
 
-## Formatting rules
+Your inputs:
+1. COURSE NOTES — full lessons from the study course this app is built around. This is the user's own material: exam-focused, worked through in depth, and the vocabulary they already know. Treat it as the backbone of your answer.
+2. AWS DOCUMENTATION BRIEFING — findings from live AWS docs. Treat this as authoritative for anything factual and current: limits, quotas, pricing, defaults, retrieval times, newly released features.
 
-Structure every answer like a polished technical document, not a raw dump:
+How to combine them:
+- Lead with the course notes' explanation and framing, then enrich it with specifics from the documentation.
+- Where the documentation is more current or more precise than the notes, prefer the documentation and say so briefly (e.g. "the course notes say X; AWS docs now list Y").
+- If the two genuinely conflict on a fact, surface the conflict rather than silently picking one.
+- If one input is empty or irrelevant, answer from the other without mentioning the gap.
+- Never invent anything absent from both inputs. If neither covers part of the question, say what's missing.
 
-- Use ## and ### Markdown headers to break up any answer with more than one distinct part. A short answer to a narrow question doesn't need headers.
-- Put every multi-line AWS CLI command, IAM policy, CloudFormation/CDK/Terraform snippet, or config file in a fenced code block with the correct language tag (\`\`\`bash, \`\`\`json, \`\`\`yaml, \`\`\`hcl, \`\`\`python, etc.). Never inline a multi-line snippet as plain text or single-backtick code.
-- When comparing 3 or more things that each have 2 or more attributes (e.g. S3 storage classes, EC2 instance families, load balancer types), use a Markdown table instead of a prose list.
-- Bold a key term or service name the first time it's introduced — not on every repeat mention.
-- Keep paragraphs to 2-4 sentences. For steps or enumerations, use a bullet or numbered list instead of run-on prose.
-- Do NOT write a "Sources:" list or bibliography at the end. The app renders the source pages you used as a separate visual strip below your answer, so a written list is duplicate clutter. Just write the answer and stop.
-- Never paste citation URLs into prose, table cells, or bullet points. A table with the same link repeated in every row is a formatting failure, not thoroughness.
-- Never emit raw HTML tags (no <ul>, <li>, <br>, <div>, etc.) anywhere, including inside table cells — if a table cell needs multiple items, separate them with commas or semicolons in plain text instead.
-- Synthesize what you find into your own clean prose. Never paste raw scraped fragments from a doc page verbatim — no stray navigation text, no "Was this page helpful?", no broken table remnants, no leftover HTML artifacts. If the source page is messy, extract the substance and write it yourself.
+Write the complete answer, so the reader has no reason to go looking elsewhere:
+- Cover the direct question first, then the surrounding context that makes it usable: how it works, when to use it, the trade-offs, and the mistakes people make.
+- Include the concrete numbers — limits, durations, costs, defaults — wherever they apply.
+- Add an exam-relevant note when the topic has a common SAA-C03 trap or a keyword-to-answer mapping.
+- Long is fine when the topic warrants it. Padding is not: every section must add something. Don't restate the question, don't write a preamble, and don't close with a summary that repeats what you just said.
 
-## Formatting examples
+Formatting:
+- Use ## and ### headers for any answer with more than one part.
+- Put every multi-line CLI command, IAM policy, or config in a fenced code block with its language tag (\`\`\`bash, \`\`\`json, \`\`\`yaml).
+- Use a Markdown table when comparing 3+ things across 2+ attributes.
+- Bold a key term on first mention only. Keep paragraphs to 2-4 sentences.
+- Never emit raw HTML tags.
 
-These illustrate the expected shape — not literal content to reuse.
-
-**Narrow conceptual question** ("What is S3 Versioning?") → 1-2 short paragraphs, no headers needed, one bolded term on first mention. No sources list.
-
-**Comparison question** ("What's the difference between SQS standard and FIFO queues?") → one framing sentence, then a Markdown table (columns for the relevant attributes: ordering, throughput, dedup, use case), then a short closing paragraph on when to pick which. No sources list.
-
-**How-to / hands-on question** ("How do I enable versioning on an S3 bucket via the CLI?") → a "## Steps" (or similar) header, a numbered list of steps, the actual command in a fenced \`\`\`bash block (never inline), a one-line note on anything non-obvious (e.g. propagation delay). No sources list.
-
-If a question isn't about AWS, say so briefly and steer back to AWS topics.`;
+Citations: sources are numbered in the SOURCES list below. Cite with a bare bracketed number like [2] immediately after the claim it supports. Cite the course notes when the explanation comes from them and the documentation when a specific fact comes from there. Do not write a sources list at the end — the app renders one.`;
 
 export default async function handler(req) {
   if (req.method !== "POST") {
@@ -57,136 +62,221 @@ export default async function handler(req) {
     return new Response("messages array required", { status: 400 });
   }
 
-  // Bound cost/context: only forward role+content, only the last 20 turns
   const trimmed = messages.slice(-20).map((m) => ({ role: m.role, content: m.content }));
+  const lastUser = [...trimmed].reverse().find((m) => m.role === "user");
+  const question = lastUser?.content || "";
+  const origin = new URL(req.url).origin;
 
-  const openaiRes = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o",
-      instructions: SYSTEM_PROMPT,
-      input: trimmed,
-      max_output_tokens: 4096,
-      stream: true,
-      tools: [
-        {
-          type: "web_search_preview",
-          search_context_size: "medium",
-        },
-      ],
-    }),
-  });
-
-  if (!openaiRes.ok || !openaiRes.body) {
-    const errText = await openaiRes.text();
-    return new Response(JSON.stringify({ error: errText }), {
-      status: openaiRes.status,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
-  // Relay OpenAI's SSE stream as newline-delimited JSON events so the client
-  // can tell "generating text" apart from "the web search tool is running" —
-  // a search call can take several seconds with no text in between.
-  const reader = openaiRes.body.getReader();
-  const decoder = new TextDecoder();
   const encoder = new TextEncoder();
-
-  // The web_search tool appends its own tracking param to every cited URL.
-  // Strip it so dedup works and the displayed link is the real doc page.
-  const cleanUrl = (raw) => {
-    try {
-      const u = new URL(raw);
-      u.searchParams.delete("utm_source");
-      return u.toString();
-    } catch {
-      return raw;
-    }
-  };
-
-  // The tool also injects markdown citation links — "([docs.aws.amazon.com](url))"
-  // — directly into the prose, including inside table cells, which looks like
-  // link spam. Rather than deleting them (which would lose which claim came
-  // from which page), rewrite each into a numbered "[n]" link pointing at the
-  // matching chip in the sources strip. Because a citation can span several
-  // deltas, hold back any trailing fragment that might still grow into one.
-  const CITATION_RE = /\s*\(\[[^\]]*\]\((https?:\/\/[^)\s]*)\)\)/g;
-  const splitSafe = (buf) => {
-    const i = buf.lastIndexOf("(");
-    if (i === -1) return [buf, ""];
-    const rest = buf.slice(i);
-    // Only hold if this could still become a citation: "(" alone, or "(["
-    // that hasn't closed yet. Ordinary prose parens are emitted immediately.
-    const couldBeCitation =
-      rest === "(" || (rest[1] === "[" && !rest.includes("))"));
-    if (couldBeCitation && rest.length < 500) return [buf.slice(0, i), rest];
-    return [buf, ""];
-  };
 
   const stream = new ReadableStream({
     async start(controller) {
-      let buffer = "";
-      let textHold = "";
       const emit = (obj) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
 
-      // One registry shared by both paths: a URL can show up in an inline
-      // citation before its annotation event arrives, or the reverse. Whoever
-      // sees it first assigns the number, so the "[n]" in the prose and the
-      // chip in the strip always agree.
-      const sourceIndex = new Map(); // cleaned url -> { index, title }
-      const registerSource = (rawUrl, title) => {
-        const url = cleanUrl(rawUrl);
-        const existing = sourceIndex.get(url);
-        // The same page is cited repeatedly; only send an event when this
-        // actually adds something (a new source, or a real title replacing
-        // the domain placeholder).
-        if (existing && (!title || title === existing.title)) return existing.index;
+      // ── Stage 1: gather from both sources at once ──────────────────────
+      emit({ t: "tool", v: "corpus" });
 
-        const index = existing?.index ?? sourceIndex.size + 1;
-
-        let domain = "";
+      const corpusPromise = (async () => {
         try {
-          domain = new URL(url).hostname;
+          const hits = await searchCorpus(origin, question, 4);
+          if (!hits.length) return [];
+          return await fetchTopics(origin, hits);
         } catch {
-          /* leave blank if unparseable */
+          return []; // grounding is best-effort; never fail the request on it
         }
-        const resolvedTitle = title || domain || url;
-        sourceIndex.set(url, { index, title: resolvedTitle });
-        emit({
-          t: "source",
-          v: {
-            index,
-            url,
-            domain,
-            title: resolvedTitle,
-            // Domain scoping is prompt-only, so a non-AWS-docs page can slip
-            // through. Flag it rather than hide it.
-            external: !domain.endsWith("docs.aws.amazon.com"),
-          },
+      })();
+
+      const webPromise = (async () => {
+        try {
+          const res = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: {
+              "content-type": "application/json",
+              authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o",
+              instructions: WEB_DRAFT_PROMPT,
+              input: [{ role: "user", content: question }],
+              max_output_tokens: 2000,
+              tools: [{ type: "web_search_preview", search_context_size: "medium" }],
+            }),
+          });
+          if (!res.ok) return { text: "", sources: [] };
+          const data = await res.json();
+
+          let text = "";
+          const sources = [];
+          const seen = new Set();
+          for (const item of data.output || []) {
+            for (const part of item.content || []) {
+              if (part.type === "output_text") {
+                text += part.text || "";
+                for (const ann of part.annotations || []) {
+                  if (ann.type !== "url_citation" || !ann.url) continue;
+                  let url = ann.url;
+                  try {
+                    const u = new URL(url);
+                    u.searchParams.delete("utm_source");
+                    url = u.toString();
+                  } catch {
+                    /* keep raw */
+                  }
+                  if (seen.has(url)) continue;
+                  seen.add(url);
+                  let domain = "";
+                  try {
+                    domain = new URL(url).hostname;
+                  } catch {
+                    /* leave blank */
+                  }
+                  sources.push({ url, domain, title: ann.title || domain || url });
+                }
+              }
+            }
+          }
+          return { text, sources };
+        } catch {
+          return { text: "", sources: [] };
+        }
+      })();
+
+      emit({ t: "tool", v: "web_search" });
+      const [corpusDocs, web] = await Promise.all([corpusPromise, webPromise]);
+      emit({ t: "tool_done" });
+
+      // ── Build one numbered source list across both origins ─────────────
+      const sources = [];
+      corpusDocs.forEach((d) => {
+        sources.push({
+          index: sources.length + 1,
+          kind: "topic",
+          url: `/?topic=${encodeURIComponent(d.id)}`,
+          domain: "Course notes",
+          title: d.title,
+          external: false,
         });
-        return index;
+      });
+      web.sources.forEach((s) => {
+        sources.push({
+          index: sources.length + 1,
+          kind: "web",
+          url: s.url,
+          domain: s.domain,
+          title: s.title,
+          external: !s.domain.endsWith("docs.aws.amazon.com"),
+        });
+      });
+      for (const s of sources) emit({ t: "source", v: s });
+
+      if (!corpusDocs.length && !web.text) {
+        emit({
+          t: "text",
+          v: "I couldn't reach the study notes or AWS documentation for that just now. Please try again in a moment.",
+        });
+        controller.close();
+        return;
+      }
+
+      // ── Stage 2: synthesize ────────────────────────────────────────────
+      emit({ t: "tool", v: "synthesize" });
+
+      const corpusBlock = corpusDocs.length
+        ? corpusDocs
+            .map(
+              (d, i) =>
+                `--- SOURCE [${i + 1}] — course notes: ${d.title} (${d.category}) ---\n${d.content}`
+            )
+            .join("\n\n")
+        : "(no relevant course notes found)";
+
+      const webStart = corpusDocs.length + 1;
+      const webBlock = web.text
+        ? `${web.text}\n\nDocumentation sources:\n${web.sources
+            .map((s, i) => `[${webStart + i}] ${s.title} — ${s.url}`)
+            .join("\n")}`
+        : "(no documentation findings)";
+
+      const priorTurns = trimmed
+        .slice(0, -1)
+        .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
+        .join("\n\n");
+
+      const synthInput = [
+        priorTurns ? `CONVERSATION SO FAR:\n${priorTurns}\n` : "",
+        `QUESTION:\n${question}\n`,
+        `COURSE NOTES:\n${corpusBlock}\n`,
+        `AWS DOCUMENTATION BRIEFING:\n${webBlock}\n`,
+        `SOURCES (cite by number):\n${
+          sources.map((s) => `[${s.index}] ${s.kind === "topic" ? "Course notes" : s.domain} — ${s.title}`).join("\n") ||
+          "(none)"
+        }`,
+      ].join("\n");
+
+      let synthRes;
+      try {
+        synthRes = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o",
+            instructions: SYNTH_PROMPT,
+            input: [{ role: "user", content: synthInput }],
+            max_output_tokens: 6000,
+            stream: true,
+          }),
+        });
+      } catch {
+        emit({ t: "text", v: "Something went wrong composing the answer. Please try again." });
+        controller.close();
+        return;
+      }
+
+      if (!synthRes.ok || !synthRes.body) {
+        const detail = await synthRes.text().catch(() => "");
+        emit({ t: "text", v: `Something went wrong composing the answer.\n\n${detail.slice(0, 300)}` });
+        controller.close();
+        return;
+      }
+
+      // Turn the model's bare [n] citations into links to the sources strip.
+      // A marker can straddle two deltas, so hold back a trailing fragment
+      // that might still become one.
+      const CITE_RE = /\[(\d{1,2})\]/g;
+      const splitSafe = (buf) => {
+        const i = buf.lastIndexOf("[");
+        if (i === -1) return [buf, ""];
+        const rest = buf.slice(i);
+        if (!rest.includes("]") && rest.length < 8) return [buf.slice(0, i), rest];
+        return [buf, ""];
       };
 
+      const maxIndex = sources.length;
+      let hold = "";
       const emitText = (chunk, flush = false) => {
-        textHold += chunk;
-        textHold = textHold.replace(CITATION_RE, (_match, url) => {
-          const n = registerSource(url);
-          return `[[${n}]](#source-${n})`;
+        hold += chunk;
+        hold = hold.replace(CITE_RE, (m, n) => {
+          const i = Number(n);
+          // Leave anything that isn't a real source alone — could be ordinary
+          // bracketed text in a command or policy snippet.
+          return i >= 1 && i <= maxIndex ? `[[${i}]](#source-${i})` : m;
         });
         let out;
         if (flush) {
-          out = textHold;
-          textHold = "";
+          out = hold;
+          hold = "";
         } else {
-          [out, textHold] = splitSafe(textHold);
+          [out, hold] = splitSafe(hold);
         }
         if (out) emit({ t: "text", v: out });
       };
 
+      const reader = synthRes.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -199,36 +289,16 @@ export default async function handler(req) {
           if (data === "[DONE]") continue;
           try {
             const evt = JSON.parse(data);
-            if (evt.type === "response.output_text.delta") {
-              emitText(evt.delta);
-            } else if (evt.type === "response.output_text.annotation.added") {
-              const ann = evt.annotation;
-              if (ann?.type === "url_citation" && ann.url) {
-                // Carries the real page title, which the inline citation
-                // (whose link text is just the bare domain) does not.
-                registerSource(ann.url, ann.title);
-              }
-            } else if (
-              evt.type === "response.web_search_call.in_progress" ||
-              // "searching" is a substate of the call still running, not the
-              // end of it — only "completed" means the search finished.
-              evt.type === "response.web_search_call.searching"
-            ) {
-              emit({ t: "tool", v: "web_search" });
-            } else if (evt.type === "response.web_search_call.completed") {
-              emit({ t: "tool_done" });
-            } else if (evt.type === "error" || evt.type === "response.failed") {
-              emitText(
-                `\n\n*(Error: ${evt.message || evt.error?.message || "request failed"})*`,
-                true
-              );
+            if (evt.type === "response.output_text.delta") emitText(evt.delta);
+            else if (evt.type === "error" || evt.type === "response.failed") {
+              emitText(`\n\n*(Error: ${evt.message || evt.error?.message || "failed"})*`, true);
             }
           } catch {
-            // ignore malformed/partial SSE lines
+            /* ignore partial SSE lines */
           }
         }
       }
-      emitText("", true); // flush any held-back tail
+      emitText("", true);
       controller.close();
     },
   });

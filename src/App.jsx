@@ -7,7 +7,11 @@ import "./App.css";
 const isMobile = () => typeof window !== "undefined" && window.innerWidth <= 820;
 
 export default function App() {
-  const [selectedId, setSelectedId] = useState(null);
+  // Course-note citations in the assistant link here as /?topic=<id>.
+  const [selectedId, setSelectedId] = useState(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("topic") || null;
+  });
   // Start collapsed on small screens, open on desktop
   const [sidebarOpen, setSidebarOpen] = useState(() => !isMobile());
 
