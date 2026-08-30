@@ -46,6 +46,7 @@
 
 body {
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   /* layered gradient mesh background — toned down for a calmer, pro feel */
   background:
@@ -54,7 +55,7 @@ body {
     radial-gradient(820px 680px at 50% 122%, rgba(31,111,235,0.06), transparent 55%),
     var(--aws-dark);
 }
-#root { height: 100vh; }
+#root { height: 100vh; height: 100dvh; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
 a { color: var(--aws-orange); }
 ::selection { background: rgba(255,153,0,0.28); color: #fff; }
@@ -64,6 +65,7 @@ a { color: var(--aws-orange); }
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   transition: grid-template-columns 0.25s ease;
   position: relative;
@@ -108,6 +110,7 @@ a { color: var(--aws-orange); }
   flex-direction: column;
   overflow: hidden;
   height: 100vh;
+  height: 100dvh;
 }
 
 .sidebar-header {
@@ -270,6 +273,7 @@ a { color: var(--aws-orange); }
 .main-content {
   overflow-y: auto;
   height: 100vh;
+  height: 100dvh;
   background: transparent;
   scrollbar-width: thin;
   scrollbar-color: var(--surface2) transparent;
