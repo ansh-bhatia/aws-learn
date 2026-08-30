@@ -2,9 +2,19 @@ import { searchCorpus, fetchTopics } from "./_lib/corpus.js";
 
 export const config = { runtime: "edge" };
 
+// Benchmarked against gpt-4o and the gpt-5.x line on this app's own prompts.
+// gpt-4o was clearly weakest: it ignored the instruction to use a table for
+// comparisons and produced roughly a third of the detail. Of the rest, 5.4 was
+// both the most complete and among the fastest — it was also the only one to
+// spot that the course notes' 256 KB SQS limit is superseded by the current
+// 1 MiB, which is exactly the notes-vs-docs reconciliation this app needs.
+// Overridable so the choice can be revisited without a code change.
+const DRAFT_MODEL = process.env.OPENAI_DRAFT_MODEL || "gpt-5.4";
+const SYNTH_MODEL = process.env.OPENAI_SYNTH_MODEL || "gpt-5.4";
+
 // Stage 1b — drafts an answer from live AWS documentation. Its job is factual
 // coverage, not presentation; the synthesizer handles voice and structure.
-const WEB_DRAFT_PROMPT = `You are researching an AWS question against the official AWS documentation (docs.aws.amazon.com) using your web search tool. Always search before answering — never answer from memory alone. Include "site:docs.aws.amazon.com" in your searches.
+export const WEB_DRAFT_PROMPT = `You are researching an AWS question against the official AWS documentation (docs.aws.amazon.com) using your web search tool. Always search before answering — never answer from memory alone. Include "site:docs.aws.amazon.com" in your searches.
 
 Write a dense, factual briefing for another assistant that will compose the final answer — not a polished reply to a user. Prioritise specifics that change with time or that people get wrong: exact limits, quotas, minimum durations, pricing mechanics, retrieval times, defaults, regional caveats, and recently changed behaviour. State facts plainly. Omit pleasantries, introductions, and closing summaries. If the docs don't cover something, say so rather than guessing.
 
@@ -14,7 +24,7 @@ Citing is mandatory, and the answer is unusable without it:
 Never omit that section, even if you only consulted one page.`;
 
 // Stage 2 — the only model whose output the user sees.
-const SYNTH_PROMPT = `You are the AWS assistant inside an AWS Certified Solutions Architect Associate (SAA-C03) study app. You are given two research inputs and must produce the single best answer to the user's question.
+export const SYNTH_PROMPT = `You are the AWS assistant inside an AWS Certified Solutions Architect Associate (SAA-C03) study app. You are given two research inputs and must produce the single best answer to the user's question.
 
 Your inputs:
 1. COURSE NOTES — full lessons from the study course this app is built around. This is the user's own material: exam-focused, worked through in depth, and the vocabulary they already know. Treat it as the backbone of your answer.
@@ -100,10 +110,12 @@ export default async function handler(req) {
               authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              model: "gpt-4o",
+              model: DRAFT_MODEL,
               instructions: WEB_DRAFT_PROMPT,
               input: [{ role: "user", content: question }],
-              max_output_tokens: 2000,
+              // Headroom for the deeper briefings this model produces, plus
+              // the mandatory list of pages consulted at the end.
+              max_output_tokens: 3000,
               tools: [{ type: "web_search_preview", search_context_size: "medium" }],
             }),
           });
@@ -184,7 +196,11 @@ export default async function handler(req) {
           external: false,
         });
       });
-      web.sources.forEach((s) => {
+      // The deeper research model cites a lot of pages — 16 on a broad
+      // question — which becomes a wall of chips. Cap before numbering so
+      // every citation the synthesizer can emit still resolves to a chip.
+      const webSources = web.sources.slice(0, 8);
+      webSources.forEach((s) => {
         sources.push({
           index: sources.length + 1,
           kind: "web",
@@ -219,7 +235,7 @@ export default async function handler(req) {
 
       const webStart = corpusDocs.length + 1;
       const webBlock = web.text
-        ? `${web.text}\n\nDocumentation sources:\n${web.sources
+        ? `${web.text}\n\nDocumentation sources:\n${webSources
             .map((s, i) => `[${webStart + i}] ${s.title} — ${s.url}`)
             .join("\n")}`
         : "(no documentation findings)";
@@ -249,7 +265,7 @@ export default async function handler(req) {
             authorization: `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            model: "gpt-4o",
+            model: SYNTH_MODEL,
             instructions: SYNTH_PROMPT,
             input: [{ role: "user", content: synthInput }],
             max_output_tokens: 6000,
