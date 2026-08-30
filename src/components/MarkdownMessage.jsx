@@ -86,9 +86,29 @@ export default function MarkdownMessage({ content }) {
               <table {...props} />
             </div>
           ),
-          a: ({ node, ...props }) => (
-            <a {...props} target="_blank" rel="noopener noreferrer" />
-          ),
+          a: ({ node, href, ...props }) => {
+            // "[n]" citation markers point at a chip in this message's own
+            // sources strip. A bare hash jump doesn't work inside a scroll
+            // container, so scroll to it and flash it instead.
+            if (href?.startsWith("#source-")) {
+              return (
+                <a
+                  {...props}
+                  href={href}
+                  className="md-cite"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById(href.slice(1));
+                    if (!el) return;
+                    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                    el.classList.add("source-chip-flash");
+                    setTimeout(() => el.classList.remove("source-chip-flash"), 1200);
+                  }}
+                />
+              );
+            }
+            return <a {...props} href={href} target="_blank" rel="noopener noreferrer" />;
+          },
         }}
       >
         {stripHtmlArtifacts(content)}

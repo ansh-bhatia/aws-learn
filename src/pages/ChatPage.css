@@ -514,6 +514,40 @@
 .source-chip.external {
   border-style: dashed;
 }
+/* Flashed when its "[n]" marker in the answer is clicked. */
+.source-chip-flash {
+  animation: source-flash 1.2s var(--ease);
+}
+@keyframes source-flash {
+  0%, 100% {
+    border-color: var(--border2);
+  }
+  20%, 60% {
+    border-color: var(--aws-orange);
+    background: rgba(255, 153, 0, 0.16);
+  }
+}
+
+/* ── Inline [n] citation markers ─────────────────────── */
+.chatpage-markdown a.md-cite {
+  display: inline-block;
+  vertical-align: super;
+  font-size: 0.68em;
+  font-weight: 600;
+  line-height: 1;
+  margin: 0 1px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(255, 153, 0, 0.13);
+  color: var(--aws-orange-2);
+  text-decoration: none;
+  word-break: normal;
+  transition: background 0.15s, color 0.15s;
+}
+.chatpage-markdown a.md-cite:hover {
+  background: rgba(255, 153, 0, 0.28);
+  color: var(--text);
+}
 .source-external {
   display: inline-flex;
   align-items: center;

@@ -110,10 +110,11 @@ export default async function handler(req) {
 
   // The tool also injects markdown citation links — "([docs.aws.amazon.com](url))"
   // — directly into the prose, including inside table cells, which looks like
-  // link spam. We render sources as their own strip instead, so strip these
-  // from the text. Because a citation can span several deltas, hold back any
-  // trailing fragment that might still grow into one.
-  const CITATION_RE = /\s*\(\[[^\]]*\]\([^)]*\)\)/g;
+  // link spam. Rather than deleting them (which would lose which claim came
+  // from which page), rewrite each into a numbered "[n]" link pointing at the
+  // matching chip in the sources strip. Because a citation can span several
+  // deltas, hold back any trailing fragment that might still grow into one.
+  const CITATION_RE = /\s*\(\[[^\]]*\]\((https?:\/\/[^)\s]*)\)\)/g;
   const splitSafe = (buf) => {
     const i = buf.lastIndexOf("(");
     if (i === -1) return [buf, ""];
@@ -130,12 +131,52 @@ export default async function handler(req) {
     async start(controller) {
       let buffer = "";
       let textHold = "";
-      const seenUrls = new Set();
       const emit = (obj) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+
+      // One registry shared by both paths: a URL can show up in an inline
+      // citation before its annotation event arrives, or the reverse. Whoever
+      // sees it first assigns the number, so the "[n]" in the prose and the
+      // chip in the strip always agree.
+      const sourceIndex = new Map(); // cleaned url -> { index, title }
+      const registerSource = (rawUrl, title) => {
+        const url = cleanUrl(rawUrl);
+        const existing = sourceIndex.get(url);
+        // The same page is cited repeatedly; only send an event when this
+        // actually adds something (a new source, or a real title replacing
+        // the domain placeholder).
+        if (existing && (!title || title === existing.title)) return existing.index;
+
+        const index = existing?.index ?? sourceIndex.size + 1;
+
+        let domain = "";
+        try {
+          domain = new URL(url).hostname;
+        } catch {
+          /* leave blank if unparseable */
+        }
+        const resolvedTitle = title || domain || url;
+        sourceIndex.set(url, { index, title: resolvedTitle });
+        emit({
+          t: "source",
+          v: {
+            index,
+            url,
+            domain,
+            title: resolvedTitle,
+            // Domain scoping is prompt-only, so a non-AWS-docs page can slip
+            // through. Flag it rather than hide it.
+            external: !domain.endsWith("docs.aws.amazon.com"),
+          },
+        });
+        return index;
+      };
 
       const emitText = (chunk, flush = false) => {
         textHold += chunk;
-        textHold = textHold.replace(CITATION_RE, "");
+        textHold = textHold.replace(CITATION_RE, (_match, url) => {
+          const n = registerSource(url);
+          return `[[${n}]](#source-${n})`;
+        });
         let out;
         if (flush) {
           out = textHold;
@@ -163,27 +204,9 @@ export default async function handler(req) {
             } else if (evt.type === "response.output_text.annotation.added") {
               const ann = evt.annotation;
               if (ann?.type === "url_citation" && ann.url) {
-                const url = cleanUrl(ann.url);
-                if (!seenUrls.has(url)) {
-                  seenUrls.add(url);
-                  let domain = "";
-                  try {
-                    domain = new URL(url).hostname;
-                  } catch {
-                    /* leave blank if unparseable */
-                  }
-                  emit({
-                    t: "source",
-                    v: {
-                      url,
-                      domain,
-                      title: ann.title || domain || url,
-                      // Domain scoping is prompt-only, so a non-AWS-docs page
-                      // can slip through. Flag it rather than hide it.
-                      external: !domain.endsWith("docs.aws.amazon.com"),
-                    },
-                  });
-                }
+                // Carries the real page title, which the inline citation
+                // (whose link text is just the bare domain) does not.
+                registerSource(ann.url, ann.title);
               }
             } else if (evt.type === "response.web_search_call.in_progress") {
               emit({ t: "tool", v: "web_search" });

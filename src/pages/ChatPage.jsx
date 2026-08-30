@@ -134,7 +134,13 @@ export default function ChatPage() {
             acc += evt.v;
             updateLast({ content: acc, status: undefined });
           } else if (evt.t === "source") {
-            sources.push(evt.v);
+            // Upsert by index — a source is emitted once when first cited
+            // (title may be a domain placeholder) and again once its real
+            // page title arrives.
+            const at = sources.findIndex((s) => s.index === evt.v.index);
+            if (at === -1) sources.push(evt.v);
+            else sources[at] = evt.v;
+            sources.sort((a, b) => a.index - b.index);
             updateLast({ sources: [...sources] });
           } else if (evt.t === "tool") {
             updateLast({ status: TOOL_LABELS[evt.v] || "Searching AWS docs…" });
