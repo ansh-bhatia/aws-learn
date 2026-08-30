@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, MessageSquarePlus, Send, Square, Trash2, Loader2 } from "lucide-react";
 import useConversations from "../hooks/useConversations";
 import MarkdownMessage from "../components/MarkdownMessage";
+import MessageActions from "../components/MessageActions";
 import SourceList from "../components/SourceList";
 import "./ChatPage.css";
 
@@ -91,29 +92,19 @@ export default function ChatPage() {
     }
   };
 
-  const send = async (overrideText) => {
-    const text = (overrideText ?? input).trim();
-    if (!text || loading) return;
-
-    let convId = activeId;
-    if (!convId) {
-      convId = create();
-      setActiveId(convId);
-    }
-
+  // Shared by send() and regenerate(): `turns` is the full conversation up to
+  // and including the user message being answered. Everything after it is
+  // replaced by the assistant reply this produces.
+  const runCompletion = async (convId, turns) => {
     setError(null);
-    setInput("");
     setSuggestions([]);
-    if (textareaRef.current) textareaRef.current.style.height = "auto";
-
-    const priorMessages = convId === activeId ? messages : [];
-    const nextMessages = [...priorMessages, { role: "user", content: text }];
     setMessages(convId, [
-      ...nextMessages,
+      ...turns,
       { role: "assistant", content: "", status: STATUS_THINKING },
     ]);
     setLoading(true);
-    followRef.current = true; // a new question should scroll into view
+    followRef.current = true; // a new answer should scroll into view
+
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -134,7 +125,7 @@ export default function ChatPage() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ messages: nextMessages }),
+        body: JSON.stringify({ messages: turns }),
         signal: controller.signal,
       });
 
@@ -186,7 +177,7 @@ export default function ChatPage() {
           status: undefined,
         });
       } else {
-        fetchSuggestions([...nextMessages, { role: "assistant", content: acc }]);
+        fetchSuggestions([...turns, { role: "assistant", content: acc }]);
       }
     } catch (err) {
       const aborted = err.name === "AbortError";
@@ -198,10 +189,10 @@ export default function ChatPage() {
           ? "\n\n*(Stopped.)*"
           : "\n\n*(Response cut off — this was taking longer than expected.)*";
         updateLast({ content: acc + note, status: undefined });
-        fetchSuggestions([...nextMessages, { role: "assistant", content: acc }]);
+        fetchSuggestions([...turns, { role: "assistant", content: acc }]);
       } else if (stoppedByUser) {
         // Nothing had streamed yet — drop the empty assistant bubble.
-        setMessages(convId, [...priorMessages, { role: "user", content: text }]);
+        setMessages(convId, turns);
       } else {
         setError(
           aborted
@@ -209,13 +200,48 @@ export default function ChatPage() {
             : err.message || "Something went wrong."
         );
         // keep the user's message visible even though the assistant reply failed
-        setMessages(convId, [...priorMessages, { role: "user", content: text }]);
+        setMessages(convId, turns);
       }
     } finally {
       clearTimeout(timeout);
       abortRef.current = null;
       setLoading(false);
     }
+  };
+
+  const send = async (overrideText) => {
+    const text = (overrideText ?? input).trim();
+    if (!text || loading) return;
+
+    let convId = activeId;
+    if (!convId) {
+      convId = create();
+      setActiveId(convId);
+    }
+
+    setInput("");
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+    const prior = convId === activeId ? messages : [];
+    await runCompletion(convId, [...prior, { role: "user", content: text }]);
+  };
+
+  // Re-answer the last user turn, discarding the reply that followed it.
+  const regenerate = async () => {
+    if (loading || !activeId) return;
+    const lastUserAt = messages.map((m) => m.role).lastIndexOf("user");
+    if (lastUserAt === -1) return;
+    await runCompletion(activeId, messages.slice(0, lastUserAt + 1));
+  };
+
+  const setFeedback = (msgIndex, value) => {
+    if (!activeId) return;
+    setMessages(activeId, (prev) =>
+      prev.map((m, i) =>
+        // Clicking the active rating again clears it.
+        i === msgIndex ? { ...m, feedback: m.feedback === value ? undefined : value } : m
+      )
+    );
   };
 
   const stopGenerating = () => {
@@ -321,6 +347,17 @@ export default function ChatPage() {
                   <>
                     <MarkdownMessage content={m.content} />
                     {m.sources?.length > 0 && <SourceList sources={m.sources} />}
+                    {/* Actions only once the answer is settled — mid-stream
+                        copy or regenerate would act on partial text. */}
+                    {!loading && m.content && (
+                      <MessageActions
+                        content={m.content}
+                        feedback={m.feedback}
+                        onFeedback={(v) => setFeedback(i, v)}
+                        onRegenerate={regenerate}
+                        canRegenerate={isLast}
+                      />
+                    )}
                   </>
                 ) : (
                   m.content
