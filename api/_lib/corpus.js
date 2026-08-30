@@ -53,20 +53,39 @@ export async function searchCorpus(origin, query, limit = 4) {
   const queryTerms = [...new Set(tokenize(query))];
   if (queryTerms.length === 0) return [];
 
+  // Coverage is judged only on terms that actually carry meaning. A question
+  // phrased naturally ("why does my ... only give me ...") is mostly filler,
+  // and counting those against the denominator makes real matches look weak.
+  // Rarity is the test rather than a hand-maintained stopword list.
+  const significant = queryTerms.filter((t) => {
+    const ti = termIdx.get(t);
+    return ti !== undefined && index.df[ti] / index.docCount < 0.25;
+  });
+
+  // If almost none of the question's vocabulary exists in the corpus, it isn't
+  // about this material. Judging coverage on the one word that happened to
+  // match would score it 100% — "bake a chocolate cake" knows only "bake",
+  // which lands on a blue/green deployment topic about bake time.
+  if (queryTerms.length >= 3 && significant.length / queryTerms.length < 0.4) return [];
+
+  const coverageTerms = significant.length ? significant : queryTerms;
+
   const scores = new Float64Array(index.docCount);
-  const matched = new Uint16Array(index.docCount); // distinct query terms hit
+  const matched = new Uint16Array(index.docCount); // distinct significant terms hit
+  const coverageSet = new Set(coverageTerms);
 
   for (const term of queryTerms) {
     const ti = termIdx.get(term);
     if (ti === undefined) continue; // absent from the corpus entirely
     const idf = Math.log(1 + (index.docCount - index.df[ti] + 0.5) / (index.df[ti] + 0.5));
     const post = index.postings[ti];
+    const counts = coverageSet.has(term);
     for (let p = 0; p < post.length; p += 2) {
       const di = post[p];
       const tf = post[p + 1];
       const norm = 1 - B + (B * index.docs[di].len) / index.avgLen;
       scores[di] += idf * ((tf * (K1 + 1)) / (tf + K1 * norm));
-      matched[di] += 1;
+      if (counts) matched[di] += 1;
     }
   }
 
@@ -79,9 +98,18 @@ export async function searchCorpus(origin, query, limit = 4) {
     if (hits) scores[di] *= 1 + 0.35 * hits;
   }
 
+  // A ratio alone isn't enough: with two meaningful terms, matching just one
+  // clears 45%. One shared word is a coincidence, not a topic match — "center
+  // a div in CSS" hits "IAM Identity Center" on "center" and nothing else.
+  const minMatches = coverageTerms.length >= 2 ? 2 : 1;
+
   const ranked = [];
   for (let i = 0; i < index.docCount; i++) {
-    if (scores[i] > 0 && matched[i] / queryTerms.length >= MIN_TERM_COVERAGE) {
+    if (
+      scores[i] > 0 &&
+      matched[i] >= minMatches &&
+      matched[i] / coverageTerms.length >= MIN_TERM_COVERAGE
+    ) {
       ranked.push({ i, score: scores[i] });
     }
   }

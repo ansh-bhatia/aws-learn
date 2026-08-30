@@ -4,9 +4,14 @@ export const config = { runtime: "edge" };
 
 // Stage 1b — drafts an answer from live AWS documentation. Its job is factual
 // coverage, not presentation; the synthesizer handles voice and structure.
-const WEB_DRAFT_PROMPT = `You are researching an AWS question against the official AWS documentation (docs.aws.amazon.com) using your web search tool. Include "site:docs.aws.amazon.com" in your searches.
+const WEB_DRAFT_PROMPT = `You are researching an AWS question against the official AWS documentation (docs.aws.amazon.com) using your web search tool. Always search before answering — never answer from memory alone. Include "site:docs.aws.amazon.com" in your searches.
 
-Write a dense, factual briefing for another assistant that will compose the final answer — not a polished reply to a user. Prioritise specifics that change with time or that people get wrong: exact limits, quotas, minimum durations, pricing mechanics, retrieval times, defaults, regional caveats, and recently changed behaviour. State facts plainly. Omit pleasantries, introductions, and closing summaries. If the docs don't cover something, say so rather than guessing.`;
+Write a dense, factual briefing for another assistant that will compose the final answer — not a polished reply to a user. Prioritise specifics that change with time or that people get wrong: exact limits, quotas, minimum durations, pricing mechanics, retrieval times, defaults, regional caveats, and recently changed behaviour. State facts plainly. Omit pleasantries, introductions, and closing summaries. If the docs don't cover something, say so rather than guessing.
+
+Citing is mandatory, and the answer is unusable without it:
+- Cite the specific documentation page inline immediately after each fact you take from it.
+- Finish with a "PAGES CONSULTED" section listing every docs.aws.amazon.com URL you used, one complete URL per line.
+Never omit that section, even if you only consulted one page.`;
 
 // Stage 2 — the only model whose output the user sees.
 const SYNTH_PROMPT = `You are the AWS assistant inside an AWS Certified Solutions Architect Associate (SAA-C03) study app. You are given two research inputs and must produce the single best answer to the user's question.
@@ -108,33 +113,55 @@ export default async function handler(req) {
           let text = "";
           const sources = [];
           const seen = new Set();
+
+          const addSource = (rawUrl, title) => {
+            let url = rawUrl;
+            try {
+              const u = new URL(url);
+              u.searchParams.delete("utm_source");
+              url = u.toString();
+            } catch {
+              return; // not a usable URL
+            }
+            if (seen.has(url)) return;
+            seen.add(url);
+            let domain = "";
+            let derived = "";
+            try {
+              const u = new URL(url);
+              domain = u.hostname;
+              // Harvested URLs carry no title, and a chip reading
+              // "docs.aws.amazon.com" is useless. The last path segment is a
+              // decent stand-in: "storage-class-intro.html" -> "Storage class intro".
+              const slug = u.pathname.split("/").filter(Boolean).pop() || "";
+              const words = slug.replace(/\.(html?|md)$/i, "").replace(/[-_]+/g, " ").trim();
+              if (words) derived = words.charAt(0).toUpperCase() + words.slice(1);
+            } catch {
+              /* leave blank */
+            }
+            sources.push({ url, domain, title: title || derived || domain || url });
+          };
+
           for (const item of data.output || []) {
             for (const part of item.content || []) {
-              if (part.type === "output_text") {
-                text += part.text || "";
-                for (const ann of part.annotations || []) {
-                  if (ann.type !== "url_citation" || !ann.url) continue;
-                  let url = ann.url;
-                  try {
-                    const u = new URL(url);
-                    u.searchParams.delete("utm_source");
-                    url = u.toString();
-                  } catch {
-                    /* keep raw */
-                  }
-                  if (seen.has(url)) continue;
-                  seen.add(url);
-                  let domain = "";
-                  try {
-                    domain = new URL(url).hostname;
-                  } catch {
-                    /* leave blank */
-                  }
-                  sources.push({ url, domain, title: ann.title || domain || url });
-                }
+              if (part.type !== "output_text") continue;
+              text += part.text || "";
+              for (const ann of part.annotations || []) {
+                if (ann.type === "url_citation" && ann.url) addSource(ann.url, ann.title);
               }
             }
           }
+
+          // The model runs the search but doesn't always attach citation
+          // annotations, and web_search_call exposes only the query it ran —
+          // not the pages it read. So also harvest doc URLs written into the
+          // briefing text itself, which the prompt requires.
+          if (text) {
+            for (const m of text.matchAll(/https?:\/\/docs\.aws\.amazon\.com\/[^\s)\]"'<>]+/g)) {
+              addSource(m[0].replace(/[.,;]+$/, ""));
+            }
+          }
+
           return { text, sources };
         } catch {
           return { text: "", sources: [] };

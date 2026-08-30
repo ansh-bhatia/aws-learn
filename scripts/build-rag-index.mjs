@@ -118,16 +118,22 @@ for (const d of docs) for (const term of Object.keys(d.tf)) df[term] = (df[term]
 const tooCommon = new Set(Object.keys(df).filter((t) => df[t] / docs.length > 0.5));
 for (const t of tooCommon) delete df[t];
 
-// Keep only each document's strongest terms. Ranking signal is dominated by
-// the top of the tf distribution, while the long tail of once-mentioned words
-// is most of the index size.
-const MAX_TERMS_PER_DOC = 140;
+// Cap terms per document to bound index size, ranking by tf-idf rather than
+// raw frequency. Frequency alone is the wrong signal here: the highest-tf
+// words in a topic are generic ("data", "storage"), while the terms that make
+// a topic findable are the rare ones — "usable", "/28", "reserved" — which a
+// pure-tf cut discards first.
+const MAX_TERMS_PER_DOC = 200;
 for (const d of docs) {
   const kept = Object.entries(d.tf)
     .filter(([t]) => !tooCommon.has(t))
-    .sort((a, b) => b[1] - a[1])
+    .map(([t, freq]) => {
+      const idf = Math.log(1 + docs.length / (df[t] || 1));
+      return [t, freq, freq * idf];
+    })
+    .sort((a, b) => b[2] - a[2])
     .slice(0, MAX_TERMS_PER_DOC);
-  d.tf = Object.fromEntries(kept);
+  d.tf = Object.fromEntries(kept.map(([t, freq]) => [t, freq]));
 }
 
 // Recompute df against what actually survived, then drop orphaned terms.
