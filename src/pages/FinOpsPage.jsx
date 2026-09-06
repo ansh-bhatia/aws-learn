@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, ShieldCheck, Download, Copy, Check, RefreshCw, TrendingUp, TrendingDown,
-  AlertTriangle, Lock, Unplug, ExternalLink, Loader2, Sparkles, Info,
+  AlertTriangle, Lock, Unplug, ExternalLink, Loader2, Sparkles, Info, Plus, LogOut,
 } from "lucide-react";
+import AuthGate from "../components/AuthGate";
+import { authedFetch } from "../lib/supabase";
 import "./FinOpsPage.css";
-
-const STORE = "aws-learn-finops-connection";
 
 const money = (n, currency = "USD") =>
   new Intl.NumberFormat(undefined, {
@@ -14,15 +14,6 @@ const money = (n, currency = "USD") =>
     currency,
     maximumFractionDigits: Math.abs(n) >= 100 ? 0 : 2,
   }).format(n || 0);
-
-function loadConnection() {
-  try {
-    const raw = localStorage.getItem(STORE);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
 
 function CopyButton({ value, label = "Copy" }) {
   const [done, setDone] = useState(false);
@@ -56,21 +47,16 @@ function ConnectFlow({ onConnected }) {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
-      try {
-        const res = await fetch("/api/finops/connect", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: "init" }),
-        });
+    authedFetch("/api/finops/connect", { action: "init" })
+      .then(async (res) => {
         const data = await res.json();
         if (!alive) return;
         if (!res.ok) setError(data.message || "Could not start the connection.");
         else setInfo(data);
-      } catch {
-        if (alive) setError("Could not reach the server.");
-      }
-    })();
+      })
+      .catch((err) => {
+        if (alive) setError(err.message || "Could not reach the server.");
+      });
     return () => {
       alive = false;
     };
@@ -90,16 +76,18 @@ function ConnectFlow({ onConnected }) {
     setVerifying(true);
     setVerifyError(null);
     try {
-      const res = await fetch("/api/finops/connect", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action: "verify", roleArn: roleArn.trim(), externalId: info.externalId }),
+      // Only the connection id goes back. The external ID stays server-side, so
+      // an ARN can never be paired with one the caller chose.
+      const res = await authedFetch("/api/finops/connect", {
+        action: "verify",
+        connectionId: info.connectionId,
+        roleArn: roleArn.trim(),
       });
       const data = await res.json();
       if (!res.ok || !data.ok) setVerifyError(data.message || "We could not verify that role.");
-      else onConnected({ roleArn: roleArn.trim(), externalId: info.externalId });
-    } catch {
-      setVerifyError("Could not reach the server.");
+      else onConnected(data.connection);
+    } catch (err) {
+      setVerifyError(err.message || "Could not reach the server.");
     } finally {
       setVerifying(false);
     }
@@ -313,30 +301,21 @@ function Dashboard({ connection, onDisconnect }) {
   // of it lets the mount effect follow React's documented shape — kick off the
   // request, apply the result in a callback — instead of driving setState from
   // the effect body.
-  const fetchSummary = useCallback(
-    async (signal) => {
-      const res = await fetch("/api/finops/summary", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(connection),
-        signal,
-      });
-      const body = await res.json();
-      if (!res.ok) throw new Error(body.message || "Could not load your cost data.");
-      return body;
-    },
-    [connection]
-  );
+  const fetchSummary = useCallback(async () => {
+    const res = await authedFetch("/api/finops/summary", { connectionId: connection.id });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.message || "Could not load your cost data.");
+    return body;
+  }, [connection]);
 
   useEffect(() => {
-    const controller = new AbortController();
     let ignore = false;
-    fetchSummary(controller.signal)
+    fetchSummary()
       .then((body) => { if (!ignore) setData(body); })
-      .catch((err) => { if (!ignore && err.name !== "AbortError") setError(err.message || "Could not reach the server."); })
+      .catch((err) => { if (!ignore) setError(err.message || "Could not reach the server."); })
       .finally(() => { if (!ignore) setLoading(false); });
-    // Disconnecting or reconnecting mid-request must not land stale data.
-    return () => { ignore = true; controller.abort(); };
+    // Switching accounts mid-request must not land the previous one's data.
+    return () => { ignore = true; };
   }, [fetchSummary]);
 
   const load = useCallback(() => {
@@ -559,26 +538,101 @@ function Dashboard({ connection, onDisconnect }) {
 
 /* ── Page ─────────────────────────────────────────────────────────────── */
 
+function FinOpsApp({ session, signOut }) {
+  const [connections, setConnections] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const [addingNew, setAddingNew] = useState(false);
+  const [error, setError] = useState(null);
+
+  // Connections live in the database against this user, so a different browser
+  // or a second device sees the same accounts.
+  useEffect(() => {
+    let ignore = false;
+    authedFetch("/api/finops/connect", { action: "list" })
+      .then((res) => res.json())
+      .then((body) => {
+        if (ignore) return;
+        const rows = (body.connections || []).filter((c) => c.status === "active");
+        setConnections(rows);
+        setActiveId((current) => current ?? rows[0]?.id ?? null);
+      })
+      .catch((err) => { if (!ignore) setError(err.message || "Could not load your connections."); });
+    return () => { ignore = true; };
+  }, []);
+
+  const onConnected = (row) => {
+    setConnections((prev) => [row, ...(prev || []).filter((c) => c.id !== row.id)]);
+    setActiveId(row.id);
+    setAddingNew(false);
+  };
+
+  const disconnect = async (id) => {
+    await authedFetch("/api/finops/connect", { action: "delete", connectionId: id }).catch(() => null);
+    setConnections((prev) => {
+      const next = (prev || []).filter((c) => c.id !== id);
+      setActiveId(next[0]?.id ?? null);
+      return next;
+    });
+  };
+
+  const active = (connections || []).find((c) => c.id === activeId) || null;
+
+  if (error) {
+    return (
+      <div className="fin-empty">
+        <AlertTriangle size={26} className="fin-empty-icon" />
+        <h2>Something went wrong</h2>
+        <p>{error}</p>
+      </div>
+    );
+  }
+  if (connections === null) {
+    return (
+      <div className="fin-empty">
+        <Loader2 size={26} className="fin-spin fin-empty-icon" />
+        <p>Loading your AWS accounts&hellip;</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="fin-account-bar">
+        <div className="fin-account-tabs">
+          {connections.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={c.id === activeId && !addingNew ? "on" : ""}
+              onClick={() => { setActiveId(c.id); setAddingNew(false); }}
+            >
+              {c.label || c.aws_account_id || "AWS account"}
+            </button>
+          ))}
+          {connections.length > 0 && (
+            <button type="button" className={addingNew ? "on" : ""} onClick={() => setAddingNew(true)}>
+              <Plus size={13} /> Add account
+            </button>
+          )}
+        </div>
+        <div className="fin-account-user">
+          <span title={session.user?.email}>{session.user?.email}</span>
+          <button type="button" onClick={signOut}>
+            <LogOut size={13} /> Sign out
+          </button>
+        </div>
+      </div>
+
+      {active && !addingNew ? (
+        <Dashboard key={active.id} connection={active} onDisconnect={() => disconnect(active.id)} />
+      ) : (
+        <ConnectFlow onConnected={onConnected} />
+      )}
+    </>
+  );
+}
+
 export default function FinOpsPage() {
-  const [connection, setConnection] = useState(loadConnection);
-
-  const connect = (conn) => {
-    try {
-      localStorage.setItem(STORE, JSON.stringify(conn));
-    } catch {
-      /* private mode — the connection still works for this session */
-    }
-    setConnection(conn);
-  };
-  const disconnect = () => {
-    try {
-      localStorage.removeItem(STORE);
-    } catch {
-      /* nothing to clear */
-    }
-    setConnection(null);
-  };
-
   return (
     <div className="fin-page">
       <nav className="fin-nav">
@@ -589,7 +643,7 @@ export default function FinOpsPage() {
           Ask the assistant
         </Link>
       </nav>
-      {connection ? <Dashboard connection={connection} onDisconnect={disconnect} /> : <ConnectFlow onConnected={connect} />}
+      <AuthGate>{({ session, signOut }) => <FinOpsApp session={session} signOut={signOut} />}</AuthGate>
     </div>
   );
 }

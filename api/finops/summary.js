@@ -1,8 +1,8 @@
 import { assumeRole, ce, coh, platformCredentials, AwsError } from "../_lib/aws.js";
+import { AuthError, DbError, bearerToken, getConnection, touchConnection, supabaseConfig } from "../_lib/connections.js";
 
 export const config = { runtime: "edge" };
 
-const ROLE_ARN = /^arn:aws(-[a-z]+)*:iam::\d{12}:role\/[\w+=,.@/-]{1,512}$/;
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "content-type": "application/json" } });
 
 const iso = (d) => d.toISOString().slice(0, 10);
@@ -30,25 +30,46 @@ const amount = (v) => Number(v?.Amount ?? 0);
 
 export default async function handler(req) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
-  if (!platformCredentials()) return json({ error: "not_configured" }, 503);
+  if (!supabaseConfig()) return json({ error: "not_configured" }, 503);
 
   let body;
   try { body = await req.json(); } catch { return json({ error: "Invalid JSON" }, 400); }
-  const { roleArn, externalId } = body;
-  if (!ROLE_ARN.test(String(roleArn || "")) || !/^[0-9a-f]{32,64}$/.test(String(externalId || ""))) {
-    return json({ error: "bad_connection", message: "Reconnect your AWS account." }, 400);
+
+  let token;
+  try { token = bearerToken(req); } catch (err) { return json({ error: "unauthenticated", message: err.message }, 401); }
+
+  // The role ARN and external ID are read from the caller's own row rather than
+  // taken from the request. A client can therefore only ever use a connection
+  // it actually owns, and cannot pair an arbitrary ARN with an external ID it
+  // happens to have seen.
+  let row;
+  try {
+    row = await getConnection(token, body.connectionId);
+  } catch (err) {
+    if (err instanceof AuthError) return json({ error: "unauthenticated", message: err.message }, 401);
+    if (err instanceof DbError) return json({ error: "db_error", message: err.message }, 500);
+    return json({ error: "unexpected", message: "Something went wrong." }, 500);
   }
+  if (!row) return json({ error: "unknown_connection", message: "That AWS connection no longer exists." }, 404);
+  if (row.status !== "active" || !row.role_arn) {
+    return json({ error: "not_verified", message: "Finish connecting this AWS account first." }, 400);
+  }
+
+  // Deliberately after the ownership check: a caller with no right to this
+  // connection gets 401 or 404 whatever our own configuration looks like.
+  if (!platformCredentials()) return json({ error: "not_configured" }, 503);
 
   let creds;
   try {
-    creds = await assumeRole({ roleArn, externalId });
+    creds = await assumeRole({ roleArn: row.role_arn, externalId: row.external_id });
   } catch (err) {
     return json(
       { error: "assume_failed", code: err instanceof AwsError ? err.code : "Unknown",
-        message: "We could not use your connection. If you deleted the role, reconnect from the portal." },
+        message: "We could not use your connection. If you deleted the role in AWS, reconnect from the portal." },
       400
     );
   }
+  touchConnection(token, row.id);
 
   const today = new Date();
   const monthsBack = iso(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 5, 1)));
