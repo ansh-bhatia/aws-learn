@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import Sidebar from "./components/Sidebar";
 import ContentArea from "./components/ContentArea";
 import ChatLauncher from "./components/ChatLauncher";
+import FinOpsLauncher from "./components/FinOpsLauncher";
 import "./App.css";
 
 const isMobile = () => typeof window !== "undefined" && window.innerWidth <= 820;
@@ -114,6 +115,7 @@ export default function App() {
         <ContentArea selectedId={selectedId} onSelect={handleSelect} />
       </main>
 
+      <FinOpsLauncher />
       <ChatLauncher />
     </div>
   );

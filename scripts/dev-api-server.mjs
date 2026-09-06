@@ -7,6 +7,8 @@ import path from "node:path";
 import chatHandler from "../api/chat.js";
 import suggestHandler from "../api/suggest.js";
 import titleHandler from "../api/title.js";
+import finopsConnectHandler from "../api/finops/connect.js";
+import finopsSummaryHandler from "../api/finops/summary.js";
 
 const PORT = 8787;
 
@@ -14,6 +16,8 @@ const routes = {
   "/api/chat": chatHandler,
   "/api/suggest": suggestHandler,
   "/api/title": titleHandler,
+  "/api/finops/connect": finopsConnectHandler,
+  "/api/finops/summary": finopsSummaryHandler,
 };
 
 const server = http.createServer(async (req, res) => {

@@ -1,0 +1,32 @@
+/* Sits directly above the chat launcher, sharing its geometry so the two read
+   as one stack rather than two unrelated buttons. */
+.finops-launcher-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 86px;
+  z-index: 60;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--aws-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-2);
+  transition: transform 0.18s var(--ease), background 0.18s var(--ease);
+  text-decoration: none;
+}
+
+.finops-launcher-fab:hover {
+  transform: scale(1.06);
+  background: var(--surface3);
+}
+
+@media (max-width: 480px) {
+  .finops-launcher-fab {
+    right: 16px;
+    bottom: 78px;
+  }
+}

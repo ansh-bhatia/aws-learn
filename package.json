@@ -12,11 +12,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "aws4fetch": "^1.0.20",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.16.0",
+    "react-router-dom": "^7.18.3",
     "rehype-highlight": "^7.0.2",
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1"
