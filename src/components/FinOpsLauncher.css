@@ -10,7 +10,7 @@
   border-radius: 50%;
   background: var(--surface2);
   border: 1px solid var(--border2);
-  color: var(--aws-orange);
+  color: var(--accent-ink);
   display: flex;
   align-items: center;
   justify-content: center;

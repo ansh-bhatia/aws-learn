@@ -41,7 +41,7 @@
   transition: color 0.15s;
 }
 .chatpage-back:hover {
-  color: var(--aws-orange);
+  color: var(--accent-ink);
 }
 
 .chatpage-new {
@@ -98,7 +98,7 @@
   transition: background 0.15s, color 0.15s;
 }
 .chatpage-history-item:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.05);
   color: var(--text);
 }
 .chatpage-history-item.active {
@@ -124,8 +124,8 @@
   opacity: 1;
 }
 .chatpage-history-delete:hover {
-  color: #ff7a7a;
-  background: rgba(255, 122, 122, 0.1);
+  color: #B91C1C;
+  background: rgba(220, 38, 38, 0.08);
 }
 
 /* ── Main column ─────────────────────────────────────── */
@@ -216,7 +216,7 @@
   transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.15s var(--ease);
 }
 .chatpage-starter:hover {
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
   color: var(--text);
   background: var(--surface3);
   transform: translateY(-1px);
@@ -237,7 +237,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border2);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(15, 23, 42, 0.035);
   font-size: 12.5px;
   color: var(--text-muted);
 }
@@ -256,7 +256,7 @@
 }
 .chatpage-inline-btn:hover {
   color: var(--text);
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
   background: var(--surface3);
 }
 
@@ -346,9 +346,9 @@
   max-width: 100%;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 122, 122, 0.35);
-  background: rgba(255, 122, 122, 0.08);
-  color: #ff9c9c;
+  border: 1px solid rgba(220, 38, 38, 0.30);
+  background: rgba(220, 38, 38, 0.06);
+  color: #B91C1C;
   font-size: 13px;
 }
 
@@ -403,12 +403,15 @@
 .chatpage-markdown code {
   font-family: var(--font-mono);
   font-size: 0.9em;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.07);
+  color: var(--accent-ink);
   padding: 2px 5px;
   border-radius: 4px;
 }
 .chatpage-markdown pre {
-  background: var(--aws-dark);
+  /* Deliberately dark so the highlight palette below reads; matches the content area. */
+  background: #0F172A;
+  color: #E2E8F0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
@@ -460,7 +463,7 @@
   z-index: 1;
 }
 .chatpage-markdown tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(15, 23, 42, 0.03);
 }
 .chatpage-markdown strong {
   font-weight: 600;
@@ -520,7 +523,7 @@
 }
 .md-copy-btn:hover {
   color: var(--text);
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
 }
 /* Touch devices have no hover — keep it permanently visible there. */
 @media (hover: none) {
@@ -607,15 +610,15 @@
 }
 .msg-action:hover {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(15, 23, 42, 0.07);
 }
 .msg-action.active-up {
-  color: #a5e075;
-  background: rgba(165, 224, 117, 0.12);
+  color: #15803D;
+  background: rgba(21, 128, 61, 0.10);
 }
 .msg-action.active-down {
-  color: #ff9c9c;
-  background: rgba(255, 156, 156, 0.12);
+  color: #B91C1C;
+  background: rgba(220, 38, 38, 0.08);
 }
 .msg-action-sep {
   width: 1px;
@@ -669,7 +672,7 @@
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .source-chip:hover {
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
   color: var(--text);
   background: var(--surface3);
 }
@@ -702,7 +705,7 @@
   color: var(--text);
 }
 .source-chip.topic:hover {
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
   background: rgba(255, 153, 0, 0.14);
 }
 /* Flashed when its "[n]" marker in the answer is clicked. */
@@ -714,7 +717,7 @@
     border-color: var(--border2);
   }
   20%, 60% {
-    border-color: var(--aws-orange);
+    border-color: var(--accent-ink);
     background: rgba(255, 153, 0, 0.16);
   }
 }
@@ -778,7 +781,7 @@
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
 .chatpage-suggestion-chip:hover {
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
   color: var(--text);
   background: var(--surface3);
 }
@@ -807,7 +810,7 @@
 }
 .chatpage-stop:hover {
   color: var(--text);
-  border-color: #ff7a7a;
+  border-color: #DC2626;
   background: var(--surface3);
 }
 
@@ -837,7 +840,7 @@
   outline: none;
 }
 .chatpage-input:focus {
-  border-color: var(--aws-orange);
+  border-color: var(--accent-ink);
 }
 
 .chatpage-send {
