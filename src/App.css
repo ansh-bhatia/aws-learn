@@ -8,27 +8,27 @@
      uses --accent-ink, which is the same hue darkened to clear 4.5:1 at small sizes. */
   --aws-orange:   #E8500A;
   --aws-orange-2: #F2733A;
-  --accent-ink:   #C2410C;
+  --accent-ink:   #B33809;
   --grad:         linear-gradient(135deg, #E8500A 0%, #F2733A 100%);
-  --grad-text:    linear-gradient(120deg, #C2410C 0%, #E8500A 60%, #F2733A 100%);
+  --grad-text:    linear-gradient(120deg, #B33809 0%, #E8500A 60%, #F2733A 100%);
 
   /* ── surfaces ──
      Warm off-white, not blue-white. The cool slate tint is what reads as harsh
      on long reading sessions; a hint of warmth is what makes a page feel like
      paper. Names kept so existing usages need no change. */
-  --aws-dark:      #FAFAF8;  /* page */
+  --aws-dark:      #F3EEE5;  /* page — soft beige; cards stay white so they lift off it */
   --surface:       #FFFFFF;
-  --surface2:      #F4F3EF;
-  --surface3:      #ECEAE4;
+  --surface2:      #EBE5DA;
+  --surface3:      #E1DACD;
   --surface-solid: #FFFFFF;
-  --sidebar-bg:    rgba(247, 246, 242, 0.94);
+  --sidebar-bg:    rgba(238, 232, 222, 0.94);
 
   /* ── lines & text (warm greys, near-black instead of navy) ── */
-  --border:      #E8E6E0;
-  --border2:     #D6D3CB;
+  --border:      #DDD5C6;
+  --border2:     #C9BFAD;
   --text:        #0D0D0D;
-  --text-muted:  #6B6860;    /* 5.4:1 on the page — readable secondary text */
-  --text-dim:    #8A877E;    /* tertiary labels only */
+  --text-muted:  #625E56;    /* 5.6:1 on beige — readable secondary text */
+  --text-dim:    #7F7A70;    /* tertiary labels only */
 
   /* ── shape, depth, motion ── */
   --radius:      14px;
