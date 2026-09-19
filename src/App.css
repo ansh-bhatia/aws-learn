@@ -3,14 +3,15 @@
 
 :root {
   /* ── brand ──
-     Burnt orange rather than AWS #FF9900: deeper and redder, it sits calmly on
-     cream where the brighter brand orange glares. Fills use --aws-orange; text
-     uses --accent-ink, which is the same hue darkened to clear 4.5:1 at small sizes. */
-  --aws-orange:   #E8500A;
-  --aws-orange-2: #F2733A;
-  --accent-ink:   #B33809;
-  --grad:         linear-gradient(135deg, #E8500A 0%, #F2733A 100%);
-  --grad-text:    linear-gradient(120deg, #B33809 0%, #E8500A 60%, #F2733A 100%);
+     Deep teal: cool against the warm beige, so the accent reads as a deliberate
+     contrast rather than more of the same warmth. Fills use --aws-orange (name
+     kept for the many existing usages); small text uses --accent-ink, a darker
+     step of the same hue that clears 4.5:1 on the page. */
+  --aws-orange:   #0F766E;
+  --aws-orange-2: #0D9488;
+  --accent-ink:   #115E59;
+  --grad:         linear-gradient(135deg, #0F766E 0%, #0D9488 100%);
+  --grad-text:    linear-gradient(120deg, #115E59 0%, #0F766E 60%, #0D9488 100%);
 
   /* ── surfaces ──
      Warm off-white, not blue-white. The cool slate tint is what reads as harsh
@@ -59,14 +60,14 @@ body {
   overflow: hidden;
   /* layered gradient mesh background — toned down for a calmer, pro feel */
   background:
-    radial-gradient(1000px 640px at 8% -12%, rgba(232,80,10,0.07), transparent 60%),
-    radial-gradient(900px 760px at 102% -4%, rgba(232,80,10,0.04), transparent 55%),
+    radial-gradient(1000px 640px at 8% -12%, rgba(15, 118, 110,0.07), transparent 60%),
+    radial-gradient(900px 760px at 102% -4%, rgba(15, 118, 110,0.04), transparent 55%),
     var(--aws-dark);
 }
 #root { height: 100vh; height: 100dvh; }
 button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
 a { color: var(--accent-ink); }
-::selection { background: rgba(255,153,0,0.30); color: var(--text); }
+::selection { background: rgba(15, 118, 110,0.30); color: var(--text); }
 
 /* ── App shell ─────────────────────────────────────── */
 .app-shell {
@@ -142,7 +143,7 @@ a { color: var(--accent-ink); }
   border-radius: 11px;
   color: #fff;
   background: var(--grad);
-  box-shadow: 0 6px 16px -6px rgba(255,153,0,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
+  box-shadow: 0 6px 16px -6px rgba(15, 118, 110,0.55), inset 0 1px 0 rgba(255,255,255,0.25);
   flex-shrink: 0;
 }
 .logo-title {
@@ -178,7 +179,7 @@ a { color: var(--accent-ink); }
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
-.search-box input:focus { box-shadow: 0 0 0 3px rgba(255,153,0,0.16); border-color: var(--accent-ink); background: var(--surface2); }
+.search-box input:focus { box-shadow: 0 0 0 3px rgba(15, 118, 110,0.16); border-color: var(--accent-ink); background: var(--surface2); }
 .search-box input::placeholder { color: var(--text-dim); }
 .search-icon { position: absolute; left: 9px; color: var(--text-dim); pointer-events: none; }
 .search-clear { position: absolute; right: 8px; color: var(--text-muted); display: flex; padding: 2px; border-radius: 4px; }
@@ -304,12 +305,12 @@ a { color: var(--accent-ink); }
 }
 .dashboard::before {
   top: -120px; right: -80px;
-  background: radial-gradient(circle, #FF9900, transparent 70%);
+  background: radial-gradient(circle, #0F766E, transparent 70%);
   animation: orbDrift1 14s ease-in-out infinite;
 }
 .dashboard::after {
   bottom: -140px; left: -60px;
-  background: radial-gradient(circle, #F2733A, transparent 70%);
+  background: radial-gradient(circle, #0D9488, transparent 70%);
   animation: orbDrift2 18s ease-in-out infinite;
 }
 @keyframes orbDrift1 {
@@ -398,8 +399,8 @@ a { color: var(--accent-ink); }
   margin-bottom: 22px;
   border-radius: 22px;
   background: var(--grad);
-  border: 1px solid rgba(255,153,0,0.35);
-  box-shadow: 0 20px 44px -18px rgba(255,153,0,0.55), inset 0 1px 0 rgba(255,255,255,0.35);
+  border: 1px solid rgba(15, 118, 110,0.35);
+  box-shadow: 0 20px 44px -18px rgba(15, 118, 110,0.55), inset 0 1px 0 rgba(255,255,255,0.35);
   animation: heroFloat 6s ease-in-out infinite;
 }
 @keyframes heroFloat {
@@ -933,7 +934,7 @@ button:focus-visible,
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(120% 150% at 50% -30%, rgba(255,153,0,0.07), transparent 60%),
+    radial-gradient(120% 150% at 50% -30%, rgba(15, 118, 110,0.07), transparent 60%),
     var(--surface);
   overflow: hidden;
   transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
@@ -951,7 +952,7 @@ button:focus-visible,
 .arch-svg { width: 100%; height: auto; display: block; }
 .arch-node-bg { fill: #0d1117; stroke: var(--border2); stroke-width: 1; }
 .arch-cap { fill: #c9d1d9; font-size: 14px; font-weight: 600; text-anchor: middle; font-family: var(--font-sans); }
-.arch-region { fill: rgba(232,80,10,0.04); stroke: #E8500A; stroke-width: 1.4; stroke-dasharray: 5 5; }
+.arch-region { fill: rgba(15, 118, 110,0.04); stroke: #0F766E; stroke-width: 1.4; stroke-dasharray: 5 5; }
 .arch-region-cap { fill: #7aa7e6; font-size: 12px; font-family: var(--font-mono); }
 .arch-az { fill: #0d1117; stroke: var(--border2); stroke-width: 1; }
 .arch-rack { fill: var(--aws-orange); opacity: 0.85; }
@@ -991,15 +992,15 @@ button:focus-visible,
    fade the centre so the reading column stays legible, edges stay vivid. */
 .scroll-bg-mesh, .scroll-bg-mesh-b {
   background:
-    radial-gradient(52% 52% at 12% 14%, rgba(242,115,58,0.14), transparent 72%),
-    radial-gradient(56% 56% at 88% 12%, rgba(250,200,160,0.18), transparent 72%),
-    radial-gradient(58% 58% at 86% 90%, rgba(232,80,10,0.12), transparent 72%),
-    radial-gradient(50% 50% at 10% 90%, rgba(232,80,10,0.10), transparent 72%);
+    radial-gradient(52% 52% at 12% 14%, rgba(13, 148, 136,0.14), transparent 72%),
+    radial-gradient(56% 56% at 88% 12%, rgba(153, 210, 200,0.18), transparent 72%),
+    radial-gradient(58% 58% at 86% 90%, rgba(15, 118, 110,0.12), transparent 72%),
+    radial-gradient(50% 50% at 10% 90%, rgba(15, 118, 110,0.10), transparent 72%);
   opacity: 0;
 }
 .scroll-bg-conic {
   background: conic-gradient(from 0deg at 50% 50%,
-    rgba(232,80,10,0.08), rgba(250,200,160,0.10), rgba(242,115,58,0.08), rgba(250,200,160,0.08), rgba(232,80,10,0.08));
+    rgba(15, 118, 110,0.08), rgba(153, 210, 200,0.10), rgba(13, 148, 136,0.08), rgba(153, 210, 200,0.08), rgba(15, 118, 110,0.08));
   opacity: 0.4;
   transform: rotate(0deg) scale(1.15);
   will-change: transform, opacity;
@@ -1020,7 +1021,7 @@ button:focus-visible,
   display: block; height: 100%; width: 100%;
   transform-origin: 0 50%; transform: scaleX(0);
   background: var(--grad);
-  box-shadow: 0 0 12px rgba(255,153,0,0.55);
+  box-shadow: 0 0 12px rgba(15, 118, 110,0.55);
 }
 
 /* ═══════════════════════════════════════════════════════════════

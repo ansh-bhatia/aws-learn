@@ -21,7 +21,7 @@ export default function CloudNetworkHero() {
     let pulses = [];
     let raf = 0;
 
-    const NODE_COLOR = "232, 80, 10"; // burnt orange, matching the accent
+    const NODE_COLOR = "15, 118, 110"; // deep teal, matching the accent
 
     function build() {
       const rect = canvas.getBoundingClientRect();
