@@ -13,7 +13,7 @@
 }
 
 .auth-icon { color: var(--text-dim); }
-.auth-ok { color: #15803D; }
+.auth-ok { color: #1F7A3E; }
 .auth-card h2 { font-size: 18px; font-weight: 650; }
 .auth-card p { color: var(--text-muted); font-size: 13.5px; line-height: 1.65; }
 .auth-card code {
@@ -42,9 +42,10 @@
   gap: 7px;
   padding: 10px 16px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--aws-orange);
-  background: var(--aws-orange);
-  color: #1a1206;
+  border: 1px solid #0D0D0D;
+  background: #0D0D0D;
+  color: #FFFFFF;
+  border-radius: 999px;
   font: inherit;
   font-size: 13px;
   font-weight: 600;

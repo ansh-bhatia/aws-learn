@@ -2,40 +2,47 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* ── brand ── */
-  --aws-orange:   #FF9900;   /* fills: buttons, bars, active markers */
-  --aws-orange-2: #FFB454;   /* hover tint for fills */
-  --accent-ink:   #B45309;   /* orange for TEXT and links — #FF9900 on white is ~2.1:1, this is 4.6:1 */
-  --grad:         linear-gradient(135deg, #FF9900 0%, #FF6A3D 100%);
-  --grad-text:    linear-gradient(120deg, #D97706 0%, #EA580C 55%, #C2410C 100%);
+  /* ── brand ──
+     Burnt orange rather than AWS #FF9900: deeper and redder, it sits calmly on
+     cream where the brighter brand orange glares. Fills use --aws-orange; text
+     uses --accent-ink, which is the same hue darkened to clear 4.5:1 at small sizes. */
+  --aws-orange:   #E8500A;
+  --aws-orange-2: #F2733A;
+  --accent-ink:   #C2410C;
+  --grad:         linear-gradient(135deg, #E8500A 0%, #F2733A 100%);
+  --grad-text:    linear-gradient(120deg, #C2410C 0%, #E8500A 60%, #F2733A 100%);
 
-  /* ── surfaces (slate-light: page sits lowest, cards lift to white) ── */
-  --aws-dark:      #F8FAFC;  /* page background — name kept so 200+ usages need no change */
+  /* ── surfaces ──
+     Warm off-white, not blue-white. The cool slate tint is what reads as harsh
+     on long reading sessions; a hint of warmth is what makes a page feel like
+     paper. Names kept so existing usages need no change. */
+  --aws-dark:      #FAFAF8;  /* page */
   --surface:       #FFFFFF;
-  --surface2:      #F1F5F9;
-  --surface3:      #E2E8F0;
+  --surface2:      #F4F3EF;
+  --surface3:      #ECEAE4;
   --surface-solid: #FFFFFF;
-  --sidebar-bg:    rgba(241, 245, 249, 0.92);
+  --sidebar-bg:    rgba(247, 246, 242, 0.94);
 
-  /* ── lines & text ── */
-  --border:      #E2E8F0;    /* solid, not rgba(white) — translucent white borders vanish on light */
-  --border2:     #CBD5E1;
-  --text:        #0F172A;
-  --text-muted:  #475569;    /* floor for readable secondary text on white (7:1) */
-  --text-dim:    #64748B;    /* 4.6:1 — only for tertiary labels, never body copy */
+  /* ── lines & text (warm greys, near-black instead of navy) ── */
+  --border:      #E8E6E0;
+  --border2:     #D6D3CB;
+  --text:        #0D0D0D;
+  --text-muted:  #6B6860;    /* 5.4:1 on the page — readable secondary text */
+  --text-dim:    #8A877E;    /* tertiary labels only */
 
   /* ── shape, depth, motion ── */
   --radius:      14px;
   --radius-sm:   10px;
   --radius-lg:   20px;
   --sidebar-w:   288px;
-  --shadow-1:    0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
-  --shadow-2:    0 18px 44px -22px rgba(15, 23, 42, 0.22);
+  --shadow-1:    0 1px 2px rgba(20, 16, 8, 0.05), 0 1px 3px rgba(20, 16, 8, 0.04);
+  --shadow-2:    0 18px 44px -22px rgba(20, 16, 8, 0.20);
   --ease:        cubic-bezier(0.22, 1, 0.36, 1);
 
   /* ── type ── */
-  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
+  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans:    "Inter", "Helvetica Neue", Helvetica, Arial, -apple-system, system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "Cascadia Code", "Fira Code", monospace;
 
   font-family: var(--font-sans);
   font-size: 14px;
@@ -52,9 +59,8 @@ body {
   overflow: hidden;
   /* layered gradient mesh background — toned down for a calmer, pro feel */
   background:
-    radial-gradient(1000px 640px at 8% -12%, rgba(255,153,0,0.10), transparent 60%),
-    radial-gradient(900px 760px at 102% -4%, rgba(140,79,255,0.07), transparent 55%),
-    radial-gradient(820px 680px at 50% 122%, rgba(31,111,235,0.05), transparent 55%),
+    radial-gradient(1000px 640px at 8% -12%, rgba(232,80,10,0.07), transparent 60%),
+    radial-gradient(900px 760px at 102% -4%, rgba(232,80,10,0.04), transparent 55%),
     var(--aws-dark);
 }
 #root { height: 100vh; height: 100dvh; }
@@ -303,7 +309,7 @@ a { color: var(--accent-ink); }
 }
 .dashboard::after {
   bottom: -140px; left: -60px;
-  background: radial-gradient(circle, #8C4FFF, transparent 70%);
+  background: radial-gradient(circle, #F2733A, transparent 70%);
   animation: orbDrift2 18s ease-in-out infinite;
 }
 @keyframes orbDrift1 {
@@ -401,17 +407,16 @@ a { color: var(--accent-ink); }
   50%      { transform: translateY(-9px); }
 }
 .dashboard-hero h1 {
-  font-size: 46px;
+  font-family: var(--font-display);
+  font-size: 64px;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.08;
-  margin-bottom: 14px;
-  background: linear-gradient(180deg, #0F172A 0%, #475569 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  letter-spacing: -0.035em;
+  line-height: 1.0;
+  margin-bottom: 16px;
+  color: var(--text);
 }
-.dashboard-hero p  { font-size: 16px; line-height: 1.6; color: var(--text-muted); margin-bottom: 30px; max-width: 540px; margin-inline: auto; }
+.dashboard-hero h1 em { font-style: italic; color: var(--aws-orange); }
+.dashboard-hero p  { font-size: 17px; line-height: 1.6; color: var(--text-muted); margin-bottom: 30px; max-width: 540px; margin-inline: auto; }
 
 .hero-stats {
   display: flex;
@@ -576,7 +581,7 @@ a { color: var(--accent-ink); }
   letter-spacing: 0.06em;
   margin-bottom: 12px;
 }
-.topic-h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.12; margin-bottom: 9px; color: var(--text); }
+.topic-h1 { font-family: var(--font-display); font-size: 40px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.08; margin-bottom: 10px; color: var(--text); }
 .topic-short { font-size: 15px; line-height: 1.55; color: var(--text-muted); }
 
 .done-btn {
@@ -594,11 +599,11 @@ a { color: var(--accent-ink); }
   flex-shrink: 0;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.done-btn:hover { border-color: #15803D; color: #15803D; background: rgba(21,128,61,0.07); }
-.done-btn.done { border-color: #15803D; color: #15803D; background: rgba(21,128,61,0.10); }
+.done-btn:hover { border-color: #1F7A3E; color: #1F7A3E; background: rgba(21,128,61,0.07); }
+.done-btn.done { border-color: #1F7A3E; color: #1F7A3E; background: rgba(21,128,61,0.10); }
 
 /* ── Markdown rendering ────────────────────────────── */
-.topic-content { line-height: 1.72; color: #1E293B; font-size: 15px; }
+.topic-content { line-height: 1.75; color: #2B2926; font-size: 15.5px; }
 /* keep prose at a comfortable measure; tables, code & visuals stay full-width */
 .topic-content > p,
 .topic-content > ul,
@@ -606,9 +611,10 @@ a { color: var(--accent-ink); }
 .topic-content > blockquote { max-width: 72ch; }
 .topic-content h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; margin: 34px 0 12px; color: var(--accent-ink); }
 .topic-content h2 {
-  font-size: 20px;
+  font-family: var(--font-display);
+  font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   margin: 32px 0 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
@@ -631,22 +637,22 @@ a { color: var(--accent-ink); }
 .topic-content li { margin-bottom: 6px; }
 .topic-content li::marker { color: var(--accent-ink); }
 .topic-content strong { color: var(--text); font-weight: 600; }
-.topic-content em    { color: #1D4ED8; font-style: italic; }
+.topic-content em    { color: var(--accent-ink); font-style: italic; }
 .topic-content blockquote {
   border-left: 3px solid var(--aws-orange);
   padding: 12px 16px;
   margin: 18px 0;
   background: color-mix(in srgb, var(--aws-orange) 7%, var(--surface));
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  color: #334155;
+  color: #4A4740;
 }
 .topic-content blockquote strong { color: var(--accent-ink); }
 .topic-content blockquote p { margin: 0; }
 .topic-content blockquote p + p { margin-top: 10px; }
 .topic-content pre {
   /* Deliberately dark: code reads as a canvas on the light page, like Stripe/Vercel docs. */
-  background: #0F172A;
-  color: #E2E8F0;
+  background: #141311;
+  color: #EDEBE6;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
@@ -736,7 +742,7 @@ a { color: var(--accent-ink); }
   letter-spacing: 0.03em;
 }
 .topic-content tbody tr { transition: background 0.12s; }
-.topic-content tbody tr:nth-child(even) td { background: rgba(15,23,42,0.025); }
+.topic-content tbody tr:nth-child(even) td { background: rgba(20,16,8,0.03); }
 .topic-content tbody tr:hover td { background: color-mix(in srgb, var(--aws-orange) 6%, transparent); }
 
 /* wrap wide tables so they scroll on small screens instead of overflowing */
@@ -836,7 +842,7 @@ button:focus-visible,
     z-index: 90;
     transform: translateX(0);
     transition: transform 0.25s ease;
-    box-shadow: 4px 0 24px rgba(15,23,42,0.14);
+    box-shadow: 4px 0 24px rgba(20,16,8,0.12);
   }
   .app-shell.sidebar-collapsed .sidebar {
     transform: translateX(-100%);
@@ -865,7 +871,7 @@ button:focus-visible,
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(15,23,42,0.32);
+    background: rgba(20,16,8,0.30);
     z-index: 80;
     animation: fadeIn 0.2s ease;
   }
@@ -945,7 +951,7 @@ button:focus-visible,
 .arch-svg { width: 100%; height: auto; display: block; }
 .arch-node-bg { fill: #0d1117; stroke: var(--border2); stroke-width: 1; }
 .arch-cap { fill: #c9d1d9; font-size: 14px; font-weight: 600; text-anchor: middle; font-family: var(--font-sans); }
-.arch-region { fill: rgba(31,111,235,0.05); stroke: #1F6FEB; stroke-width: 1.4; stroke-dasharray: 5 5; }
+.arch-region { fill: rgba(232,80,10,0.04); stroke: #E8500A; stroke-width: 1.4; stroke-dasharray: 5 5; }
 .arch-region-cap { fill: #7aa7e6; font-size: 12px; font-family: var(--font-mono); }
 .arch-az { fill: #0d1117; stroke: var(--border2); stroke-width: 1; }
 .arch-rack { fill: var(--aws-orange); opacity: 0.85; }
@@ -984,29 +990,16 @@ button:focus-visible,
 /* two colour palettes crossfaded on scroll (opacity only = no repaint).
    fade the centre so the reading column stays legible, edges stay vivid. */
 .scroll-bg-mesh, .scroll-bg-mesh-b {
-  will-change: transform, opacity;
-  transform: scale(1.08);
-  -webkit-mask-image: radial-gradient(105% 95% at 50% 42%, rgba(0,0,0,0.30), #000 70%);
-  mask-image: radial-gradient(105% 95% at 50% 42%, rgba(0,0,0,0.30), #000 70%);
-}
-.scroll-bg-mesh {
   background:
-    radial-gradient(50% 50% at 14% 10%, rgba(255,153,0,0.50), transparent 72%),
-    radial-gradient(55% 55% at 90% 16%, rgba(140,79,255,0.50), transparent 72%),
-    radial-gradient(58% 58% at 84% 92%, rgba(31,111,235,0.48), transparent 72%),
-    radial-gradient(50% 50% at 12% 88%, rgba(45,212,191,0.36), transparent 72%);
-}
-.scroll-bg-mesh-b {
-  background:
-    radial-gradient(52% 52% at 12% 14%, rgba(255,79,139,0.50), transparent 72%),
-    radial-gradient(56% 56% at 88% 12%, rgba(34,211,238,0.46), transparent 72%),
-    radial-gradient(58% 58% at 86% 90%, rgba(99,102,241,0.48), transparent 72%),
-    radial-gradient(50% 50% at 10% 90%, rgba(255,153,0,0.34), transparent 72%);
+    radial-gradient(52% 52% at 12% 14%, rgba(242,115,58,0.14), transparent 72%),
+    radial-gradient(56% 56% at 88% 12%, rgba(250,200,160,0.18), transparent 72%),
+    radial-gradient(58% 58% at 86% 90%, rgba(232,80,10,0.12), transparent 72%),
+    radial-gradient(50% 50% at 10% 90%, rgba(232,80,10,0.10), transparent 72%);
   opacity: 0;
 }
 .scroll-bg-conic {
   background: conic-gradient(from 0deg at 50% 50%,
-    rgba(255,153,0,0.16), rgba(140,79,255,0.16), rgba(31,111,235,0.16), rgba(45,212,191,0.12), rgba(255,153,0,0.16));
+    rgba(232,80,10,0.08), rgba(250,200,160,0.10), rgba(242,115,58,0.08), rgba(250,200,160,0.08), rgba(232,80,10,0.08));
   opacity: 0.4;
   transform: rotate(0deg) scale(1.15);
   will-change: transform, opacity;
@@ -1061,7 +1054,7 @@ button:focus-visible,
   pointer-events: none;
   opacity: 0.5;
   background-image:
-    radial-gradient(rgba(15,23,42,0.06) 1px, transparent 1px);
+    radial-gradient(rgba(20,16,8,0.07) 1px, transparent 1px);
   background-size: 26px 26px;
   -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);
   mask-image: radial-gradient(120% 90% at 50% 0%, #000 30%, transparent 80%);

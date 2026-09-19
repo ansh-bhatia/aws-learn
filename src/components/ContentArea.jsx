@@ -1132,7 +1132,7 @@ function Dashboard({ onSelect, progress }) {
           <div className="hero-badge hero-rise" style={{ "--d": "20ms" }}>
             <Cloud size={36} strokeWidth={2.2} />
           </div>
-          <h1 className="hero-rise" style={{ "--d": "80ms" }}>AWS Learning Hub</h1>
+          <h1 className="hero-rise" style={{ "--d": "80ms" }}>AWS Learning <em>Hub</em></h1>
           <p className="hero-rise" style={{ "--d": "160ms" }}>Master every AWS service — from compute to AI. Pick a category to start.</p>
           <div className="hero-stats hero-rise" style={{ "--d": "240ms" }}>
             <div className="stat">
