@@ -16,6 +16,8 @@ from reportlab.pdfgen import canvas
 SP = sys.argv[1]
 RAW = f"{SP}/guide-raw.pdf"
 OUT = sys.argv[2]
+# Optional footer label so one script can finish several documents.
+FOOTER = sys.argv[3] if len(sys.argv) > 3 else "AWS Cloud Engineer — Interview Study Guide"
 
 with open(f"{SP}/outline.json", encoding="utf-8") as fh:
     plan = json.load(fh)
@@ -110,7 +112,7 @@ for i in range(n_pages):
         c.setFillColorRGB(0.42, 0.41, 0.39)
         c.drawCentredString(W / 2.0, 24, str(i - first_body + 1))
         c.setFont("Times-Italic", 7.5)
-        c.drawString(46, 24, "AWS Cloud Engineer — Interview Study Guide")
+        c.drawString(46, 24, FOOTER)
     c.showPage()
 c.save()
 buf.seek(0)
@@ -131,7 +133,7 @@ for ch in chapters:
 
 writer.add_metadata(
     {
-        "/Title": "AWS Cloud Engineer — Interview Study Guide",
+        "/Title": FOOTER,
         "/Subject": "Comprehensive AWS interview preparation and study reference",
         "/Keywords": "AWS, cloud engineer, interview, SAA-C03, study guide",
         "/Creator": "AWS Learn",

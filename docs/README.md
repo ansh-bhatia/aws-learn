@@ -61,3 +61,28 @@ Counting numbered lines alone pulled in explanatory topics ("1. Fully managed.
 2. Deep AWS integration…"), so every other rule also requires imperative verbs.
 Multi-part builds are detected across the whole corpus and kept whole, so a
 step that happens to be light on instructions cannot leave a hole mid-build.
+
+## Project interview preparation
+
+`AWS-Project-Interview-Preparation.pdf` is for a specific student, built from
+ten resume bullets. Sources live in `scripts/interview-prep/`.
+
+```bash
+node scripts/interview-prep/build.mjs <workdir>
+chrome --headless --no-pdf-header-footer \
+  --print-to-pdf=<workdir>/interview-raw.pdf file:///<workdir>/interview.html
+cp <workdir>/interview-raw.pdf <workdir>/guide-raw.pdf
+cp <workdir>/interview-outline.json <workdir>/outline.json
+python scripts/build-study-pdf-finish.py <workdir> \
+  docs/AWS-Project-Interview-Preparation.pdf "AWS Project Interview Preparation"
+```
+
+`diagram.mjs` is a small declarative architecture renderer — lanes become
+columns, nodes stack, edges route orthogonally, and anything spanning more than
+one lane is routed along a bus beneath the boxes so it does not cut through
+them. Edit `projects.mjs` to correct the reconstructed detail; the diagrams
+regenerate from the same data.
+
+Note that the technical detail in this document is reconstructed from one-line
+bullets, which the document states prominently on page 2. It is a rehearsal
+script, not a record.
