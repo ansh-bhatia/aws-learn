@@ -39,3 +39,25 @@ Anything a working engineer would already know is cut: titles like "What is…"
 and "Introduction" are dropped outright, and a line only survives if it carries
 a figure or an absolute ("cannot", "default", "maximum") and reads as a
 standalone fact. Narrative set-ups and console paths are rejected.
+
+## Hands-on lab manual
+
+`AWS-Hands-On-Lab-Manual.pdf` is the practical companion — 203 pages, 163 labs.
+Where the other two documents strip click-paths out, this one keeps them.
+
+```bash
+node scripts/build-revision-notes-extract.mjs <workdir>  # shared classifier
+node scripts/build-lab-manual.mjs <workdir>              # select labs, order multi-part builds
+node scripts/build-lab-manual-render.mjs <workdir>       # manual HTML + outline plan
+chrome --headless --no-pdf-header-footer \
+  --print-to-pdf=<workdir>/labs-raw.pdf file:///<workdir>/labs.html
+cp <workdir>/labs-raw.pdf <workdir>/guide-raw.pdf
+cp <workdir>/labs-outline.json <workdir>/outline.json
+python scripts/build-study-pdf-finish.py <workdir> docs/AWS-Hands-On-Lab-Manual.pdf
+```
+
+A topic is a lab if its title says so, or if it tells you to *do* things.
+Counting numbered lines alone pulled in explanatory topics ("1. Fully managed.
+2. Deep AWS integration…"), so every other rule also requires imperative verbs.
+Multi-part builds are detected across the whole corpus and kept whole, so a
+step that happens to be light on instructions cannot leave a hole mid-build.
