@@ -4,6 +4,7 @@ import { diagram } from "./diagram.mjs";
 import { projects } from "./projects.mjs";
 import { approach, controlTower, crossCutting, redFlags } from "./content.mjs";
 import { bank, bankIntro, rapidFire, behavioural, askThem } from "./questionbank.mjs";
+import * as ctd from "./ctdiagrams.mjs";
 
 const SP = process.argv[2];
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -155,7 +156,20 @@ body += `<section class="part"><h1 id="ct">4 · AWS Control Tower and landing zo
 <h2>Why multi-account at all</h2><div class="tw"><table><tbody>${controlTower.why
   .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div>
 
-<h2>What a landing zone looks like</h2>${ctDiagram}
+<h2>Why multi-account, drawn</h2>${ctd.beforeAfter}
+
+<h2>What a landing zone looks like</h2>${ctd.ouTree}
+<p>Controls attach to OUs, so the structure is really a question of which policies need to differ. Two OUs people forget: <b>Sandbox</b>, which needs hard spend limits rather than trust, and <b>Suspended</b>, which holds decommissioned accounts under a deny-all SCP so they are inert but still auditable.</p>
+
+<h2>The three kinds of control, and where each intercepts</h2>${ctd.controlTypes}
+
+<h2>How an account gets created</h2>${ctd.vending}
+
+<h2>Where the logs go</h2>${ctd.logging}
+
+<h2>How people get access</h2>${ctd.identity}
+
+<h2>How the networks join up</h2>${ctd.network}
 
 <h2>What Control Tower sets up for you</h2><div class="tw"><table><tbody>${controlTower.builds
   .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div>
@@ -265,6 +279,9 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
   .dl { font-family:Consolas,monospace; font-size:6.3px; fill:#7A827F; letter-spacing:0.7px; }
   .dn { font-family:"Segoe UI",Arial,sans-serif; font-size:8px; font-weight:600; }
   .ds { font-family:Consolas,monospace; font-size:6.4px; fill:#6B726F; }
+  .tn { font-family:"Segoe UI",Arial,sans-serif; font-size:7.4px; font-weight:600; }
+  .ts { font-family:Consolas,monospace; font-size:6px; fill:#6B726F; }
+  .te { fill:none; stroke:#9AA3A0; stroke-width:1; }
   .de { fill:none; stroke:#5A625F; stroke-width:1; }
   .debg { fill:#FFFFFF; }
   .det { font-family:Consolas,monospace; font-size:6.2px; fill:#5A625F; }
@@ -293,7 +310,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
   <div class="bar"></div>
   <h1>AWS Project<br>Interview Preparation</h1>
   <div class="sub">Nine projects, end to end — plus Control Tower and landing zones</div>
-  <div class="st">9 PROJECTS &nbsp;·&nbsp; 10 DIAGRAMS &nbsp;·&nbsp; ${qCount} QUESTIONS</div>
+  <div class="st">9 PROJECTS &nbsp;·&nbsp; 16 DIAGRAMS &nbsp;·&nbsp; ${qCount} QUESTIONS</div>
   <div style="font-size:9pt;color:#5A625F">Prepared ${today}</div>
 </div>
 
