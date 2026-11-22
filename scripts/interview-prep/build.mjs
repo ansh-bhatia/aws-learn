@@ -3,12 +3,19 @@ import path from "node:path";
 import { diagram } from "./diagram.mjs";
 import { projects } from "./projects.mjs";
 import { approach, controlTower, crossCutting, redFlags } from "./content.mjs";
+import { bank, bankIntro, rapidFire, behavioural, askThem } from "./questionbank.mjs";
 
 const SP = process.argv[2];
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const md = (s) =>
   esc(s).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>");
 
+const qCount = bank.reduce((n, b) => n + b.opening.length + b.followUp.length + b.extension.length, 0)
+  + rapidFire.reduce((n, [, i]) => n + i.length, 0)
+  + behavioural.length
+  + projects.reduce((n, p) => n + p.questions.length, 0)
+  + controlTower.questions.length
+  + crossCutting.reduce((n, c) => n + c.qa.length, 0);
 const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
 /* ── Control Tower landing-zone diagram ─────────────────────────────── */
@@ -98,9 +105,51 @@ projects.forEach((p, i) => {
   </section>`;
 });
 
-// Part 3 — Control Tower
-tocAdd("ct", "3 · Control Tower and landing zones");
-body += `<section class="part"><h1 id="ct">3 · AWS Control Tower and landing zones</h1>
+
+// Part 3 — question bank
+tocAdd("bank", "3 · Question bank");
+body += `<section class="part"><h1 id="bank">3 · Question bank</h1>
+<p class="lede">${bankIntro.split(/\n\n+/).map((x) => md(x)).join('</p><p class="lede">')}</p>`;
+for (const b of bank) {
+  tocAdd("qb-" + b.id, b.label, true);
+  body += `<div class="qbsec"><h2 id="qb-${b.id}">${esc(b.label)}</h2>`;
+  for (const [lvl, key, note] of [
+    ["Opening", "opening", "asked first"],
+    ["Follow-up", "followUp", "where candidates come apart"],
+    ["Extension", "extension", "reasoning, not recall"],
+  ]) {
+    if (!b[key] || !b[key].length) continue;
+    body += `<h3 class="lvl">${lvl} <span class="lvlnote">${note}</span></h3><ul class="qb">`;
+    for (const [q, a] of b[key]) body += `<li><span class="qq">${md(q)}</span><span class="qa2">${md(a)}</span></li>`;
+    body += `</ul>`;
+  }
+  body += `</div>`;
+}
+
+tocAdd("rapid", "Rapid fire", true);
+body += `<h2 id="rapid">Rapid fire</h2>
+<p>One-line answers expected. If any of these take more than ten seconds, that is the revision list.</p>`;
+for (const [theme, items] of rapidFire) {
+  body += `<h3>${esc(theme)}</h3><ul class="rf">`;
+  for (const it of items) {
+    const [q, a] = it.split(" → ");
+    body += `<li><b>${md(q)}</b><br><span class="rfa">→ ${md(a || "")}</span></li>`;
+  }
+  body += `</ul>`;
+}
+
+tocAdd("behav", "Behavioural", true);
+body += `<h2 id="behav">Behavioural</h2>
+<p>These are scored on whether the story has a consequence and a correction, not on how impressive it sounds.</p>`;
+body += behavioural.map(([q, a]) => `<div class="qa"><p class="q">${md(q)}</p><p class="a">${md(a)}</p></div>`).join("");
+
+tocAdd("askthem", "Questions to ask them", true);
+body += `<h2 id="askthem">Questions to ask them</h2>
+<p>Having none signals no interest. These also tell you whether you want the job.</p><ul>`;
+body += askThem.map((q) => `<li>${md(q)}</li>`).join("") + `</ul></section>`;
+
+// Part 4 — Control Tower
+body += `<section class="part"><h1 id="ct">4 · AWS Control Tower and landing zones</h1>
 <p class="lede">${md(controlTower.what)}</p>
 
 <h2>Why multi-account at all</h2><div class="tw"><table><tbody>${controlTower.why
@@ -127,8 +176,8 @@ body += `<section class="part"><h1 id="ct">3 · AWS Control Tower and landing zo
 </section>`;
 
 // Part 4 — cross-cutting
-tocAdd("cross", "4 · Cross-cutting questions");
-body += `<section class="part"><h1 id="cross">4 · Cross-cutting questions</h1>
+tocAdd("cross", "5 · Cross-cutting questions");
+body += `<section class="part"><h1 id="cross">5 · Cross-cutting questions</h1>
 <p class="lede">These come up regardless of which project you are discussing.</p>`;
 for (const c of crossCutting) {
   body += `<h2>${esc(c.theme)}</h2>`;
@@ -137,8 +186,8 @@ for (const c of crossCutting) {
 body += `</section>`;
 
 // Part 5 — red flags
-tocAdd("flags", "5 · What loses the room");
-body += `<section class="part"><h1 id="flags">5 · What loses the room</h1>
+tocAdd("flags", "6 · What loses the room");
+body += `<section class="part"><h1 id="flags">6 · What loses the room</h1>
 <div class="tw"><table><tbody>${redFlags
   .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div>
 <div class="closing"><h3>The one habit worth practising</h3>
@@ -221,6 +270,19 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
   .det { font-family:Consolas,monospace; font-size:6.2px; fill:#5A625F; }
   .dc { font-family:"Segoe UI",Arial,sans-serif; font-size:7px; fill:#6B726F; font-style:italic; }
 
+  .qbsec { break-inside:auto; margin-bottom:6px; }
+  .lvl { font-size:9.4pt; margin:11px 0 4px; color:#0F766E; page-break-after:avoid; }
+  .lvlnote { font-family:Consolas,monospace; font-size:7.3pt; color:#8A918E; font-weight:normal;
+             text-transform:uppercase; letter-spacing:0.8px; margin-left:6px; }
+  ul.qb { list-style:none; padding:0; margin:0 0 6px; }
+  ul.qb li { break-inside:avoid; margin-bottom:6px; padding-left:10px; border-left:2px solid #E0E7E6; }
+  .qq { display:block; font-weight:600; font-size:9.3pt; }
+  .qa2 { display:block; font-size:8.8pt; color:#4A514E; }
+  .qa2::before { content:"→ "; color:#0F766E; }
+  ul.rf { list-style:none; padding:0; margin:0 0 8px; column-count:2; column-gap:18px; }
+  ul.rf li { break-inside:avoid; margin-bottom:6px; font-size:8.6pt; }
+  .rfa { color:#4A514E; }
+
   .tw { break-inside:avoid; margin:8px 0 10px; }
   table { border-collapse:collapse; width:100%; font-size:8.9pt; }
   th, td { border:1px solid #DCE1E0; padding:5px 7px; text-align:left; vertical-align:top; }
@@ -231,7 +293,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
   <div class="bar"></div>
   <h1>AWS Project<br>Interview Preparation</h1>
   <div class="sub">Nine projects, end to end — plus Control Tower and landing zones</div>
-  <div class="st">9 PROJECTS &nbsp;·&nbsp; 10 DIAGRAMS &nbsp;·&nbsp; ~60 MODEL ANSWERS</div>
+  <div class="st">9 PROJECTS &nbsp;·&nbsp; 10 DIAGRAMS &nbsp;·&nbsp; ${qCount} QUESTIONS</div>
   <div style="font-size:9pt;color:#5A625F">Prepared ${today}</div>
 </div>
 
@@ -267,9 +329,10 @@ fs.writeFileSync(
     chapters: [
       { num: 1, name: "How you approach and run a project", topics: approach.phases.map((p) => p.name) },
       { num: 2, name: "The nine projects", topics: projects.map((p) => p.name) },
-      { num: 3, name: "AWS Control Tower and landing zones", topics: controlTower.setup.map(([k]) => k) },
-      { num: 4, name: "Cross-cutting questions", topics: crossCutting.map((c) => c.theme) },
-      { num: 5, name: "What loses the room", topics: redFlags.map(([k]) => k) },
+      { num: 3, name: "Question bank", topics: bank.map((b) => b.label) },
+      { num: 4, name: "AWS Control Tower and landing zones", topics: controlTower.setup.map(([k]) => k) },
+      { num: 5, name: "Cross-cutting questions", topics: crossCutting.map((c) => c.theme) },
+      { num: 6, name: "What loses the room", topics: redFlags.map(([k]) => k) },
     ],
   })
 );
