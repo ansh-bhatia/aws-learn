@@ -49,6 +49,15 @@ def find_page(needle: str, start: int) -> int:
     return -1
 
 
+# A contents page names most chapters at once, so it out-competes the real
+# heading on every substring search. Identify those pages and skip them.
+all_names = [norm(c["name"]) for c in plan["chapters"] if norm(c["name"])]
+contents_pages = {
+    i for i, pn in enumerate(page_norm)
+    if sum(1 for k in all_names if k in pn) >= max(3, len(all_names) // 2)
+}
+print("contents pages skipped:", sorted(i + 1 for i in contents_pages) or "none")
+
 cursor = 0
 chapters = []
 for ch in plan["chapters"]:
@@ -58,6 +67,17 @@ for ch in plan["chapters"]:
         if ch_key in page_norm[i]:
             page = i
             break
+    if page < 0:
+        # A contents page lists every chapter name, so a plain substring search
+        # lands there instead of on the chapter. Require the name at the very
+        # top of the page, which is where a heading sits.
+        key = norm(ch["name"])
+        for i in range(cursor, n_pages):
+            if i in contents_pages:
+                continue
+            if key and key in page_norm[i][:90]:
+                page = i
+                break
     if page < 0:
         page = find_page(ch["name"], cursor)
     if page < 0:
