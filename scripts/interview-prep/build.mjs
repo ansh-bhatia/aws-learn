@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { diagram } from "./diagram.mjs";
 import { projects } from "./projects.mjs";
-import { approach, controlTower, crossCutting, redFlags } from "./content.mjs";
+import { approach, controlTower, crossCutting, redFlags, glossary } from "./content.mjs";
 import { bank, bankIntro, rapidFire, behavioural, askThem } from "./questionbank.mjs";
 import * as ctd from "./ctdiagrams.mjs";
 
@@ -14,7 +14,6 @@ const md = (s) =>
 const qCount = bank.reduce((n, b) => n + b.opening.length + b.followUp.length + b.extension.length, 0)
   + rapidFire.reduce((n, [, i]) => n + i.length, 0)
   + behavioural.length
-  + projects.reduce((n, p) => n + p.questions.length, 0)
   + controlTower.questions.length
   + crossCutting.reduce((n, c) => n + c.qa.length, 0);
 const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -53,6 +52,13 @@ const ctDiagram = diagram({
   caption: "Controls attach to OUs; logs flow one way into an account workload teams cannot write to.",
 });
 
+
+// Every question is [question, whatTheyAreChecking, whatToSay].
+const qa3 = ([q, want, say]) =>
+  `<div class="qa"><p class="q">${md(q)}</p>` +
+  (want ? `<p class="want"><span class="lbl">They are checking</span> ${md(want)}</p>` : "") +
+  `<p class="a"><span class="lbl">Say this</span> ${md(say)}</p></div>`;
+
 /* ── Sections ───────────────────────────────────────────────────────── */
 
 let toc = "";
@@ -61,8 +67,8 @@ const tocAdd = (id, label, sub = false) =>
   (toc += `<li class="${sub ? "s" : "m"}"><a href="#${id}">${esc(label)}</a></li>`);
 
 // Part 1 — approach
-tocAdd("approach", "1 · How you approach and run a project");
-body += `<section class="part"><h1 id="approach">1 · How you approach and run a project</h1>
+tocAdd("approach", "1 · How to approach and run a project");
+body += `<section class="part"><h1 id="approach">1 · How to approach and run a project</h1>
 <p class="lede">${md(approach.intro)}</p>`;
 for (const p of approach.phases) {
   body += `<div class="phase"><h3>${esc(p.name)}</h3><p class="goal">${md(p.goal)}</p><ul>`;
@@ -76,7 +82,7 @@ body += `</tbody></table></div></section>`;
 // Part 2 — projects
 tocAdd("projects", "2 · The nine projects");
 body += `<section class="part"><h1 id="projects">2 · The nine projects</h1>
-<p class="lede">Each one follows the same shape: what the problem was, the architecture, how data flows, how it was configured, the decisions worth defending, and the questions you should expect.</p></section>`;
+<p class="lede">Each project follows the same shape. What the problem was. The architecture. How the data moves. How it was set up. The decisions you should be ready to defend. The questions are not here — they are all together in Part 3, so there is one place to revise from.</p></section>`;
 
 projects.forEach((p, i) => {
   const n = i + 1;
@@ -98,8 +104,7 @@ projects.forEach((p, i) => {
     <h3>Decisions worth defending</h3><div class="tw"><table><tbody>${p.decisions
       .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div>
 
-    <h3>Expect to be asked</h3>${p.questions
-      .map(([q, a]) => `<div class="qa"><p class="q">${md(q)}</p><p class="a">${md(a)}</p></div>`).join("")}
+    <p class="bankref">Questions on this project, with full answers, are in <b>${esc(p.bankRef)}</b>.</p>
 
     <div class="nums"><span class="tag">Numbers to have ready</span><ul>${p.numbers
       .map((x) => `<li>${md(x)}</li>`).join("")}</ul></div>
@@ -121,7 +126,7 @@ for (const b of bank) {
   ]) {
     if (!b[key] || !b[key].length) continue;
     body += `<h3 class="lvl">${lvl} <span class="lvlnote">${note}</span></h3><ul class="qb">`;
-    for (const [q, a] of b[key]) body += `<li><span class="qq">${md(q)}</span><span class="qa2">${md(a)}</span></li>`;
+    for (const item of b[key]) body += `<li>${qa3(item)}</li>`;
     body += `</ul>`;
   }
   body += `</div>`;
@@ -129,7 +134,7 @@ for (const b of bank) {
 
 tocAdd("rapid", "Rapid fire", true);
 body += `<h2 id="rapid">Rapid fire</h2>
-<p>One-line answers expected. If any of these take more than ten seconds, that is the revision list.</p>`;
+<p>Short answers are expected here. If any of these takes you more than ten seconds, put it on your revision list.</p>`;
 for (const [theme, items] of rapidFire) {
   body += `<h3>${esc(theme)}</h3><ul class="rf">`;
   for (const it of items) {
@@ -141,12 +146,12 @@ for (const [theme, items] of rapidFire) {
 
 tocAdd("behav", "Behavioural", true);
 body += `<h2 id="behav">Behavioural</h2>
-<p>These are scored on whether the story has a consequence and a correction, not on how impressive it sounds.</p>`;
-body += behavioural.map(([q, a]) => `<div class="qa"><p class="q">${md(q)}</p><p class="a">${md(a)}</p></div>`).join("");
+<p>These are marked on whether your story has a real result and a real lesson, not on how impressive it sounds.</p>`;
+body += behavioural.map(qa3).join("");
 
 tocAdd("askthem", "Questions to ask them", true);
 body += `<h2 id="askthem">Questions to ask them</h2>
-<p>Having none signals no interest. These also tell you whether you want the job.</p><ul>`;
+<p>Having no questions makes you look uninterested. These also help you work out whether you want the job.</p><ul>`;
 body += askThem.map((q) => `<li>${md(q)}</li>`).join("") + `</ul></section>`;
 
 // Part 4 — Control Tower
@@ -185,28 +190,34 @@ body += `<section class="part"><h1 id="ct">4 · AWS Control Tower and landing zo
 <div class="tw"><table><tbody>${controlTower.inProject
   .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div>
 
-<h2>Expect to be asked</h2>${controlTower.questions
-  .map(([q, a]) => `<div class="qa"><p class="q">${md(q)}</p><p class="a">${md(a)}</p></div>`).join("")}
+<h2>Expect to be asked</h2>${controlTower.questions.map(qa3).join("")}
 </section>`;
 
 // Part 4 — cross-cutting
-tocAdd("cross", "5 · Cross-cutting questions");
-body += `<section class="part"><h1 id="cross">5 · Cross-cutting questions</h1>
-<p class="lede">These come up regardless of which project you are discussing.</p>`;
+tocAdd("cross", "5 · Questions that come up every time");
+body += `<section class="part"><h1 id="cross">5 · Questions that come up every time</h1>
+<p class="lede">These are asked whichever project you are talking about.</p>`;
 for (const c of crossCutting) {
   body += `<h2>${esc(c.theme)}</h2>`;
-  body += c.qa.map(([q, a]) => `<div class="qa"><p class="q">${md(q)}</p><p class="a">${md(a)}</p></div>`).join("");
+  body += c.qa.map(qa3).join("");
 }
 body += `</section>`;
 
 // Part 5 — red flags
-tocAdd("flags", "6 · What loses the room");
-body += `<section class="part"><h1 id="flags">6 · What loses the room</h1>
+tocAdd("flags", "6 · Mistakes that lose the interview");
+body += `<section class="part"><h1 id="flags">6 · Mistakes that lose the interview</h1>
 <div class="tw"><table><tbody>${redFlags
   .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div>
 <div class="closing"><h3>The one habit worth practising</h3>
 <p>For every project, be able to say in two sentences: <b>what the constraint was</b>, and <b>what you chose because of it</b>. Almost every good interview answer is a variant of that sentence, and almost every weak one is a list of services with no constraint attached.</p></div>
 </section>`;
+
+// Appendix — glossary
+tocAdd("gloss", "Words used in this document");
+body += `<section class="part"><h1 id="gloss">Words used in this document</h1>
+<p class="lede">If any word in this document is unfamiliar, it is explained here. Interviewers also ask for these definitions directly, so being able to say them in one sentence is useful on its own.</p>
+<div class="tw"><table><tbody>${glossary
+  .map(([k, v]) => `<tr><th>${esc(k)}</th><td>${md(v)}</td></tr>`).join("")}</tbody></table></div></section>`;
 
 /* ── Document ───────────────────────────────────────────────────────── */
 
@@ -266,7 +277,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 
   .qa { break-inside:avoid; margin-bottom:9px; padding-left:11px; border-left:2px solid #CFE0DD; }
   .q { font-weight:600; margin:0 0 3px; color:#11433F; }
-  .a { margin:0; font-size:9.3pt; }
+  .a { margin:0; font-size:9.3pt; line-height:1.55; }
 
   .nums { background:#F6F8F8; border:1px solid #E0E5E4; border-radius:4px; padding:9px 12px; margin-top:12px; break-inside:avoid; }
   .nums ul { margin:0; padding-left:16px; }
@@ -287,12 +298,18 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
   .det { font-family:Consolas,monospace; font-size:6.2px; fill:#5A625F; }
   .dc { font-family:"Segoe UI",Arial,sans-serif; font-size:7px; fill:#6B726F; font-style:italic; }
 
+  .want { margin:0 0 4px; font-size:8.9pt; color:#5A625F; }
+  .lbl { display:inline-block; font-family:Consolas,monospace; font-size:7pt; letter-spacing:0.8px;
+         text-transform:uppercase; color:#0F766E; margin-right:5px; }
+  .bankref { font-size:8.9pt; color:#4A514E; background:#F4F7F7; border:1px solid #E0E7E6;
+             border-radius:4px; padding:6px 10px; margin-top:10px; }
   .qbsec { break-inside:auto; margin-bottom:6px; }
   .lvl { font-size:9.4pt; margin:11px 0 4px; color:#0F766E; page-break-after:avoid; }
   .lvlnote { font-family:Consolas,monospace; font-size:7.3pt; color:#8A918E; font-weight:normal;
              text-transform:uppercase; letter-spacing:0.8px; margin-left:6px; }
   ul.qb { list-style:none; padding:0; margin:0 0 6px; }
-  ul.qb li { break-inside:avoid; margin-bottom:6px; padding-left:10px; border-left:2px solid #E0E7E6; }
+  ul.qb li { break-inside:avoid; margin-bottom:9px; }
+  ul.qb .qa { margin-bottom:0; }
   .qq { display:block; font-weight:600; font-size:9.3pt; }
   .qa2 { display:block; font-size:8.8pt; color:#4A514E; }
   .qa2::before { content:"→ "; color:#0F766E; }
@@ -309,7 +326,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <div class="cover">
   <div class="bar"></div>
   <h1>AWS Project<br>Interview Preparation</h1>
-  <div class="sub">Nine projects, end to end — plus Control Tower and landing zones</div>
+  <div class="sub">Nine projects explained, with answers you can say out loud</div>
   <div class="st">9 PROJECTS &nbsp;·&nbsp; 16 DIAGRAMS &nbsp;·&nbsp; ${qCount} QUESTIONS</div>
   <div style="font-size:9pt;color:#5A625F">Prepared ${today}</div>
 </div>
@@ -317,21 +334,21 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <div class="warn">
   <div class="warnbox">
     <h2>Read this before anything else</h2>
-    <p><b>The technical detail in this document is reconstructed, not recorded.</b> It was written from ten one-line resume bullets. Every service choice, configuration value and design decision here is a plausible, defensible version of what such a project usually looks like — it is not a record of what you actually built.</p>
-    <p><b>So treat it as a rehearsal script, not a reference.</b> Go through each project and correct it to match reality before you use any of it. Where this document says OpenSearch and you used Pinecone, change it. Where it claims a mechanism you did not implement, cut it.</p>
-    <p><b>The risk of not doing that is specific and serious.</b> An interviewer asks one layer deeper than the script — "what embedding model?", "what was the actual p99?" — and an answer rehearsed from someone else's assumption falls apart. A smaller, true story survives scrutiny; a larger invented one does not.</p>
-    <p style="margin-bottom:0"><b>What is safe to use as-is</b> is the shape: how to structure an answer, which trade-offs to name, what interviewers are actually testing, and the Control Tower material, which is standard AWS rather than project-specific.</p>
+    <p><b>The technical details in this document are guesses, not facts.</b> They were written from ten single lines on a CV. Every service, setting and decision here is a sensible version of what such a project usually looks like. It is not a record of what you actually built.</p>
+    <p><b>So use it for practice, not as a reference.</b> Go through every project and correct it so it matches what you really did. If it says OpenSearch and you used something else, change it. If it describes something you did not build, delete it.</p>
+    <p><b>Here is what happens if you skip that step.</b> The interviewer asks one question deeper than the script. Something like "which embedding model did you use?" or "how long did a request actually take?" If your answer came from someone else's guess, you will not be able to answer, and then they will doubt everything else you said. A small true story survives questioning. A big invented one does not.</p>
+    <p style="margin-bottom:0"><b>What you can use exactly as written:</b> the structure of an answer, the trade-offs worth mentioning, what the interviewer is really testing, and the whole Control Tower section, because that is standard AWS and does not depend on your projects.</p>
   </div>
 
   <h2>How to tell a project story</h2>
-  <p>Four sentences, in this order. It works for every project in this document.</p>
+  <p>Use four sentences, in this order. This works for every project in this document.</p>
   <ol>
-    <li><b>The constraint.</b> "Credit decisions had to be reproducible and explainable to a regulator."</li>
-    <li><b>The choice it forced.</b> "So the scoring is deterministic SQL, and the model never decides."</li>
-    <li><b>The mechanism.</b> "The LLM collects information conversationally and explains the result afterwards."</li>
-    <li><b>What you would change.</b> "With more time I would add task-based model routing earlier — we found the cost win late."</li>
+    <li><b>The limit you had to work with.</b> "Credit decisions had to be repeatable, and we had to be able to explain them to a regulator."</li>
+    <li><b>What that made you choose.</b> "So the score is calculated by SQL rules, and the AI never decides anything."</li>
+    <li><b>How it works.</b> "The AI collects the information through conversation, and afterwards explains the result in plain words."</li>
+    <li><b>What you would do differently.</b> "If I did it again I would use a cheaper model for the simple parts sooner. We only worked out that saving late."</li>
   </ol>
-  <p>The fourth sentence is the one most candidates skip, and it is the one that makes you sound like someone who has shipped something rather than someone who has read about it.</p>
+  <p>Most people skip the fourth sentence. It is the one that makes you sound like someone who has really built something, instead of someone who has only read about it.</p>
 </div>
 
 <div class="toc"><h1>Contents</h1><ul>${toc}</ul></div>
